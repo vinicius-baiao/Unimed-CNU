@@ -7,6 +7,8 @@ var ABA_TAREFAS      = 'Tarefas';
 var ABA_LOG          = 'Log';
 var ABA_CHECKLISTS   = 'Checklists';
 var ABA_CKL_STATUS   = 'Checklist_Status';
+var ABA_INTERACOES   = 'Interações';
+var EMAIL_REPORTE    = '';  // e-mail(s) para o relatório diário, separados por vírgula
 
 // Índices das colunas (base 0) na aba Tarefas
 var COL = {
@@ -39,6 +41,9 @@ function doGet(e) {
       case 'listarTemplates':        resultado = listarTemplates();             break;
       case 'listarChecklist_Status': resultado = listarChecklist_Status();      break;
       case 'salvarChecklist':        resultado = salvarChecklist(dados);        break;
+      case 'listarInteracoes':      resultado = listarInteracoes(dados);       break;
+      case 'adicionarInteracao':    resultado = adicionarInteracao(dados);     break;
+      case 'getUsuario':            resultado = { email: Session.getActiveUser().getEmail() }; break;
       default:
         resultado = { erro: 'Ação desconhecida: ' + acao };
     }
@@ -140,6 +145,18 @@ function atualizarTarefa(dados) {
   for (var i = 1; i < linhas.length; i++) {
     if (String(linhas[i][COL.ID]) !== String(dados.id)) continue;
 
+    // ── Verificação de permissão ──────────────────────────────
+    var editor  = Session.getActiveUser().getEmail();
+    var criador = String(linhas[i][COL.CRIADO_POR] || '');
+    if (dados.status === 'Concluído' && dados.status !== linhas[i][COL.STATUS] && editor !== criador) {
+      return { erro: 'Apenas quem criou a tarefa pode marcá-la como Concluída.' };
+    }
+    var prazoAtualStr = linhas[i][COL.PRAZO] ? new Date(linhas[i][COL.PRAZO]).toISOString().slice(0,10) : '';
+    if (dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr && editor !== criador) {
+      return { erro: 'Apenas quem criou a tarefa pode alterar o prazo.' };
+    }
+
+    var statusAnterior  = String(linhas[i][COL.STATUS] || '');
     var camposEditaveis = ['tarefa','projeto','responsavel','prazo','status','prioridade','observacoes'];
     var colMap = {
       tarefa:      COL.TAREFA,
@@ -163,6 +180,21 @@ function atualizarTarefa(dados) {
 
     if (dados.responsavel && dados.responsavel !== responsavelAnterior) {
       notificarResponsavel(dados, 'reatribuicao');
+    }
+
+    // Registrar mudança de status como interação automática
+    if (dados.status !== undefined && dados.status !== statusAnterior) {
+      var shtI = getSheet(ABA_INTERACOES);
+      if (shtI) {
+        var rowsI = shtI.getDataRange().getValues();
+        var maxI  = 0;
+        for (var k = 1; k < rowsI.length; k++) {
+          var nk = parseInt(rowsI[k][0], 10);
+          if (!isNaN(nk) && nk > maxI) maxI = nk;
+        }
+        shtI.appendRow([maxI + 1, dados.id, new Date(), Session.getActiveUser().getEmail(),
+          'Atualização de status', '"' + statusAnterior + '" → "' + dados.status + '"']);
+      }
     }
 
     return { sucesso: true };
@@ -362,8 +394,119 @@ function setup() {
       .requireValueInList(['TRUE','FALSE'], true).build());
   [50, 80, 80, 300, 60, 80, 140].forEach(function(w, i) { cks.setColumnWidth(i + 1, w); });
 
+  // ── Aba Interações ───────────────────────────────────────────
+  var inter  = ss.getSheetByName(ABA_INTERACOES) || ss.insertSheet(ABA_INTERACOES);
+  var hInter = ['ID','ID_Tarefa','Data/Hora','Editor','Tipo','Conteúdo'];
+  inter.getRange(1, 1, 1, hInter.length).setValues([hInter])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  inter.setFrozenRows(1);
+  [50, 80, 150, 210, 160, 350].forEach(function(w, i) { inter.setColumnWidth(i + 1, w); });
+
   SpreadsheetApp.flush();
-  Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status');
+  Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações');
+}
+
+// ── listarInteracoes ──────────────────────────────────────────
+function listarInteracoes(dados) {
+  var sheet = getSheet(ABA_INTERACOES);
+  if (!sheet) return { interacoes: [] };
+  var rows   = sheet.getDataRange().getValues();
+  var header = rows[0];
+  var lista  = [];
+  var filtroId = dados.idTarefa ? String(dados.idTarefa) : '';
+
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][0]) continue;
+    if (filtroId && String(rows[i][1]) !== filtroId) continue;
+    var obj = {};
+    header.forEach(function(col, idx) { obj[col] = rows[i][idx]; });
+    lista.push(obj);
+  }
+  lista.sort(function(a, b) { return new Date(b['Data/Hora']) - new Date(a['Data/Hora']); });
+  return { interacoes: lista };
+}
+
+// ── adicionarInteracao ────────────────────────────────────────
+function adicionarInteracao(dados) {
+  var sheet  = getSheet(ABA_INTERACOES);
+  var editor = Session.getActiveUser().getEmail();
+  var linhas = sheet.getDataRange().getValues();
+  var idMax  = 0;
+  for (var i = 1; i < linhas.length; i++) {
+    var n = parseInt(linhas[i][0], 10);
+    if (!isNaN(n) && n > idMax) idMax = n;
+  }
+  sheet.appendRow([
+    idMax + 1,
+    dados.idTarefa,
+    new Date(),
+    editor,
+    dados.tipo     || 'Comentário',
+    dados.conteudo || ''
+  ]);
+  gravarLog('INTERACAO', 'ID_Tarefa', '', dados.idTarefa);
+  return { sucesso: true, id: idMax + 1 };
+}
+
+// ── relatorioDiario ───────────────────────────────────────────
+// Configurar via Apps Script → Triggers → relatorioDiario → Horário (17h).
+function relatorioDiario() {
+  if (!EMAIL_REPORTE) return;
+
+  var hoje  = new Date(); hoje.setHours(0, 0, 0, 0);
+  var aman  = new Date(hoje); aman.setDate(hoje.getDate() + 1);
+  var lista = listarTarefas().tarefas;
+
+  var ps = { 'A fazer': 0, 'Em andamento': 0, 'Bloqueado': 0, 'Concluído': 0 };
+  var vencidas = [], vHoje = [], vAmanha = [];
+
+  lista.forEach(function(t) {
+    ps[t.Status] = (ps[t.Status] || 0) + 1;
+    if (!t.Prazo || t.Status === 'Concluído') return;
+    var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
+    if (d < hoje) vencidas.push(t);
+    else if (d.getTime() === hoje.getTime()) vHoje.push(t);
+    else if (d.getTime() === aman.getTime()) vAmanha.push(t);
+  });
+
+  var dtStr = hoje.toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  var linhaT = function(t) {
+    return '<li style="font-size:13px;margin-bottom:5px"><b>' + t.Tarefa + '</b>'
+      + (t.Projeto ? ' · <span style="color:#6c757d">' + t.Projeto + '</span>' : '')
+      + (t['Responsável'] ? ' <span style="color:#adb5bd">(' + t['Responsável'].split('@')[0] + ')</span>' : '')
+      + '</li>';
+  };
+  var secao = function(titulo, cor, items) {
+    if (!items.length) return '';
+    return '<h3 style="font-size:14px;color:' + cor + ';margin:18px 0 8px">' + titulo + ' (' + items.length + ')</h3>'
+      + '<ul style="margin:0 0 4px;padding-left:18px">' + items.map(linhaT).join('') + '</ul>';
+  };
+
+  var html = '<div style="font-family:Arial,sans-serif;max-width:620px;color:#212529">'
+    + '<div style="background:#004e4c;padding:18px 24px;border-radius:8px 8px 0 0">'
+    + '<h2 style="color:#fff;margin:0;font-size:17px">Relatório Diário — Gestão de Tarefas</h2>'
+    + '<p style="color:#a8d5d4;margin:3px 0 0;font-size:12px">Unimed CNU · ' + dtStr + '</p>'
+    + '</div>'
+    + '<div style="background:#fff;padding:22px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
+    + '<h3 style="font-size:14px;color:#004e4c;margin:0 0 10px">Resumo por status</h3>'
+    + '<table style="width:100%;border-collapse:collapse;margin-bottom:4px">'
+    + '<tr><td style="padding:7px 10px;background:#f8f9fa;font-size:13px">A fazer</td><td style="padding:7px 10px;font-weight:700;font-size:13px">' + ps['A fazer'] + '</td>'
+    + '<td style="padding:7px 10px;font-size:13px">Em andamento</td><td style="padding:7px 10px;font-weight:700;font-size:13px">' + ps['Em andamento'] + '</td></tr>'
+    + '<tr><td style="padding:7px 10px;background:#f8f9fa;font-size:13px">Bloqueado</td><td style="padding:7px 10px;font-weight:700;font-size:13px">' + ps['Bloqueado'] + '</td>'
+    + '<td style="padding:7px 10px;font-size:13px">Concluído</td><td style="padding:7px 10px;font-weight:700;font-size:13px">' + ps['Concluído'] + '</td></tr>'
+    + '</table>'
+    + secao('Vencidas', '#c0392b', vencidas)
+    + secao('Vencem hoje', '#856404', vHoje)
+    + secao('Vencem amanha', '#0c4a9f', vAmanha)
+    + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #dee2e6">'
+    + 'Gerado automaticamente pelo sistema de Gestão de Tarefas CNU</p>'
+    + '</div></div>';
+
+  MailApp.sendEmail({
+    to:       EMAIL_REPORTE,
+    subject:  '[Tarefas CNU] Resumo do dia — ' + hoje.toLocaleDateString('pt-BR'),
+    htmlBody: html
+  });
 }
 
 // ── Trigger diário: lembretes D-1 ────────────────────────────
