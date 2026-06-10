@@ -6,7 +6,9 @@
       "Bash(git commit -m ' *)",
       "Bash(extract-text \"C:\\\\Users\\\\Aurélio\\\\Downloads\\\\CNU_TaskTracker_Template.xlsx\")",
       "Bash(git config *)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(python -c \"import openpyxl; print\\('ok'\\)\")",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; python \"C:/Users/Aurélio/Downloads/build_db.py\")"
     ]
   }
 }
