@@ -2,9 +2,11 @@
 //  Tarefas CNU — Backend (Apps Script)
 // ============================================================
 
-var SHEET_ID   = '';  // preencher após criar a planilha
-var ABA_TAREFAS = 'Tarefas';
-var ABA_LOG     = 'Log';
+var SHEET_ID        = '';  // preencher após criar a planilha
+var ABA_TAREFAS      = 'Tarefas';
+var ABA_LOG          = 'Log';
+var ABA_CHECKLISTS   = 'Checklists';
+var ABA_CKL_STATUS   = 'Checklist_Status';
 
 // Índices das colunas (base 0) na aba Tarefas
 var COL = {
@@ -30,10 +32,13 @@ function doGet(e) {
   var resultado;
   try {
     switch (acao) {
-      case 'listarTarefas':   resultado = listarTarefas();          break;
-      case 'criarTarefa':     resultado = criarTarefa(dados);       break;
-      case 'atualizarTarefa': resultado = atualizarTarefa(dados);   break;
-      case 'excluirTarefa':   resultado = excluirTarefa(dados);     break;
+      case 'listarTarefas':          resultado = listarTarefas();               break;
+      case 'criarTarefa':            resultado = criarTarefa(dados);            break;
+      case 'atualizarTarefa':        resultado = atualizarTarefa(dados);        break;
+      case 'excluirTarefa':          resultado = excluirTarefa(dados);          break;
+      case 'listarTemplates':        resultado = listarTemplates();             break;
+      case 'listarChecklist_Status': resultado = listarChecklist_Status();      break;
+      case 'salvarChecklist':        resultado = salvarChecklist(dados);        break;
       default:
         resultado = { erro: 'Ação desconhecida: ' + acao };
     }
@@ -179,6 +184,91 @@ function excluirTarefa(dados) {
   }
 
   return { erro: 'Tarefa não encontrada: ' + dados.id };
+}
+
+// ── listarTemplates ───────────────────────────────────────────
+function listarTemplates() {
+  var sheet = getSheet(ABA_CHECKLISTS);
+  if (!sheet) return { templates: [] };
+  var dados = sheet.getDataRange().getValues();
+  var mapa  = {};
+
+  for (var i = 1; i < dados.length; i++) {
+    var linha = dados[i];
+    var idTpl = String(linha[0]);
+    var nome  = linha[1];
+    var item  = linha[2];
+    var ordem = linha[3];
+    if (!idTpl || !nome || !item) continue;
+    if (!mapa[idTpl]) mapa[idTpl] = { id: idTpl, nome: nome, itens: [] };
+    mapa[idTpl].itens.push({ item: item, ordem: ordem });
+  }
+
+  var lista = Object.keys(mapa).map(function(k) { return mapa[k]; });
+  lista.forEach(function(t) {
+    t.itens.sort(function(a, b) { return (a.ordem || 0) - (b.ordem || 0); });
+  });
+  return { templates: lista };
+}
+
+// ── listarChecklist_Status ────────────────────────────────────
+function listarChecklist_Status() {
+  var sheet = getSheet(ABA_CKL_STATUS);
+  if (!sheet) return { itens: [] };
+  var dados  = sheet.getDataRange().getValues();
+  var header = dados[0];
+  var lista  = [];
+
+  for (var i = 1; i < dados.length; i++) {
+    var linha = dados[i];
+    if (!linha[0] && !linha[1]) continue;
+    var obj = {};
+    header.forEach(function(col, idx) { obj[col] = linha[idx]; });
+    lista.push(obj);
+  }
+  return { itens: lista };
+}
+
+// ── salvarChecklist ───────────────────────────────────────────
+// Substitui completamente os itens de uma tarefa: remove os antigos e grava os novos.
+function salvarChecklist(dados) {
+  var sheet    = getSheet(ABA_CKL_STATUS);
+  var idTarefa = String(dados.idTarefa);
+
+  // Remover linhas existentes para esta tarefa (em ordem reversa)
+  var linhas = sheet.getDataRange().getValues();
+  for (var i = linhas.length - 1; i >= 1; i--) {
+    if (String(linhas[i][1]) === idTarefa) sheet.deleteRow(i + 1);
+  }
+
+  var itens = dados.itens || [];
+  if (!itens.length) return { sucesso: true };
+
+  // Calcular próximo ID
+  var linhasApos = sheet.getDataRange().getValues();
+  var idMax = 0;
+  for (var j = 1; j < linhasApos.length; j++) {
+    var n = parseInt(linhasApos[j][0], 10);
+    if (!isNaN(n) && n > idMax) idMax = n;
+  }
+
+  var agora = new Date();
+  itens.forEach(function(it) {
+    var concluido = it.concluido === true || it.concluido === 'true';
+    idMax++;
+    sheet.appendRow([
+      idMax,
+      idTarefa,
+      dados.template || '',
+      it.item,
+      it.ordem || 0,
+      concluido,
+      concluido ? agora : ''
+    ]);
+  });
+
+  gravarLog('CHECKLIST', 'ID_Tarefa', '', idTarefa);
+  return { sucesso: true };
 }
 
 // ── Notificações e Calendar ───────────────────────────────────
