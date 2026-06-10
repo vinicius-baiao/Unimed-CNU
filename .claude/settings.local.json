@@ -8,7 +8,9 @@
       "Bash(git config *)",
       "mcp__Claude_Preview__preview_start",
       "PowerShell(python -c \"import openpyxl; print\\('ok'\\)\")",
-      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; python \"C:/Users/Aurélio/Downloads/build_db.py\")"
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; python \"C:/Users/Aurélio/Downloads/build_db.py\")",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget"
     ]
   }
 }
