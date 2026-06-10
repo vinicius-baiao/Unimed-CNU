@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Tarefas — Unimed CNU</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    /* ── Tokens ─────────────────────────────────────────── */
+    :root {
+      --verde:        #004e4c;
+      --verde-claro:  #006d6a;
+      --verde-bg:     #e6f2f1;
+      --dourado:      #c9a84c;
+      --dourado-bg:   #fdf6e3;
+      --cinza-50:     #f8f9fa;
+      --cinza-100:    #e9ecef;
+      --cinza-400:    #868e96;
+      --cinza-700:    #495057;
+      --cinza-900:    #212529;
+      --erro-bg:      #fdecea;
+      --erro-cor:     #c0392b;
+      --aviso-bg:     #fff3cd;
+      --aviso-cor:    #856404;
+      --info-bg:      #d0e8ff;
+      --info-cor:     #0c4a9f;
+      --radius:       8px;
+      --shadow:       0 2px 8px rgba(0,0,0,.10);
+      --shadow-hover: 0 4px 16px rgba(0,0,0,.16);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cinza-50);
+      color: var(--cinza-900);
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    header {
+      background: var(--verde);
+      color: #fff;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: var(--shadow);
+    }
+    header svg { flex-shrink: 0; }
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.2rem;
+      font-weight: 400;
+      letter-spacing: .01em;
+    }
+
+    /* ── Toolbar ─────────────────────────────────────────── */
+    .toolbar {
+      background: #fff;
+      border-bottom: 1px solid var(--cinza-100);
+      padding: 12px 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .toolbar select, .toolbar input {
+      padding: 7px 10px;
+      border: 1px solid var(--cinza-100);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: .875rem;
+      color: var(--cinza-700);
+      background: var(--cinza-50);
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: .875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--verde); color: #fff; }
+    .btn-dourado { background: var(--dourado); color: #fff; }
+
+    /* ── Kanban ──────────────────────────────────────────── */
+    .board {
+      display: flex;
+      gap: 16px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      min-height: calc(100vh - 120px);
+    }
+    .coluna {
+      flex: 1;
+      min-width: 240px;
+      max-width: 320px;
+      background: var(--cinza-100);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+    .coluna-header {
+      padding: 12px 14px 10px;
+      font-weight: 600;
+      font-size: .875rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--verde);
+      border-bottom: 2px solid var(--verde);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .coluna-header .badge-count {
+      background: var(--verde);
+      color: #fff;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: .75rem;
+    }
+    .coluna-body {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 120px;
+    }
+    .coluna-body.dragover { background: var(--verde-bg); }
+
+    /* ── Cards ───────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow);
+      cursor: grab;
+      border-left: 3px solid transparent;
+      transition: box-shadow .15s, transform .15s;
+    }
+    .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+    .card.dragging { opacity: .5; cursor: grabbing; }
+
+    .card-titulo { font-weight: 500; font-size: .9rem; margin-bottom: 6px; }
+    .card-projeto { font-size: .78rem; color: var(--cinza-400); margin-bottom: 8px; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card-responsavel { font-size: .75rem; color: var(--cinza-700); }
+    .card-prazo { font-size: .75rem; color: var(--cinza-400); }
+    .card-prazo.vence-hoje  { color: var(--erro-cor); font-weight: 600; }
+    .card-prazo.vence-amanha{ color: var(--aviso-cor); font-weight: 600; }
+
+    /* ── Badges de prioridade ────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: .72rem;
+      font-weight: 600;
+    }
+    .badge-critica  { background: var(--erro-bg);   color: var(--erro-cor);  }
+    .badge-alta     { background: var(--aviso-bg);  color: var(--aviso-cor); }
+    .badge-media    { background: var(--info-bg);   color: var(--info-cor);  }
+    .badge-baixa    { background: var(--cinza-100); color: var(--cinza-700); }
+
+    /* borda esquerda por prioridade */
+    .card[data-prioridade="Crítica"] { border-left-color: var(--erro-cor);  }
+    .card[data-prioridade="Alta"]    { border-left-color: var(--aviso-cor); }
+    .card[data-prioridade="Média"]   { border-left-color: var(--info-cor);  }
+    .card[data-prioridade="Baixa"]   { border-left-color: var(--cinza-400); }
+
+    /* ── Modal ───────────────────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: var(--shadow-hover);
+    }
+    .modal h2 {
+      font-family: 'DM Serif Display', serif;
+      color: var(--verde);
+      margin-bottom: 16px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+    label { display: block; font-size: .8rem; font-weight: 500; color: var(--cinza-700); margin-bottom: 4px; }
+    input[type="text"], input[type="date"], input[type="email"], select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--cinza-100);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: .875rem;
+    }
+    textarea { resize: vertical; min-height: 72px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+    /* ── Toast ───────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--verde);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: .875rem;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Loading ─────────────────────────────────────────── */
+    #loading {
+      text-align: center;
+      padding: 48px;
+      color: var(--cinza-400);
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <!-- Logo Unimed SVG oficial (símbolo cruz verde + texto) -->
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unimed">
+    <rect x="12" y="2" width="8" height="28" rx="2" fill="#fff"/>
+    <rect x="2" y="12" width="28" height="8" rx="2" fill="#fff"/>
+  </svg>
+  <h1>Gestão de Tarefas — Rede Ambulatorial</h1>
+  <div style="flex:1"></div>
+  <button class="btn btn-dourado" onclick="abrirModal()">+ Nova Tarefa</button>
+</header>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <select id="filtroProjeto" onchange="renderBoard()">
+    <option value="">Todos os projetos</option>
+  </select>
+  <select id="filtroResponsavel" onchange="renderBoard()">
+    <option value="">Todos os responsáveis</option>
+  </select>
+  <input type="text" id="filtroBusca" placeholder="Buscar tarefa..." oninput="renderBoard()" style="min-width:180px">
+</div>
+
+<!-- Board -->
+<div class="board" id="board">
+  <div id="loading">Carregando tarefas…</div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="fecharModalFora(event)">
+  <div class="modal">
+    <h2 id="modalTitulo">Nova Tarefa</h2>
+    <form id="formTarefa" onsubmit="salvarTarefa(event)">
+      <input type="hidden" id="campoId">
+      <div class="form-grid">
+        <div class="full">
+          <label>Tarefa *</label>
+          <input type="text" id="campoTarefa" required>
+        </div>
+        <div>
+          <label>Projeto</label>
+          <input type="text" id="campoProjeto">
+        </div>
+        <div>
+          <label>Responsável (e-mail)</label>
+          <input type="email" id="campoResponsavel">
+        </div>
+        <div>
+          <label>Prazo</label>
+          <input type="date" id="campoPrazo">
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="campoStatus">
+            <option>A fazer</option>
+            <option>Em andamento</option>
+            <option>Bloqueado</option>
+            <option>Concluído</option>
+          </select>
+        </div>
+        <div>
+          <label>Prioridade</label>
+          <select id="campoPrioridade">
+            <option>Crítica</option>
+            <option>Alta</option>
+            <option selected>Média</option>
+            <option>Baixa</option>
+          </select>
+        </div>
+        <div class="full">
+          <label>Observações</label>
+          <textarea id="campoObservacoes"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" style="background:var(--cinza-100);color:var(--cinza-700)" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Configuração ──────────────────────────────────────────────
+var WEBAPP_URL = '';  // preencher com a URL do Apps Script Web App
+
+var COLUNAS = ['A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
+var tarefas = [];
+
+// ── JSONP call ────────────────────────────────────────────────
+function chamarAPI(params, callback) {
+  var cbName = '_cb_' + Date.now();
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.getElementById(cbName + '_script').remove();
+    callback(data);
+  };
+  params.callback = cbName;
+  var qs = Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(
+      typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
+    );
+  }).join('&');
+  var s = document.createElement('script');
+  s.id  = cbName + '_script';
+  s.src = WEBAPP_URL + '?' + qs;
+  document.body.appendChild(s);
+}
+
+// ── Inicialização ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  carregarTarefas();
+});
+
+function carregarTarefas() {
+  document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
+  chamarAPI({ acao: 'listarTarefas' }, function(data) {
+    tarefas = data.tarefas || [];
+    popularFiltros();
+    renderBoard();
+  });
+}
+
+// ── Filtros ───────────────────────────────────────────────────
+function popularFiltros() {
+  var projetos     = [...new Set(tarefas.map(function(t){ return t.Projeto; }).filter(Boolean))].sort();
+  var responsaveis = [...new Set(tarefas.map(function(t){ return t['Responsável']; }).filter(Boolean))].sort();
+
+  var fpEl = document.getElementById('filtroProjeto');
+  fpEl.innerHTML = '<option value="">Todos os projetos</option>';
+  projetos.forEach(function(p) {
+    fpEl.innerHTML += '<option value="' + p + '">' + p + '</option>';
+  });
+
+  var frEl = document.getElementById('filtroResponsavel');
+  frEl.innerHTML = '<option value="">Todos os responsáveis</option>';
+  responsaveis.forEach(function(r) {
+    frEl.innerHTML += '<option value="' + r + '">' + r + '</option>';
+  });
+}
+
+function tarefasFiltradas() {
+  var proj = document.getElementById('filtroProjeto').value;
+  var resp = document.getElementById('filtroResponsavel').value;
+  var busca = document.getElementById('filtroBusca').value.toLowerCase();
+  return tarefas.filter(function(t) {
+    if (proj && t.Projeto !== proj) return false;
+    if (resp && t['Responsável'] !== resp) return false;
+    if (busca && !t.Tarefa.toLowerCase().includes(busca)) return false;
+    return true;
+  });
+}
+
+// ── Render board ──────────────────────────────────────────────
+function renderBoard() {
+  var board   = document.getElementById('board');
+  var filtradas = tarefasFiltradas();
+  board.innerHTML = '';
+
+  COLUNAS.forEach(function(status) {
+    var cards = filtradas.filter(function(t){ return t.Status === status; });
+    var col = document.createElement('div');
+    col.className   = 'coluna';
+    col.dataset.status = status;
+
+    col.innerHTML = '<div class="coluna-header">'
+      + status
+      + '<span class="badge-count">' + cards.length + '</span>'
+      + '</div>'
+      + '<div class="coluna-body" id="col-' + status.replace(/ /g,'_') + '"></div>';
+
+    board.appendChild(col);
+    var body = col.querySelector('.coluna-body');
+
+    body.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      body.classList.add('dragover');
+    });
+    body.addEventListener('dragleave', function() { body.classList.remove('dragover'); });
+    body.addEventListener('drop', function(e) {
+      e.preventDefault();
+      body.classList.remove('dragover');
+      var id = e.dataTransfer.getData('text/plain');
+      moverCard(id, status);
+    });
+
+    cards.forEach(function(t) { body.appendChild(criarCard(t)); });
+  });
+}
+
+function criarCard(t) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.draggable  = true;
+  card.dataset.id = t.ID;
+  card.dataset.prioridade = t.Prioridade || '';
+
+  var prazoStr = '';
+  var prazoClass = 'card-prazo';
+  if (t.Prazo) {
+    var prazo = new Date(t.Prazo);
+    var hoje  = new Date(); hoje.setHours(0,0,0,0);
+    var amanha = new Date(hoje); amanha.setDate(hoje.getDate()+1);
+    prazoStr = prazo.toLocaleDateString('pt-BR');
+    if (prazo.getTime() === hoje.getTime())   prazoClass += ' vence-hoje';
+    if (prazo.getTime() === amanha.getTime()) prazoClass += ' vence-amanha';
+  }
+
+  var badgeClass = ({
+    'Crítica': 'badge-critica',
+    'Alta':    'badge-alta',
+    'Média':   'badge-media',
+    'Baixa':   'badge-baixa'
+  })[t.Prioridade] || 'badge-baixa';
+
+  card.innerHTML = '<div class="card-titulo">' + esc(t.Tarefa) + '</div>'
+    + (t.Projeto ? '<div class="card-projeto">' + esc(t.Projeto) + '</div>' : '')
+    + '<div class="card-footer">'
+    + '<span class="badge ' + badgeClass + '">' + esc(t.Prioridade || '') + '</span>'
+    + (t['Responsável'] ? '<span class="card-responsavel">' + esc(t['Responsável'].split('@')[0]) + '</span>' : '')
+    + (prazoStr ? '<span class="' + prazoClass + '">' + prazoStr + '</span>' : '')
+    + '</div>';
+
+  card.addEventListener('dragstart', function(e) {
+    e.dataTransfer.setData('text/plain', t.ID);
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragend', function() { card.classList.remove('dragging'); });
+  card.addEventListener('dblclick', function() { abrirModal(t); });
+
+  return card;
+}
+
+// ── Drag and drop → API ───────────────────────────────────────
+function moverCard(id, novoStatus) {
+  var tarefa = tarefas.find(function(t){ return String(t.ID) === String(id); });
+  if (!tarefa || tarefa.Status === novoStatus) return;
+
+  tarefa.Status = novoStatus;
+  renderBoard();
+
+  chamarAPI({ acao: 'atualizarTarefa', dados: { id: id, status: novoStatus } }, function(data) {
+    if (data.erro) { toast('Erro ao mover: ' + data.erro, true); carregarTarefas(); }
+    else toast('Status atualizado.');
+  });
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function abrirModal(tarefa) {
+  document.getElementById('campoId').value          = tarefa ? tarefa.ID         : '';
+  document.getElementById('campoTarefa').value      = tarefa ? tarefa.Tarefa     : '';
+  document.getElementById('campoProjeto').value     = tarefa ? tarefa.Projeto    : '';
+  document.getElementById('campoResponsavel').value = tarefa ? tarefa['Responsável'] : '';
+  document.getElementById('campoPrazo').value       = tarefa && tarefa.Prazo ? isoDate(tarefa.Prazo) : '';
+  document.getElementById('campoStatus').value      = tarefa ? tarefa.Status     : 'A fazer';
+  document.getElementById('campoPrioridade').value  = tarefa ? tarefa.Prioridade : 'Média';
+  document.getElementById('campoObservacoes').value = tarefa ? tarefa.Observações : '';
+  document.getElementById('modalTitulo').textContent = tarefa ? 'Editar Tarefa' : 'Nova Tarefa';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function fecharModal() { document.getElementById('overlay').classList.remove('open'); }
+function fecharModalFora(e) { if (e.target === document.getElementById('overlay')) fecharModal(); }
+
+function salvarTarefa(e) {
+  e.preventDefault();
+  var id = document.getElementById('campoId').value;
+  var dados = {
+    tarefa:      document.getElementById('campoTarefa').value,
+    projeto:     document.getElementById('campoProjeto').value,
+    responsavel: document.getElementById('campoResponsavel').value,
+    prazo:       document.getElementById('campoPrazo').value,
+    status:      document.getElementById('campoStatus').value,
+    prioridade:  document.getElementById('campoPrioridade').value,
+    observacoes: document.getElementById('campoObservacoes').value
+  };
+
+  if (id) {
+    dados.id = id;
+    chamarAPI({ acao: 'atualizarTarefa', dados: dados }, function(data) {
+      if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+      fecharModal();
+      toast('Tarefa atualizada.');
+      carregarTarefas();
+    });
+  } else {
+    chamarAPI({ acao: 'criarTarefa', dados: dados }, function(data) {
+      if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+      fecharModal();
+      toast('Tarefa criada.');
+      carregarTarefas();
+    });
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, erro) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = erro ? 'var(--erro-cor)' : 'var(--verde)';
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function isoDate(val) {
+  if (!val) return '';
+  var d = new Date(val);
+  return isNaN(d) ? '' : d.toISOString().slice(0,10);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Credenciais e config local
+.clasp.json
+credentials.json
+token.json
+*.env
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
