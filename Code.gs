@@ -210,6 +210,72 @@ function criarEventoCalendar(dados, prazo) {
   }
 }
 
+// ── Setup inicial da planilha ─────────────────────────────────
+// Rodar UMA VEZ após criar o Google Sheets.
+// Cria abas, cabeçalhos, validações de dados e formatação.
+function setup() {
+  var ss = SHEET_ID
+    ? SpreadsheetApp.openById(SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+
+  // ── Aba Tarefas ──────────────────────────────────────────────
+  var tarefas = ss.getSheetByName(ABA_TAREFAS) || ss.insertSheet(ABA_TAREFAS);
+
+  var hTarefas = ['ID','Tarefa','Projeto','Responsável','Prazo','Status',
+                  'Prioridade','Criado por','Data criação','Observações','Ativo'];
+  tarefas.getRange(1, 1, 1, hTarefas.length).setValues([hTarefas])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  tarefas.setFrozenRows(1);
+
+  var larguras = [50, 260, 160, 210, 100, 120, 100, 210, 140, 260, 55];
+  larguras.forEach(function(w, i) { tarefas.setColumnWidth(i + 1, w); });
+
+  tarefas.getRange(2, 6, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['A fazer','Em andamento','Bloqueado','Concluído'], true).build());
+  tarefas.getRange(2, 7, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Crítica','Alta','Média','Baixa'], true).build());
+  tarefas.getRange(2, 11, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['TRUE','FALSE'], true).build());
+
+  // ── Aba Log ──────────────────────────────────────────────────
+  var log = ss.getSheetByName(ABA_LOG) || ss.insertSheet(ABA_LOG);
+
+  var hLog = ['ID','Data/Hora','Editor','Ação','Campo','Valor Anterior','Valor Novo'];
+  log.getRange(1, 1, 1, hLog.length).setValues([hLog])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  log.setFrozenRows(1);
+
+  var largLog = [50, 150, 210, 100, 130, 220, 220];
+  largLog.forEach(function(w, i) { log.setColumnWidth(i + 1, w); });
+
+  // ── Aba Checklists (templates) ───────────────────────────────
+  var ckl = ss.getSheetByName('Checklists') || ss.insertSheet('Checklists');
+
+  var hCkl = ['ID_Template','Nome_Template','Item','Ordem'];
+  ckl.getRange(1, 1, 1, hCkl.length).setValues([hCkl])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  ckl.setFrozenRows(1);
+  [80, 200, 300, 60].forEach(function(w, i) { ckl.setColumnWidth(i + 1, w); });
+
+  // ── Aba Checklist_Status (estado por tarefa) ─────────────────
+  var cks = ss.getSheetByName('Checklist_Status') || ss.insertSheet('Checklist_Status');
+
+  var hCks = ['ID','ID_Tarefa','ID_Template','Item','Ordem','Concluído','Data conclusão'];
+  cks.getRange(1, 1, 1, hCks.length).setValues([hCks])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  cks.setFrozenRows(1);
+  cks.getRange(2, 6, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['TRUE','FALSE'], true).build());
+  [50, 80, 80, 300, 60, 80, 140].forEach(function(w, i) { cks.setColumnWidth(i + 1, w); });
+
+  SpreadsheetApp.flush();
+  Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status');
+}
+
 // ── Trigger diário: lembretes D-1 ────────────────────────────
 function lembretesDiarios() {
   var sheet  = getSheet(ABA_TAREFAS);

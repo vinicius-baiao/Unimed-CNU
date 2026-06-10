@@ -5,7 +5,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(extract-text \"C:\\\\Users\\\\Aurélio\\\\Downloads\\\\CNU_TaskTracker_Template.xlsx\")",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
