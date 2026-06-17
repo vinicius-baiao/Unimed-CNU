@@ -2,7 +2,7 @@
 //  Tarefas CNU — Backend (Apps Script)
 // ============================================================
 
-var SHEET_ID        = '';  // preencher após criar a planilha
+var SHEET_ID        = '1veZ4jj9zrs6TeQxPl_NrMUxelqITRSlAmwFH_B_wt_w';
 var ABA_TAREFAS      = 'Tarefas';
 var ABA_LOG          = 'Log';
 var ABA_CHECKLISTS   = 'Checklists';
