@@ -482,6 +482,45 @@ function setup() {
   Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários');
 }
 
+// ── popularUsuarios ── rodar 1x após setup() ──────────────────
+function popularUsuarios() {
+  var ss = SHEET_ID
+    ? SpreadsheetApp.openById(SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+  var usu = ss.getSheetByName(ABA_USUARIOS);
+  if (!usu) { Logger.log('Aba Usuários não existe. Rode setup() primeiro.'); return; }
+
+  // Limpa dados existentes (mantém cabeçalho)
+  var ultima = usu.getLastRow();
+  if (ultima > 1) usu.getRange(2, 1, ultima - 1, 3).clearContent();
+
+  // [Nome, Email, Admin]
+  var usuarios = [
+    ['Vinicius Baião',              'vinicius.baiao@unimedcnu.coop.br',           true],
+    ['Aurélio Corujeira',           'aurelio.pereira.ext@unimedcnu.coop.br',       true],
+    ['Carlos Christian Simões',     'carlos.simoes@unimedcnu.coop.br',             false],
+    ['Carolina Hashimoto',          'carolina.lopes@unimedcnu.coop.br',            false],
+    ['Eduardo Caporicci',           'eduardo.caporicci@unimedcnu.coop.br',         false],
+    ['Anastacia Semaan',            'tacia@unimedcnu.coop.br',                     false],
+    ['Andressa Souza',              'andressa.souza.ext@unimedcnu.coop.br',        false],
+    ['Lorena Paiva',                'redesalvador@unimedcnu.coop.br',              false],
+    ['Flavia Coelho',               'flavia.coelho@unimedcnu.coop.br',             false],
+    ['Tainara Bramont',             'tainara.conceicao@unimedcnu.coop.br',         false],
+    ['Gabriel Boaventura',          'gabriel.boaventura@unimedcnu.coop.br',        false],
+    ['Thais Conceição',             'thais.conceicao@unimedcnu.coop.br',           false],
+    ['Priscila Amazonas',           'priscila.amazonas@unimedcnu.coop.br',         false],
+    ['Mateus Cruz',                 'mateus.silva@unimedcnu.coop.br',              false],
+    ['Maiara Atagiba',              'maiara.cardoso@unimedcnu.coop.br',            false],
+    ['Ana Tarsis',                  'anatarsis.santos@unimedcnu.coop.br',          false],
+    ['Marcos Paulo Pereira',        'marcos.pereira@unimedcnu.coop.br',            false],
+    ['Andressa De Jesus Lima',      'andressa.lima@unimedcnu.coop.br',             false]
+  ];
+
+  usu.getRange(2, 1, usuarios.length, 3).setValues(usuarios);
+  SpreadsheetApp.flush();
+  Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
+}
+
 // ── listarInteracoes ──────────────────────────────────────────
 function listarInteracoes(dados) {
   var sheet = getSheet(ABA_INTERACOES);
