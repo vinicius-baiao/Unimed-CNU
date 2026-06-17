@@ -451,8 +451,9 @@
       transition: opacity .2s, transform .2s;
       pointer-events: none; z-index: 200; max-width: 340px;
     }
-    #toast.show { opacity: 1; transform: translateY(0); }
-    #toast.erro { background: var(--erro-cor); }
+    #toast.show    { opacity: 1; transform: translateY(0); }
+    #toast.erro    { background: var(--erro-cor); }
+    #toast.sucesso { background: var(--col-concluido); }
     #loading { text-align: center; padding: 56px; color: var(--text-muted); width: 100%; font-size: .9rem; }
 
     /* ── Print / PDF ─────────────────────────────────────── */
@@ -1108,17 +1109,24 @@ function salvarTarefa(e) {
   var acao = id ? 'atualizarTarefa' : 'criarTarefa';
   if (id) dados.id = id;
 
+  var resetBtn = function() { btn.disabled = false; btn.textContent = 'Salvar'; };
+
+  var timeout = setTimeout(function() {
+    resetBtn();
+    toast('Tempo esgotado. Verifique sua conexão e tente novamente.', true);
+  }, 15000);
+
   chamarAPI({ acao: acao, dados: dados }, function(data) {
+    clearTimeout(timeout);
     if (data.erro) {
       toast('Erro: ' + data.erro, true);
-      btn.disabled = false;
-      btn.textContent = 'Salvar';
+      resetBtn();
       return;
     }
     var tid = id || String(data.id);
     salvarCkl(tid, function() {
       fecharModal();
-      toast(id ? 'Tarefa atualizada.' : 'Tarefa criada.');
+      toast(id ? '✓ Tarefa atualizada com sucesso.' : '✓ Tarefa criada com sucesso.', false, true);
       if (id) delete interacoesCache[String(id)];
       carregarTudo();
     });
@@ -1262,12 +1270,13 @@ function exportarPDF() {
 }
 
 // ── Toast ─────────────────────────────────────────────────────
-function toast(msg, erro) {
+function toast(msg, erro, sucesso) {
   var el = document.getElementById('toast');
   el.textContent = msg;
-  el.classList.toggle('erro', !!erro);
+  el.classList.toggle('erro',    !!erro);
+  el.classList.toggle('sucesso', !!sucesso);
   el.classList.add('show');
-  setTimeout(function() { el.classList.remove('show'); }, 3200);
+  setTimeout(function() { el.classList.remove('show'); }, 3500);
 }
 
 // ── Helpers ───────────────────────────────────────────────────
