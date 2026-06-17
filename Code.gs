@@ -137,8 +137,8 @@ function criarTarefa(dados) {
   gravarLog('CRIAR', 'Tarefa', '', dados.tarefa);
 
   if (dados.responsavel) {
-    notificarResponsavel(dados, 'criacao');
-    criarEventoCalendar(dados, prazo);
+    try { notificarResponsavel(dados, 'criacao'); } catch(e) { Logger.log('Email erro: ' + e.message); }
+    try { criarEventoCalendar(dados, prazo); }      catch(e) { Logger.log('Calendar erro: ' + e.message); }
   }
 
   return { sucesso: true, id: id };
@@ -313,20 +313,42 @@ function salvarChecklist(dados) {
 // ── Notificações e Calendar ───────────────────────────────────
 function notificarResponsavel(dados, tipo) {
   var assuntos = {
-    criacao:     '[Tarefas CNU] Nova tarefa atribuída a você',
-    reatribuicao:'[Tarefas CNU] Tarefa reatribuída a você'
+    criacao:      '[Tarefas CNU] Nova tarefa atribuída a você',
+    reatribuicao: '[Tarefas CNU] Tarefa reatribuída a você'
   };
-  var corpo = 'Olá,\n\n'
-    + 'Tarefa: '   + (dados.tarefa    || '') + '\n'
-    + 'Projeto: '  + (dados.projeto   || '') + '\n'
-    + 'Prazo: '    + (dados.prazo     || '') + '\n'
-    + 'Prioridade: '+ (dados.prioridade|| '') + '\n\n'
-    + 'Acesse o painel para mais detalhes.\n\nUnimed CNU';
+  var url = ScriptApp.getService().getUrl();
+
+  var prazoFmt = dados.prazo
+    ? new Date(dados.prazo).toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'})
+    : '—';
+
+  var html = '<div style="font-family:Arial,sans-serif;max-width:600px;color:#212529">'
+    + '<div style="background:#004e4c;padding:16px 24px;border-radius:8px 8px 0 0">'
+    + '<h2 style="color:#fff;margin:0;font-size:16px">' + (assuntos[tipo] || assuntos.criacao) + '</h2>'
+    + '<p style="color:#a8d5d4;margin:4px 0 0;font-size:12px">Unimed CNU · Rede Ambulatorial</p>'
+    + '</div>'
+    + '<div style="background:#fff;padding:20px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">'
+    + '<tr><td style="padding:7px 0;color:#6c757d;width:110px">Tarefa</td>'
+    +     '<td style="padding:7px 0;font-weight:600">' + (dados.tarefa || '') + '</td></tr>'
+    + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Projeto</td>'
+    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + (dados.projeto || '—') + '</td></tr>'
+    + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Prazo</td>'
+    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + prazoFmt + '</td></tr>'
+    + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Prioridade</td>'
+    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + (dados.prioridade || '—') + '</td></tr>'
+    + '</table>'
+    + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
+    +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'
+    + 'Abrir Gestão de Tarefas →</a>'
+    + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
+    + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
+    + '</div></div>';
 
   MailApp.sendEmail({
-    to:      dados.responsavel,
-    subject: assuntos[tipo] || assuntos.criacao,
-    body:    corpo
+    to:       dados.responsavel,
+    subject:  assuntos[tipo] || assuntos.criacao,
+    htmlBody: html
   });
 }
 
@@ -536,11 +558,30 @@ function lembretesDiarios() {
     var responsavel = linha[COL.RESPONSAVEL];
     if (!responsavel) continue;
 
+    var url = ScriptApp.getService().getUrl();
+    var htmlLem = '<div style="font-family:Arial,sans-serif;max-width:600px;color:#212529">'
+      + '<div style="background:#004e4c;padding:16px 24px;border-radius:8px 8px 0 0">'
+      + '<h2 style="color:#fff;margin:0;font-size:16px">[Tarefas CNU] Lembrete: tarefa vence amanhã</h2>'
+      + '<p style="color:#a8d5d4;margin:4px 0 0;font-size:12px">Unimed CNU · Rede Ambulatorial</p>'
+      + '</div>'
+      + '<div style="background:#fff;padding:20px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
+      + '<p style="font-size:14px;margin:0 0 12px">A tarefa abaixo vence <strong>amanhã</strong>:</p>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">'
+      + '<tr><td style="padding:7px 0;color:#6c757d;width:80px">Tarefa</td>'
+      +     '<td style="padding:7px 0;font-weight:600">' + linha[COL.TAREFA] + '</td></tr>'
+      + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Projeto</td>'
+      +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + (linha[COL.PROJETO] || '—') + '</td></tr>'
+      + '</table>'
+      + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
+      +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'
+      + 'Abrir Gestão de Tarefas →</a>'
+      + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
+      + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
+      + '</div></div>';
     MailApp.sendEmail({
-      to:      responsavel,
-      subject: '[Tarefas CNU] Lembrete: tarefa vence amanhã',
-      body:    'Olá,\n\nA tarefa "' + linha[COL.TAREFA] + '" do projeto "'
-               + linha[COL.PROJETO] + '" vence amanhã.\n\nUnimed CNU'
+      to:       responsavel,
+      subject:  '[Tarefas CNU] Lembrete: tarefa vence amanhã',
+      htmlBody: htmlLem
     });
   }
 }
