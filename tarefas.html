@@ -105,6 +105,7 @@
       box-shadow: var(--shadow); cursor: grab;
       border-left: 3px solid transparent;
       transition: box-shadow .15s, transform .15s;
+      user-select: none; -webkit-user-select: none;
     }
     .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
     .card.dragging { opacity: .5; cursor: grabbing; }
@@ -650,7 +651,10 @@ function renderBoard() {
 
     var body = col.querySelector('.coluna-body');
     body.addEventListener('dragover',  function(e) { e.preventDefault(); body.classList.add('dragover'); });
-    body.addEventListener('dragleave', function()  { body.classList.remove('dragover'); });
+    body.addEventListener('dragleave', function(e) {
+      // só remove o highlight quando o mouse realmente sai da coluna
+      if (!body.contains(e.relatedTarget)) body.classList.remove('dragover');
+    });
     body.addEventListener('drop', function(e) {
       e.preventDefault(); body.classList.remove('dragover');
       moverCard(e.dataTransfer.getData('text/plain'), status);
@@ -700,6 +704,7 @@ function criarCard(t) {
 
   card.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', t.ID); card.classList.add('dragging'); });
   card.addEventListener('dragend',   function()  { card.classList.remove('dragging'); });
+  card.addEventListener('dragover',  function(e) { e.preventDefault(); });
   card.addEventListener('dblclick',  function()  { abrirModal(t); });
   return card;
 }
