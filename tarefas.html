@@ -459,7 +459,7 @@
     /* ── Print / PDF ─────────────────────────────────────── */
     @media print {
       .top-bar, .view-toggle, .overlay, #toast, .td-acao, .sidebar,
-      header button, .btn-dourado, #btnExportar { display: none !important; }
+      header button, .btn-dourado { display: none !important; }
       body { background: #fff; }
       .app-layout { display: block; }
       .board { display: none !important; }
@@ -511,9 +511,6 @@
     </svg>
     <input type="text" id="filtroBusca" placeholder="Buscar tarefa…" oninput="renderView()">
   </div>
-  <button id="btnExportar" class="btn btn-ghost" onclick="exportarPDF()" title="Exportar lista em PDF">
-    ⬇ Exportar PDF
-  </button>
   <div class="view-toggle">
     <button class="toggle-btn active" id="btnKanban" onclick="setView('kanban')" title="Kanban">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
@@ -1258,16 +1255,6 @@ function salvarInteracao() {
   });
 }
 
-// ── Exportar PDF ──────────────────────────────────────────────
-function exportarPDF() {
-  document.getElementById('printDate').textContent = 'Gerado em ' + new Date().toLocaleString('pt-BR');
-  if (viewAtual !== 'lista') {
-    setView('lista');
-    setTimeout(function() { window.print(); }, 150);
-  } else {
-    window.print();
-  }
-}
 
 // ── Toast ─────────────────────────────────────────────────────
 function toast(msg, erro, sucesso) {
