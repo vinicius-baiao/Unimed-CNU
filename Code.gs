@@ -8,6 +8,7 @@ var ABA_LOG          = 'Log';
 var ABA_CHECKLISTS   = 'Checklists';
 var ABA_CKL_STATUS   = 'Checklist_Status';
 var ABA_INTERACOES   = 'Interações';
+var ABA_USUARIOS     = 'Usuários';
 var EMAIL_REPORTE    = '';  // e-mail(s) para o relatório diário, separados por vírgula
 
 // Índices das colunas (base 0) na aba Tarefas
@@ -50,7 +51,12 @@ function doGet(e) {
       case 'salvarChecklist':        resultado = salvarChecklist(dados);        break;
       case 'listarInteracoes':      resultado = listarInteracoes(dados);       break;
       case 'adicionarInteracao':    resultado = adicionarInteracao(dados);     break;
-      case 'getUsuario':            resultado = { email: Session.getActiveUser().getEmail() }; break;
+      case 'listarUsuarios':        resultado = listarUsuarios();                              break;
+      case 'getUsuario': {
+        var _u = Session.getActiveUser().getEmail();
+        resultado = { email: _u, admin: isAdmin(_u) };
+        break;
+      }
       default:
         resultado = { erro: 'Ação desconhecida: ' + acao };
     }
@@ -67,6 +73,30 @@ function doGet(e) {
   return ContentService
     .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Usuários / Admin ──────────────────────────────────────────
+function isAdmin(email) {
+  var sheet = getSheet(ABA_USUARIOS);
+  if (!sheet) return false;
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).toLowerCase() === String(email).toLowerCase()
+        && rows[i][2] === true) return true;
+  }
+  return false;
+}
+
+function listarUsuarios() {
+  var sheet = getSheet(ABA_USUARIOS);
+  if (!sheet) return { usuarios: [] };
+  var rows = sheet.getDataRange().getValues();
+  var lista = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][0] && !rows[i][1]) continue;
+    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), admin: rows[i][2] === true });
+  }
+  return { usuarios: lista };
 }
 
 // ── Helpers de planilha ───────────────────────────────────────
@@ -155,11 +185,12 @@ function atualizarTarefa(dados) {
     // ── Verificação de permissão ──────────────────────────────
     var editor  = Session.getActiveUser().getEmail();
     var criador = String(linhas[i][COL.CRIADO_POR] || '');
-    if (dados.status === 'Concluído' && dados.status !== linhas[i][COL.STATUS] && editor !== criador) {
+    var admin   = isAdmin(editor);
+    if (!admin && dados.status === 'Concluído' && dados.status !== linhas[i][COL.STATUS] && editor !== criador) {
       return { erro: 'Apenas quem criou a tarefa pode marcá-la como Concluída.' };
     }
     var prazoAtualStr = linhas[i][COL.PRAZO] ? new Date(linhas[i][COL.PRAZO]).toISOString().slice(0,10) : '';
-    if (dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr && editor !== criador) {
+    if (!admin && dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr && editor !== criador) {
       return { erro: 'Apenas quem criou a tarefa pode alterar o prazo.' };
     }
 
@@ -217,6 +248,11 @@ function excluirTarefa(dados) {
 
   for (var i = 1; i < linhas.length; i++) {
     if (String(linhas[i][COL.ID]) !== String(dados.id)) continue;
+    var editor  = Session.getActiveUser().getEmail();
+    var criador = String(linhas[i][COL.CRIADO_POR] || '');
+    if (editor !== criador && !isAdmin(editor)) {
+      return { erro: 'Apenas o criador da tarefa pode excluí-la.' };
+    }
     sheet.getRange(i + 1, COL.ATIVO + 1).setValue(false);
     gravarLog('EXCLUIR', 'Ativo', true, false);
     return { sucesso: true };
@@ -431,8 +467,19 @@ function setup() {
   inter.setFrozenRows(1);
   [50, 80, 150, 210, 160, 350].forEach(function(w, i) { inter.setColumnWidth(i + 1, w); });
 
+  // ── Aba Usuários ─────────────────────────────────────────────
+  var usu = ss.getSheetByName(ABA_USUARIOS) || ss.insertSheet(ABA_USUARIOS);
+  var hUsu = ['Nome', 'Email', 'Admin'];
+  usu.getRange(1, 1, 1, hUsu.length).setValues([hUsu])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  usu.setFrozenRows(1);
+  usu.getRange(2, 3, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['TRUE','FALSE'], true).build());
+  [220, 280, 80].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
+
   SpreadsheetApp.flush();
-  Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações');
+  Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários');
 }
 
 // ── listarInteracoes ──────────────────────────────────────────

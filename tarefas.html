@@ -617,8 +617,10 @@
             <input type="text" id="campoProjeto">
           </div>
           <div>
-            <label>Responsável (e-mail)</label>
-            <input type="email" id="campoResponsavel">
+            <label>Responsável</label>
+            <select id="campoResponsavel">
+              <option value="">— Selecionar responsável —</option>
+            </select>
           </div>
           <div>
             <label>Prazo</label>
@@ -667,6 +669,8 @@
       </div>
 
       <div class="modal-actions" id="actFormulario">
+        <button type="button" id="btnExcluir" class="btn btn-ghost" style="color:var(--erro-cor);border-color:var(--erro-cor);display:none" onclick="confirmarExcluir()">Excluir</button>
+        <div style="flex:1"></div>
         <button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
         <button type="submit" id="btnSalvar" class="btn btn-primary">Salvar</button>
       </div>
@@ -709,9 +713,11 @@ var COLUNAS     = ['A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
 
 var tarefas     = [];
 var templates   = [];
+var usuarios    = [];         // [{nome, email, admin}]
 var cklStatus   = {};         // {id_tarefa: [{item, ordem, concluido}]}
 var interacoesCache = {};     // {id_tarefa: [interacoes]} — cache lazy
-var currentUser = '';         // e-mail do usuário logado
+var currentUser        = '';  // e-mail do usuário logado
+var currentUserIsAdmin = false;
 
 var viewAtual    = 'kanban';
 var sortCol      = 'ID';
@@ -749,7 +755,13 @@ document.addEventListener('DOMContentLoaded', function() {
   carregarTudo();
   // Buscar usuário logado (assíncrono, não bloqueia o carregamento)
   if (WEBAPP_URL) {
-    chamarAPI({ acao: 'getUsuario' }, function(d) { currentUser = d.email || ''; });
+    chamarAPI({ acao: 'getUsuario' }, function(d) {
+      currentUser        = d.email  || '';
+      currentUserIsAdmin = d.admin  || false;
+    });
+    chamarAPI({ acao: 'listarUsuarios' }, function(d) {
+      usuarios = d.usuarios || [];
+    });
   }
 });
 
@@ -1042,6 +1054,30 @@ function setModalTab(tab) {
   }
 }
 
+function popularSelectResponsaveis(emailAtual) {
+  var sel = document.getElementById('campoResponsavel');
+  sel.innerHTML = '<option value="">— Selecionar responsável —</option>';
+  usuarios.forEach(function(u) {
+    var opt = document.createElement('option');
+    opt.value = u.email;
+    opt.textContent = u.nome + ' (' + u.email.split('@')[0] + ')';
+    if (u.email === emailAtual) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function confirmarExcluir() {
+  var id = document.getElementById('campoId').value;
+  if (!id) return;
+  if (!confirm('Excluir esta tarefa? A ação não pode ser desfeita.')) return;
+  chamarAPI({ acao: 'excluirTarefa', dados: { id: id } }, function(data) {
+    if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+    fecharModal();
+    toast('Tarefa excluída.', false, true);
+    carregarTudo();
+  });
+}
+
 // ── Modal / formulário ────────────────────────────────────────
 function abrirModal(tarefa) {
   modalTabAtual = 'dados';
@@ -1050,24 +1086,30 @@ function abrirModal(tarefa) {
   document.getElementById('campoId').value          = tarefa ? tarefa.ID              : '';
   document.getElementById('campoTarefa').value      = tarefa ? tarefa.Tarefa          : '';
   document.getElementById('campoProjeto').value     = tarefa ? tarefa.Projeto         : '';
-  document.getElementById('campoResponsavel').value = tarefa ? tarefa['Responsável']  : '';
   document.getElementById('campoPrazo').value       = tarefa && tarefa.Prazo ? isoDate(tarefa.Prazo) : '';
   document.getElementById('campoStatus').value      = tarefa ? tarefa.Status          : 'A fazer';
   document.getElementById('campoPrioridade').value  = tarefa ? tarefa.Prioridade      : 'Média';
   document.getElementById('campoObservacoes').value = tarefa ? tarefa['Observações']  : '';
   document.getElementById('modalTitulo').textContent = tarefa ? 'Editar Tarefa' : 'Nova Tarefa';
 
+  popularSelectResponsaveis(tarefa ? tarefa['Responsável'] : '');
+
   // Tabs: mostrar "Histórico" só ao editar
   var tabsEl = document.getElementById('modalTabsEl');
   tabsEl.style.display = tarefa ? 'flex' : 'none';
 
-  // Permissão: apenas criador pode mudar prazo ou concluir
+  // Permissão: apenas criador (ou admin) pode mudar prazo, concluir ou excluir
   var eCriador = !tarefa || !currentUser || String(tarefa['Criado por']) === currentUser;
-  document.getElementById('campoPrazo').disabled = !!tarefa && !eCriador;
-  document.getElementById('permissaoNota').style.display = (tarefa && !eCriador) ? 'block' : 'none';
+  var podeTudo  = eCriador || currentUserIsAdmin;
+  document.getElementById('campoPrazo').disabled = !!tarefa && !podeTudo;
+  document.getElementById('permissaoNota').style.display = (tarefa && !podeTudo) ? 'block' : 'none';
   Array.from(document.getElementById('campoStatus').options).forEach(function(opt) {
-    opt.disabled = (tarefa && !eCriador && opt.value === 'Concluído');
+    opt.disabled = (tarefa && !podeTudo && opt.value === 'Concluído');
   });
+
+  // Botão excluir: visível apenas para criador ou admin (ao editar)
+  var btnEx = document.getElementById('btnExcluir');
+  btnEx.style.display = (tarefa && podeTudo) ? '' : 'none';
 
   // Checklist
   document.getElementById('campoTemplate').value = '';
