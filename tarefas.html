@@ -220,7 +220,6 @@
       background: var(--bg-card); border-radius: 8px; padding: 12px 14px;
       box-shadow: var(--shadow); cursor: grab;
       border: 1px solid var(--border);
-      border-left: 3px solid transparent;
       transition: box-shadow .15s, transform .15s, border-color .15s;
       user-select: none; -webkit-user-select: none;
     }
@@ -228,7 +227,6 @@
       box-shadow: var(--shadow-hover);
       transform: translateY(-2px);
       border-color: var(--border-hover);
-      border-left-color: inherit;
     }
     .card.dragging { opacity: .45; cursor: grabbing; transform: rotate(1deg); }
     .card-titulo { font-weight: 500; font-size: .875rem; margin-bottom: 4px; color: var(--text-primary); line-height: 1.4; }
@@ -276,10 +274,6 @@
     .badge-media   { background: var(--info-bg);   color: var(--info-cor);  }
     .badge-baixa   { background: var(--border); color: var(--text-secondary); }
 
-    .card[data-prioridade="Crítica"] { border-left-color: var(--erro-cor);  }
-    .card[data-prioridade="Alta"]    { border-left-color: var(--aviso-cor); }
-    .card[data-prioridade="Média"]   { border-left-color: var(--col-andamento); }
-    .card[data-prioridade="Baixa"]   { border-left-color: var(--border-hover); }
 
     /* ── List View ───────────────────────────────────────── */
     .list-view { padding: 20px 24px; display: none; }
