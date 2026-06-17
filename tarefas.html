@@ -485,7 +485,7 @@
 
       <div class="modal-actions" id="actFormulario">
         <button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Salvar</button>
+        <button type="submit" id="btnSalvar" class="btn btn-primary">Salvar</button>
       </div>
     </form>
 
@@ -848,6 +848,10 @@ function fecharModalFora(e) { if (e.target === document.getElementById('overlay'
 
 function salvarTarefa(e) {
   e.preventDefault();
+  var btn = document.getElementById('btnSalvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+
   var id    = document.getElementById('campoId').value;
   var dados = {
     tarefa:      document.getElementById('campoTarefa').value,
@@ -863,7 +867,12 @@ function salvarTarefa(e) {
   if (id) dados.id = id;
 
   chamarAPI({ acao: acao, dados: dados }, function(data) {
-    if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+    if (data.erro) {
+      toast('Erro: ' + data.erro, true);
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+      return;
+    }
     var tid = id || String(data.id);
     salvarCkl(tid, function() {
       fecharModal();
