@@ -31,6 +31,13 @@ function doGet(e) {
   var callback = e.parameter.callback || '';
   var dados    = e.parameter.dados    ? JSON.parse(e.parameter.dados) : {};
 
+  // Sem ação → serve o frontend HTML (permite embed no Google Sites)
+  if (!acao) {
+    return HtmlService.createHtmlOutputFromFile('tarefas')
+      .setTitle('Gestão de Tarefas — Rede Ambulatorial CNU')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   var resultado;
   try {
     switch (acao) {
