@@ -76,7 +76,7 @@
       display: flex; align-items: center; gap: 8px;
       background: var(--bg-app); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 6px 12px;
-      flex: 0 0 220px; transition: border-color .15s, box-shadow .15s;
+      flex: 1; transition: border-color .15s, box-shadow .15s;
     }
     .top-bar-search:focus-within {
       border-color: var(--verde); box-shadow: 0 0 0 3px rgba(0,78,76,.10);
@@ -510,7 +510,6 @@
     </svg>
     <input type="text" id="filtroBusca" placeholder="Buscar tarefa…" oninput="renderView()">
   </div>
-  <div style="flex:1"></div>
   <button id="btnExportar" class="btn btn-ghost" onclick="exportarPDF()" title="Exportar lista em PDF">
     ⬇ Exportar PDF
   </button>
