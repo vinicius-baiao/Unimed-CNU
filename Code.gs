@@ -76,13 +76,21 @@ function doGet(e) {
 }
 
 // ── Usuários / Admin ──────────────────────────────────────────
+// Aba Usuários: [0]Nome [1]Email [2]Perfil [3]Cargo [4]Time
+// Perfil "Admin" ou "Gestor" tem poderes de override (concluir/editar/excluir qualquer tarefa).
+function perfilEhAdmin(perfil) {
+  var p = String(perfil || '').toLowerCase().trim();
+  return p === 'admin' || p === 'gestor';
+}
+
 function isAdmin(email) {
   var sheet = getSheet(ABA_USUARIOS);
   if (!sheet) return false;
   var rows = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]).toLowerCase() === String(email).toLowerCase()
-        && rows[i][2] === true) return true;
+    if (String(rows[i][1]).toLowerCase() === String(email).toLowerCase()) {
+      return perfilEhAdmin(rows[i][2]);
+    }
   }
   return false;
 }
@@ -95,11 +103,12 @@ function listarUsuarios() {
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][0] && !rows[i][1]) continue;
     lista.push({
-      nome:     String(rows[i][0]),
-      email:    String(rows[i][1]),
-      admin:    rows[i][2] === true,
-      gerencia: String(rows[i][3] || ''),
-      unidade:  String(rows[i][4] || '')
+      nome:   String(rows[i][0]),
+      email:  String(rows[i][1]),
+      perfil: String(rows[i][2] || ''),
+      cargo:  String(rows[i][3] || ''),
+      time:   String(rows[i][4] || ''),
+      admin:  perfilEhAdmin(rows[i][2])
     });
   }
   return { usuarios: lista };
@@ -477,14 +486,14 @@ function setup() {
 
   // ── Aba Usuários ─────────────────────────────────────────────
   var usu = ss.getSheetByName(ABA_USUARIOS) || ss.insertSheet(ABA_USUARIOS);
-  var hUsu = ['Nome', 'Email', 'Admin', 'Gerência', 'Unidade'];
+  var hUsu = ['Nome', 'Email', 'Perfil', 'Cargo', 'Time'];
   usu.getRange(1, 1, 1, hUsu.length).setValues([hUsu])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   usu.setFrozenRows(1);
   usu.getRange(2, 3, 999).setDataValidation(
     SpreadsheetApp.newDataValidation()
-      .requireValueInList(['TRUE','FALSE'], true).build());
-  [220, 280, 80, 200, 200].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
+      .requireValueInList(['Admin','Gestor','Usuário Padrão'], true).build());
+  [220, 300, 130, 230, 240].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
 
   SpreadsheetApp.flush();
   Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários');
@@ -500,31 +509,50 @@ function popularUsuarios() {
 
   // Limpa dados existentes (mantém cabeçalho)
   var ultima = usu.getLastRow();
-  if (ultima > 1) usu.getRange(2, 1, ultima - 1, 3).clearContent();
+  if (ultima > 1) usu.getRange(2, 1, ultima - 1, 5).clearContent();
 
-  // [Nome, Email, Admin]
+  // [Nome, Email, Perfil, Cargo, Time]  — base de 2026-06-19 ("Usuário Ferramenta.xlsx")
   var usuarios = [
-    ['Vinicius Baião',              'vinicius.baiao@unimedcnu.coop.br',           true],
-    ['Aurélio Corujeira',           'aurelio.pereira.ext@unimedcnu.coop.br',       true],
-    ['Carlos Christian Simões',     'carlos.simoes@unimedcnu.coop.br',             false],
-    ['Carolina Hashimoto',          'carolina.lopes@unimedcnu.coop.br',            false],
-    ['Eduardo Caporicci',           'eduardo.caporicci@unimedcnu.coop.br',         false],
-    ['Anastacia Semaan',            'tacia@unimedcnu.coop.br',                     false],
-    ['Andressa Souza',              'andressa.souza.ext@unimedcnu.coop.br',        false],
-    ['Lorena Paiva',                'redesalvador@unimedcnu.coop.br',              false],
-    ['Flavia Coelho',               'flavia.coelho@unimedcnu.coop.br',             false],
-    ['Tainara Bramont',             'tainara.conceicao@unimedcnu.coop.br',         false],
-    ['Gabriel Boaventura',          'gabriel.boaventura@unimedcnu.coop.br',        false],
-    ['Thais Conceição',             'thais.conceicao@unimedcnu.coop.br',           false],
-    ['Priscila Amazonas',           'priscila.amazonas@unimedcnu.coop.br',         false],
-    ['Mateus Cruz',                 'mateus.silva@unimedcnu.coop.br',              false],
-    ['Maiara Atagiba',              'maiara.cardoso@unimedcnu.coop.br',            false],
-    ['Ana Tarsis',                  'anatarsis.santos@unimedcnu.coop.br',          false],
-    ['Marcos Paulo Pereira',        'marcos.pereira@unimedcnu.coop.br',            false],
-    ['Andressa De Jesus Lima',      'andressa.lima@unimedcnu.coop.br',             false]
+    ['Vinicius Baião',               'vinicius.baiao@unimedcnu.coop.br',          'Admin',          'Especialista',                     'Rede Ambulatorial'],
+    ['Aurélio Corujeira',            'aurelio.pereira.ext@unimedcnu.coop.br',     'Admin',          'Designer',                         'Rede Amb - Onco'],
+    ['Carlos Christian Simões',      'carlos.simoes@unimedcnu.coop.br',           'Gestor',         'Gerente de Rede',                  'Negociação de Rede - NNE'],
+    ['Carolina Hashimoto',           'carolina.lopes@unimedcnu.coop.br',          'Gestor',         'Coordenadora de Rede',             'Negociação de Rede - SSA'],
+    ['Andressa Souza',               'andressa.souza.ext@unimedcnu.coop.br',      'Usuário Padrão', 'Consultora',                       'Negociação de Rede - SSA'],
+    ['Lorena Paiva',                 'redesalvador@unimedcnu.coop.br',            'Usuário Padrão', 'Consultora',                       'Negociação de Rede - SSA'],
+    ['Debora Cardoso',               'deborasilva@unimednacional.coop.br',        'Usuário Padrão', 'Executivo de Relacionamento SR',   'Negociação de Rede - SSA'],
+    ['Flavia Coelho',                'flavia.coelho@unimedcnu.coop.br',           'Usuário Padrão', 'Executivo de Relacionamento PL',   'Negociação de Rede - SSA'],
+    ['Tainara Bramont',              'tainara.conceicao@unimedcnu.coop.br',       'Usuário Padrão', 'Executivo de Relacionamento JR',   'Negociação de Rede - SSA'],
+    ['Gabriel Boaventura',           'gabriel.boaventura@unimedcnu.coop.br',      'Usuário Padrão', 'Executivo de Relacionamento JR',   'Negociação de Rede - SSA'],
+    ['Thais Conceição',              'thais.conceicao@unimedcnu.coop.br',         'Usuário Padrão', 'Analista administrativo',          'Negociação de Rede - SSA'],
+    ['Priscila Amazonas',            'priscila.amazonas@unimedcnu.coop.br',       'Usuário Padrão', 'Analista administrativo',          'Negociação de Rede - SSA'],
+    ['Mateus Cruz',                  'mateus.silva@unimedcnu.coop.br',            'Usuário Padrão', 'Assistente administrativo',        'Negociação de Rede - SSA'],
+    ['Maiara Atagiba',               'maiara.cardoso@unimedcnu.coop.br',          'Usuário Padrão', 'Assistente administrativo',        'Negociação de Rede - SSA'],
+    ['Ana Tarsis',                   'anatarsis.santos@unimedcnu.coop.br',        'Usuário Padrão', 'Assistente administrativo',        'Negociação de Rede - SSA'],
+    ['Eduardo Caporicci',            'eduardo.caporicci@unimedcnu.coop.br',       'Gestor',         'Gerente',                          'Operações de Rede'],
+    ['Marcos Paulo Macedo Pereira',  'marcos.pereira@unimedcnu.coop.br',          'Usuário Padrão', 'Analista de NPS Pleno',            'Operações de Rede'],
+    ['Anastacia Loukas B Semaan',    'tacia@unimedcnu.coop.br',                   'Gestor',         'Coordenadora de Rede',             'Qualificação, Regulamentação e NSP'],
+    ['Andressa De Jesus Lima',       'andressa.lima@unimedcnu.coop.br',           'Usuário Padrão', 'Coordenador de Operações de Rede', ''],
+    ['Andrea Fonseca Cano',          'andrea.cano@unimednacional.coop.br',        'Usuário Padrão', '',                                 ''],
+    ['Beatriz Kaori Fujimoto',       'beatriz.fujimoto@unimedcnu.coop.br',        'Usuário Padrão', '',                                 ''],
+    ['Bruna Tupi Dos Santos',        'bruna.tupi@unimedcnu.coop.br',              'Usuário Padrão', '',                                 ''],
+    ['Cintia Maria Fernandes Rosa',  'cintia.rosa@unimedcnu.coop.br',             'Usuário Padrão', '',                                 ''],
+    ['Cleice Aparecida Dias Da Silva','cleice.dias@unimedcnu.coop.br',            'Usuário Padrão', '',                                 ''],
+    ['Cleice Aparecida Dias Da Silva','cleice.silva@unimedcnu.coop.br',           'Usuário Padrão', '',                                 ''],
+    ['Cristiane E Da Costa Ferreira','cristiane.costa@unimedcnu.coop.br',         'Usuário Padrão', '',                                 ''],
+    ['Erika Pereira Da Silva',       'erika.pereira@unimedcnu.coop.br',           'Usuário Padrão', '',                                 ''],
+    ['Florence Borges De Paiva',     'florence.paiva@unimedcnu.coop.br',          'Usuário Padrão', '',                                 ''],
+    ['Geovanna De Oliveira Ferreira','geovanna.ferreira@unimedcnu.coop.br',       'Usuário Padrão', '',                                 ''],
+    ['Gustavo Ferreira Machado',     'gustavo.machado@unimedcnu.coop.br',         'Usuário Padrão', '',                                 ''],
+    ['Jacqueline Mendes Pereira',    'jacqueline.pereira@unimednacional.coop.br', 'Usuário Padrão', '',                                 ''],
+    ['Joyce Araujo Viana',           'joyce.viana@unimednacional.coop.br',        'Usuário Padrão', '',                                 ''],
+    ['Natalia Da Silva Gomes Fonseca','natalia.fonseca@unimedcnu.coop.br',        'Usuário Padrão', '',                                 ''],
+    ['Priscila Alves Ferrari',       'priscila.ferrari@unimednacional.coop.br',   'Usuário Padrão', '',                                 ''],
+    ['Raquel Fuentes De Stefano',    'raquel.stefano@unimednacional.coop.br',     'Usuário Padrão', '',                                 ''],
+    ['Thais De S Carvalho Freitas',  'thais.freitas@unimedcnu.coop.br',           'Usuário Padrão', '',                                 ''],
+    ['Vinicius Silva De Oliveira',   'viniciuss.oliveira@unimedcnu.coop.br',      'Usuário Padrão', '',                                 '']
   ];
 
-  usu.getRange(2, 1, usuarios.length, 3).setValues(usuarios);
+  usu.getRange(2, 1, usuarios.length, 5).setValues(usuarios);
   SpreadsheetApp.flush();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }
