@@ -612,15 +612,23 @@
             <label>Tarefa *</label>
             <input type="text" id="campoTarefa" required>
           </div>
-          <div>
-            <label>Projeto</label>
-            <input type="text" id="campoProjeto">
-          </div>
-          <div>
+          <div class="full">
             <label>Responsável</label>
+            <div style="display:flex; gap:8px; margin-bottom:8px">
+              <select id="filtroGerencia" onchange="onFiltroGerencia()">
+                <option value="">Todas as gerências</option>
+              </select>
+              <select id="filtroUnidade" onchange="filtrarResponsaveis()">
+                <option value="">Todas as unidades</option>
+              </select>
+            </div>
             <select id="campoResponsavel">
               <option value="">— Selecionar responsável —</option>
             </select>
+          </div>
+          <div>
+            <label>Projeto</label>
+            <input type="text" id="campoProjeto">
           </div>
           <div>
             <label>Prazo</label>
@@ -1064,16 +1072,72 @@ function setModalTab(tab) {
   }
 }
 
+var responsavelSelecionado = '';
+
+function optsDistintas(valores) {
+  return uniq(valores).sort(function(a, b) {
+    return String(a).localeCompare(String(b), 'pt-BR');
+  });
+}
+
+// Popula os 2 filtros (Gerência → Unidade) e a lista de responsáveis, mantendo a seleção atual.
 function popularSelectResponsaveis(emailAtual) {
+  responsavelSelecionado = emailAtual || '';
+  var gSel = document.getElementById('filtroGerencia');
+  gSel.innerHTML = '<option value="">Todas as gerências</option>'
+    + optsDistintas(usuarios.map(function(u) { return u.gerencia; }))
+      .map(function(g) { return '<option value="' + esc(g) + '">' + esc(g) + '</option>'; }).join('');
+  gSel.value = '';
+  atualizarFiltroUnidades();
+  filtrarResponsaveis();
+}
+
+// Unidades dependem da gerência escolhida (cascata).
+function atualizarFiltroUnidades() {
+  var ger  = document.getElementById('filtroGerencia').value;
+  var base = ger ? usuarios.filter(function(u) { return u.gerencia === ger; }) : usuarios;
+  var uSel = document.getElementById('filtroUnidade');
+  uSel.innerHTML = '<option value="">Todas as unidades</option>'
+    + optsDistintas(base.map(function(u) { return u.unidade; }))
+      .map(function(u) { return '<option value="' + esc(u) + '">' + esc(u) + '</option>'; }).join('');
+  uSel.value = '';
+}
+
+function onFiltroGerencia() {
+  atualizarFiltroUnidades();
+  filtrarResponsaveis();
+}
+
+function filtrarResponsaveis() {
+  var ger = document.getElementById('filtroGerencia').value;
+  var uni = document.getElementById('filtroUnidade').value;
   var sel = document.getElementById('campoResponsavel');
   sel.innerHTML = '<option value="">— Selecionar responsável —</option>';
-  usuarios.forEach(function(u) {
+
+  var achou = false;
+  usuarios
+    .filter(function(u) {
+      if (ger && u.gerencia !== ger) return false;
+      if (uni && u.unidade !== uni) return false;
+      return true;
+    })
+    .forEach(function(u) {
+      var opt = document.createElement('option');
+      opt.value = u.email;
+      opt.textContent = u.nome + ' (' + u.email.split('@')[0] + ')';
+      if (u.email === responsavelSelecionado) { opt.selected = true; achou = true; }
+      sel.appendChild(opt);
+    });
+
+  // Garante que o responsável já atribuído continue selecionável mesmo fora do filtro.
+  if (responsavelSelecionado && !achou) {
+    var atual = usuarios.find(function(x) { return x.email === responsavelSelecionado; });
     var opt = document.createElement('option');
-    opt.value = u.email;
-    opt.textContent = u.nome + ' (' + u.email.split('@')[0] + ')';
-    if (u.email === emailAtual) opt.selected = true;
+    opt.value = responsavelSelecionado;
+    opt.textContent = atual ? atual.nome + ' (' + atual.email.split('@')[0] + ')' : responsavelSelecionado;
+    opt.selected = true;
     sel.appendChild(opt);
-  });
+  }
 }
 
 function confirmarExcluir() {
