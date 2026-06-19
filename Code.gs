@@ -384,7 +384,9 @@ function notificarResponsavel(dados, tipo) {
   MailApp.sendEmail({
     to:       dados.responsavel,
     subject:  assuntos[tipo] || assuntos.criacao,
-    htmlBody: html
+    htmlBody: html,
+    name:     'Gestão de Tarefas — CNU',
+    replyTo:  Session.getActiveUser().getEmail()
   });
 }
 
@@ -620,7 +622,8 @@ function relatorioDiario() {
   MailApp.sendEmail({
     to:       EMAIL_REPORTE,
     subject:  '[Tarefas CNU] Resumo do dia — ' + hoje.toLocaleDateString('pt-BR'),
-    htmlBody: html
+    htmlBody: html,
+    name:     'Gestão de Tarefas — CNU'
   });
 }
 
@@ -667,7 +670,8 @@ function lembretesDiarios() {
     MailApp.sendEmail({
       to:       responsavel,
       subject:  '[Tarefas CNU] Lembrete: tarefa vence amanhã',
-      htmlBody: htmlLem
+      htmlBody: htmlLem,
+      name:     'Gestão de Tarefas — CNU'
     });
   }
 }
