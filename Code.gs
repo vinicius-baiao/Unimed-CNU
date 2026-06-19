@@ -94,7 +94,13 @@ function listarUsuarios() {
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][0] && !rows[i][1]) continue;
-    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), admin: rows[i][2] === true });
+    lista.push({
+      nome:     String(rows[i][0]),
+      email:    String(rows[i][1]),
+      admin:    rows[i][2] === true,
+      gerencia: String(rows[i][3] || ''),
+      unidade:  String(rows[i][4] || '')
+    });
   }
   return { usuarios: lista };
 }
@@ -384,7 +390,9 @@ function notificarResponsavel(dados, tipo) {
   MailApp.sendEmail({
     to:       dados.responsavel,
     subject:  assuntos[tipo] || assuntos.criacao,
-    htmlBody: html
+    htmlBody: html,
+    name:     'Gestão de Tarefas — CNU',
+    replyTo:  Session.getActiveUser().getEmail()
   });
 }
 
@@ -469,14 +477,14 @@ function setup() {
 
   // ── Aba Usuários ─────────────────────────────────────────────
   var usu = ss.getSheetByName(ABA_USUARIOS) || ss.insertSheet(ABA_USUARIOS);
-  var hUsu = ['Nome', 'Email', 'Admin'];
+  var hUsu = ['Nome', 'Email', 'Admin', 'Gerência', 'Unidade'];
   usu.getRange(1, 1, 1, hUsu.length).setValues([hUsu])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   usu.setFrozenRows(1);
   usu.getRange(2, 3, 999).setDataValidation(
     SpreadsheetApp.newDataValidation()
       .requireValueInList(['TRUE','FALSE'], true).build());
-  [220, 280, 80].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
+  [220, 280, 80, 200, 200].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
 
   SpreadsheetApp.flush();
   Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários');
@@ -620,7 +628,8 @@ function relatorioDiario() {
   MailApp.sendEmail({
     to:       EMAIL_REPORTE,
     subject:  '[Tarefas CNU] Resumo do dia — ' + hoje.toLocaleDateString('pt-BR'),
-    htmlBody: html
+    htmlBody: html,
+    name:     'Gestão de Tarefas — CNU'
   });
 }
 
@@ -667,7 +676,8 @@ function lembretesDiarios() {
     MailApp.sendEmail({
       to:       responsavel,
       subject:  '[Tarefas CNU] Lembrete: tarefa vence amanhã',
-      htmlBody: htmlLem
+      htmlBody: htmlLem,
+      name:     'Gestão de Tarefas — CNU'
     });
   }
 }
