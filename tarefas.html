@@ -765,9 +765,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+function mostrarErroBoard(msg) {
+  document.getElementById('board').innerHTML =
+    '<div id="loading" style="color:var(--erro-cor)">⚠️ ' + esc(msg)
+    + '<br><span style="font-size:.8rem;color:var(--text-muted)">Recarregue com Ctrl+Shift+R. Se persistir, avise o administrador.</span></div>';
+}
+
 function carregarTudo() {
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
   chamarAPI({ acao: 'listarTarefas' }, function(data) {
+    if (!data || data.erro) {
+      mostrarErroBoard(data && data.erro ? data.erro : 'Não foi possível carregar as tarefas (sem resposta do servidor).');
+      return;
+    }
     tarefas = data.tarefas || [];
     popularFiltros();
 
