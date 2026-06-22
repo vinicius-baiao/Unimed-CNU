@@ -872,7 +872,7 @@ function jsonResponse(obj) {
 // ── Carga de teste — executar manualmente no editor do Apps Script ──
 // Reproduz o lote do JSON de teste sem depender do endpoint HTTP.
 function carregarDadosTeste() {
-  var criado_por = 'usuario@unimedcnu.coop.br';
+  var criado_por = 'aurelio.pereira.ext@unimedcnu.coop.br';
   var projeto    = 'Demandas Linhas de Cuidados - Oportunidades';
 
   var tarefas = [
