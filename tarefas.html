@@ -174,7 +174,6 @@
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
       display: flex; flex-direction: column;
-      overflow: hidden;
     }
     .coluna[data-status="A fazer"]      { --col-accent: var(--col-afazer);    }
     .coluna[data-status="Em andamento"] { --col-accent: var(--col-andamento); }
@@ -186,6 +185,9 @@
       display: flex; justify-content: space-between; align-items: center;
       border-bottom: 1px solid var(--border);
       border-top: 3px solid var(--col-accent, var(--border));
+      border-radius: var(--radius) var(--radius) 0 0;
+      background: var(--bg-card);
+      position: sticky; top: 96px; z-index: 5;
     }
     .coluna-header-left { display: flex; align-items: center; gap: 8px; }
     .coluna-dot {
@@ -201,6 +203,18 @@
       flex: 1; padding: 10px; display: flex; flex-direction: column;
       gap: 8px; min-height: 120px;
       transition: background .15s;
+    }
+    /* Durante drag: mostra contorno em todas as colunas */
+    .board.drag-active .coluna-body {
+      outline: 2px dashed var(--border-hover);
+      outline-offset: -4px;
+      border-radius: 0 0 var(--radius) var(--radius);
+      background: var(--bg-app);
+    }
+    .board.drag-active .coluna-body.dragover {
+      background: var(--verde-bg);
+      outline: 2px dashed var(--verde-claro);
+      outline-offset: -6px;
     }
     .coluna-body.dragover {
       background: var(--verde-bg);
@@ -1336,8 +1350,17 @@ function criarCard(t) {
     e.stopPropagation();
     excluirTarefaById(t.ID, t.Tarefa);
   });
-  card.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', t.ID); card.classList.add('dragging'); });
-  card.addEventListener('dragend',   function()  { card.classList.remove('dragging'); });
+  card.addEventListener('dragstart', function(e) {
+    e.dataTransfer.setData('text/plain', t.ID);
+    card.classList.add('dragging');
+    document.getElementById('board').classList.add('drag-active');
+  });
+  card.addEventListener('dragend', function() {
+    card.classList.remove('dragging');
+    var b = document.getElementById('board');
+    b.classList.remove('drag-active');
+    b.querySelectorAll('.coluna-body').forEach(function(el) { el.classList.remove('dragover'); });
+  });
   card.addEventListener('dragover',  function(e) { e.preventDefault(); });
   return card;
 }
