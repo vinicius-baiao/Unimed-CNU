@@ -506,6 +506,89 @@
       padding: 8px 24px; background: var(--verde-bg);
       font-size: .78rem; color: var(--text-secondary);
     }
+
+    /* ── Home / Dashboard ────────────────────────────────── */
+    #homeView {
+      padding: 32px 40px 48px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .home-hero {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 32px; gap: 16px; flex-wrap: wrap;
+    }
+    .home-greeting {
+      font-size: 1.55rem; font-family: 'DM Serif Display', serif;
+      color: var(--text-primary); font-weight: 400;
+    }
+    .home-subline {
+      font-size: .85rem; color: var(--text-muted); margin-top: 4px;
+    }
+    .home-stat-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 32px;
+    }
+    .home-stat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      box-shadow: var(--shadow);
+    }
+    .home-stat-card.alert { border-color: var(--erro-cor); background: var(--erro-bg); }
+    .home-stat-card.warn  { border-color: #f59f00; background: var(--aviso-bg); }
+    .stat-num {
+      font-size: 1.9rem; font-weight: 700; font-family: 'DM Serif Display', serif;
+      color: var(--text-primary); line-height: 1;
+    }
+    .home-stat-card.alert .stat-num { color: var(--erro-cor); }
+    .home-stat-card.warn  .stat-num { color: var(--aviso-cor); }
+    .stat-label {
+      font-size: .78rem; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .home-section { margin-bottom: 32px; }
+    .home-section-title {
+      font-size: .7rem; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .home-cards { display: flex; flex-direction: column; gap: 8px; }
+    .home-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      box-shadow: var(--shadow); display: flex; align-items: center;
+      gap: 12px; cursor: pointer; transition: box-shadow .15s, border-color .15s;
+    }
+    .home-card:hover { box-shadow: var(--shadow-hover); border-color: var(--border-hover); }
+    .home-card-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .home-card-main { flex: 1; min-width: 0; }
+    .home-card-titulo {
+      font-size: .9rem; font-weight: 500; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .home-card-meta {
+      font-size: .78rem; color: var(--text-muted); margin-top: 2px;
+    }
+    .home-card-prazo {
+      font-size: .78rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+      padding: 2px 8px; border-radius: 4px; background: var(--cinza-50); color: var(--text-secondary);
+    }
+    .home-card-prazo.vence-hoje   { background: var(--aviso-bg); color: var(--aviso-cor); }
+    .home-card-prazo.atrasado     { background: var(--erro-bg);  color: var(--erro-cor); }
+    .home-empty {
+      padding: 20px; text-align: center; color: var(--text-muted); font-size: .875rem;
+      background: var(--bg-card); border: 1px dashed var(--border); border-radius: var(--radius);
+    }
+    .btn-home { display: flex; align-items: center; gap: 6px; }
+    .btn-inicio {
+      font-size: .8rem; padding: 4px 10px; height: auto;
+    }
+    @media (max-width: 640px) {
+      #homeView { padding: 20px 16px 32px; }
+      .home-stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .home-hero { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -528,7 +611,10 @@
 </div>
 
 <!-- Top bar -->
-<div class="top-bar">
+<div class="top-bar" id="topBar">
+  <button class="btn btn-ghost btn-inicio" id="btnInicio" onclick="setModo('home')" style="display:none">
+    ← Início
+  </button>
   <div class="top-bar-search">
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
       <circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/>
@@ -551,8 +637,62 @@
   </div>
 </div>
 
+<!-- Home / Dashboard -->
+<div id="homeView">
+  <div class="home-hero">
+    <div>
+      <div class="home-greeting">Olá, <span id="homeNome">…</span></div>
+      <div class="home-subline" id="homeData"></div>
+    </div>
+    <button class="btn btn-primary btn-home" onclick="setModo('tarefas')">
+      Ver todas as tarefas
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8 3 12 7 8 11"/></svg>
+    </button>
+  </div>
+
+  <!-- Painel de gestão (Admin/Gestor) -->
+  <div id="homePainel" style="display:none">
+    <div class="home-stat-grid">
+      <div class="home-stat-card">
+        <div class="stat-num" id="statAfazer">—</div>
+        <div class="stat-label">A fazer</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="stat-num" id="statAndamento">—</div>
+        <div class="stat-label">Em andamento</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="stat-num" id="statBloqueado">—</div>
+        <div class="stat-label">Bloqueado</div>
+      </div>
+      <div class="home-stat-card" id="statAtrasadoCard">
+        <div class="stat-num" id="statAtrasado">—</div>
+        <div class="stat-label">Atrasadas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minhas tarefas -->
+  <div class="home-section">
+    <div class="home-section-title">Minhas Tarefas</div>
+    <div id="homeMinhas"></div>
+  </div>
+
+  <!-- Atrasadas -->
+  <div class="home-section">
+    <div class="home-section-title">Atrasadas</div>
+    <div id="homeAtrasadas"></div>
+  </div>
+
+  <!-- Vencem em breve -->
+  <div class="home-section">
+    <div class="home-section-title">Vencem nos próximos 7 dias</div>
+    <div id="homeProximas"></div>
+  </div>
+</div>
+
 <!-- App layout: sidebar + content -->
-<div class="app-layout">
+<div class="app-layout" id="appLayout" style="display:none">
 
   <!-- Sidebar -->
   <aside class="sidebar">
@@ -756,6 +896,7 @@ var currentUser          = '';
 var currentUserIsAdmin   = false;
 var currentUserPodeExcluir = false;
 
+var modoAtual    = 'home';   // 'home' | 'tarefas'
 var viewAtual    = 'kanban';
 var sortCol      = 'ID';
 var sortAsc      = true;
@@ -800,17 +941,23 @@ function chamarAPI(params, callback) {
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('printDate').textContent =
     'Gerado em ' + new Date().toLocaleString('pt-BR');
+
+  // Inicia no Home; app-layout fica oculto até o usuário navegar
+  setModo('home');
   carregarTudo();
-  // Buscar usuário logado (assíncrono, não bloqueia o carregamento)
+
   if (WEBAPP_URL) {
     chamarAPI({ acao: 'getUsuario' }, function(d) {
       currentUser            = d.email       || '';
       currentUserIsAdmin     = d.admin       || false;
       currentUserPodeExcluir = d.podeExcluir || false;
       if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
+      // Atualiza saudação e painel assim que o perfil chegar
+      if (modoAtual === 'home' && tarefas.length) renderHome();
     });
     chamarAPI({ acao: 'listarUsuarios' }, function(d) {
       usuarios = d.usuarios || [];
+      if (modoAtual === 'home' && tarefas.length) renderHome();
     });
   }
 });
@@ -828,9 +975,13 @@ function carregarTudo() {
     tarefas   = p.tarefas;
     templates = p.templates;
     cklStatus = p.ckl;
-    popularFiltros();
-    popularSelectTemplates();
-    renderView();
+    if (modoAtual === 'home') {
+      renderHome();
+    } else {
+      popularFiltros();
+      popularSelectTemplates();
+      renderView();
+    }
   }
 
   chamarAPI({ acao: 'listarTarefas' }, function(data) {
@@ -935,6 +1086,123 @@ function setView(v) {
   document.getElementById('btnKanban').classList.toggle('active', v === 'kanban');
   document.getElementById('btnLista').classList.toggle('active',  v === 'lista');
   renderView();
+}
+
+// ── Modo Home / Tarefas ───────────────────────────────────────
+function setModo(m) {
+  modoAtual = m;
+  var isHome = m === 'home';
+  document.getElementById('homeView').style.display   = isHome ? 'block' : 'none';
+  document.getElementById('appLayout').style.display  = isHome ? 'none'  : 'flex';
+  document.getElementById('btnInicio').style.display  = isHome ? 'none'  : '';
+  if (isHome) {
+    renderHome();
+  } else {
+    popularFiltros();
+    popularSelectTemplates();
+    renderView();
+  }
+}
+
+function renderHome() {
+  // Saudação e data
+  var nomeEl = document.getElementById('homeNome');
+  var nome = '';
+  if (currentUser) {
+    var u = usuarios.filter(function(x) { return x.email === currentUser; })[0];
+    nome = u ? u.nome.split(' ')[0] : currentUser.split('@')[0];
+  }
+  nomeEl.textContent = nome || '…';
+
+  var hoje = new Date();
+  document.getElementById('homeData').textContent = hoje.toLocaleDateString('pt-BR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  // Calcular datas de referência
+  var agora    = new Date(); agora.setHours(0, 0, 0, 0);
+  var em7dias  = new Date(agora); em7dias.setDate(agora.getDate() + 7);
+
+  var ativas = tarefas.filter(function(t) { return t.Status !== 'Concluído'; });
+
+  var minhas   = ativas.filter(function(t) { return t['Responsável'] === currentUser; });
+  var atrasadas = ativas.filter(function(t) {
+    if (!t.Prazo) return false;
+    var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
+    return d < agora;
+  });
+  var proximas = ativas.filter(function(t) {
+    if (!t.Prazo) return false;
+    var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
+    return d >= agora && d <= em7dias;
+  });
+
+  // Painel Admin/Gestor
+  var painel = document.getElementById('homePainel');
+  if (currentUserPodeExcluir) {
+    painel.style.display = '';
+    var ps = { 'A fazer': 0, 'Em andamento': 0, 'Bloqueado': 0 };
+    ativas.forEach(function(t) { if (ps[t.Status] !== undefined) ps[t.Status]++; });
+    document.getElementById('statAfazer').textContent    = ps['A fazer'];
+    document.getElementById('statAndamento').textContent = ps['Em andamento'];
+    document.getElementById('statBloqueado').textContent = ps['Bloqueado'];
+    document.getElementById('statAtrasado').textContent  = atrasadas.length;
+    var cardAt = document.getElementById('statAtrasadoCard');
+    cardAt.className = 'home-stat-card' + (atrasadas.length > 0 ? ' alert' : '');
+  } else {
+    painel.style.display = 'none';
+  }
+
+  // Seção "Minhas Tarefas" — só as próprias, ordenadas por prazo
+  minhas.sort(function(a, b) {
+    if (!a.Prazo && !b.Prazo) return 0;
+    if (!a.Prazo) return 1;
+    if (!b.Prazo) return -1;
+    return new Date(a.Prazo) - new Date(b.Prazo);
+  });
+  document.getElementById('homeMinhas').innerHTML = minhas.length
+    ? minhas.map(function(t) { return homeCard(t, false); }).join('')
+    : '<div class="home-empty">Nenhuma tarefa atribuída a você.</div>';
+
+  // Seção "Atrasadas" — Admin/Gestor vê todas; usuário padrão só as suas
+  var atrasadasVisiveis = currentUserPodeExcluir
+    ? atrasadas
+    : atrasadas.filter(function(t) { return t['Responsável'] === currentUser; });
+  document.getElementById('homeAtrasadas').innerHTML = atrasadasVisiveis.length
+    ? atrasadasVisiveis.map(function(t) { return homeCard(t, true); }).join('')
+    : '<div class="home-empty">Nenhuma tarefa atrasada.</div>';
+
+  // Seção "Vencem em breve" — exclui as já atrasadas
+  var proximasVisiveis = currentUserPodeExcluir
+    ? proximas
+    : proximas.filter(function(t) { return t['Responsável'] === currentUser; });
+  document.getElementById('homeProximas').innerHTML = proximasVisiveis.length
+    ? proximasVisiveis.map(function(t) { return homeCard(t, false); }).join('')
+    : '<div class="home-empty">Nenhuma tarefa vencendo nos próximos 7 dias.</div>';
+}
+
+function abrirTarefaPorId(id) {
+  var t = tarefas.filter(function(x) { return String(x.ID) === String(id); })[0];
+  if (t) abrirModal(t);
+}
+
+function homeCard(t, atrasado) {
+  var dotCores = {
+    'A fazer': 'var(--col-afazer)', 'Em andamento': 'var(--col-andamento)',
+    'Bloqueado': 'var(--col-bloqueado)', 'Concluído': 'var(--col-concluido)'
+  };
+  var prazoTxt = t.Prazo ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
+  var prazoCls = atrasado ? 'atrasado' : prazoClass(t.Prazo);
+  var resp = t['Responsável'] ? t['Responsável'].split('@')[0] : '';
+  var proj = t.Projeto ? ' · ' + esc(t.Projeto) : '';
+  return '<div class="home-card" onclick="abrirTarefaPorId(' + Number(t.ID) + ')">'
+    + '<div class="home-card-dot" style="background:' + (dotCores[t.Status] || 'var(--col-afazer)') + '"></div>'
+    + '<div class="home-card-main">'
+    +   '<div class="home-card-titulo">' + esc(t.Tarefa) + '</div>'
+    +   '<div class="home-card-meta">' + esc(resp) + esc(proj) + '</div>'
+    + '</div>'
+    + (prazoTxt ? '<div class="home-card-prazo ' + prazoCls + '">' + prazoTxt + '</div>' : '')
+    + '</div>';
 }
 
 function renderView() {
