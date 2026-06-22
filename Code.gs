@@ -112,28 +112,39 @@ function listarUsuarios() {
 }
 
 // ── Helpers de planilha ───────────────────────────────────────
+var _ss = null; // cache da instância — evita openById() repetido por request
+
 function getSheet(nome) {
-  var ss = SHEET_ID
-    ? SpreadsheetApp.openById(SHEET_ID)
-    : SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(nome);
+  if (!_ss) {
+    _ss = SHEET_ID
+      ? SpreadsheetApp.openById(SHEET_ID)
+      : SpreadsheetApp.getActiveSpreadsheet();
+  }
+  return _ss.getSheetByName(nome);
 }
 
 function proximoId() {
-  var dados = getSheet(ABA_TAREFAS).getDataRange().getValues();
-  var max   = 0;
-  for (var i = 1; i < dados.length; i++) {
-    var id = parseInt(dados[i][COL.ID], 10);
-    if (!isNaN(id) && id > max) max = id;
-  }
-  return max + 1;
+  var sheet  = getSheet(ABA_TAREFAS);
+  var ultima = sheet.getLastRow();
+  if (ultima <= 1) return 1;
+  var lastId = parseInt(sheet.getRange(ultima, COL.ID + 1).getValue(), 10);
+  return (isNaN(lastId) ? ultima - 1 : lastId) + 1;
 }
 
 function gravarLog(acao, campo, anterior, novo) {
-  var log   = getSheet(ABA_LOG);
+  gravarLogs([[acao, campo, anterior, novo]]);
+}
+
+function gravarLogs(entradas) {
+  if (!entradas || !entradas.length) return;
+  var log    = getSheet(ABA_LOG);
+  var baseId = log.getLastRow();
   var editor = Session.getActiveUser().getEmail();
-  var idLog  = (log.getLastRow()) + 1;
-  log.appendRow([idLog, new Date(), editor, acao, campo, anterior, novo]);
+  var agora  = new Date();
+  var rows   = entradas.map(function(e, i) {
+    return [baseId + i + 1, agora, editor, e[0], e[1], e[2], e[3]];
+  });
+  log.getRange(baseId + 1, 1, rows.length, 7).setValues(rows);
 }
 
 // ── listarTarefas ─────────────────────────────────────────────
@@ -222,13 +233,21 @@ function atualizarTarefa(dados) {
 
     var responsavelAnterior = linhas[i][COL.RESPONSAVEL];
 
+    // Aplicar alterações na linha em memória e coletar logs
+    var rowAtualizada = linhas[i].slice();
+    var logEntradas   = [];
+
     camposEditaveis.forEach(function(campo) {
       if (dados[campo] === undefined) return;
       var anterior = linhas[i][colMap[campo]];
       var novo     = campo === 'prazo' ? new Date(dados[campo]) : dados[campo];
-      sheet.getRange(i + 1, colMap[campo] + 1).setValue(novo);
-      gravarLog('ATUALIZAR', campo, anterior, novo);
+      rowAtualizada[colMap[campo]] = novo;
+      logEntradas.push(['ATUALIZAR', campo, anterior, novo]);
     });
+
+    // 1 write para todos os campos alterados; 1 write para todos os logs
+    sheet.getRange(i + 1, 1, 1, rowAtualizada.length).setValues([rowAtualizada]);
+    gravarLogs(logEntradas);
 
     if (dados.responsavel && dados.responsavel !== responsavelAnterior) {
       notificarResponsavel(dados, 'reatribuicao');
@@ -238,13 +257,8 @@ function atualizarTarefa(dados) {
     if (dados.status !== undefined && dados.status !== statusAnterior) {
       var shtI = getSheet(ABA_INTERACOES);
       if (shtI) {
-        var rowsI = shtI.getDataRange().getValues();
-        var maxI  = 0;
-        for (var k = 1; k < rowsI.length; k++) {
-          var nk = parseInt(rowsI[k][0], 10);
-          if (!isNaN(nk) && nk > maxI) maxI = nk;
-        }
-        shtI.appendRow([maxI + 1, dados.id, new Date(), Session.getActiveUser().getEmail(),
+        var maxI = shtI.getLastRow(); // O(1) — não escaneia tudo
+        shtI.appendRow([maxI + 1, dados.id, new Date(), editor,
           'Atualização de status', '"' + statusAnterior + '" → "' + dados.status + '"']);
       }
     }
@@ -331,38 +345,34 @@ function listarChecklist_Status() {
 function salvarChecklist(dados) {
   var sheet    = getSheet(ABA_CKL_STATUS);
   var idTarefa = String(dados.idTarefa);
+  var todas    = sheet.getDataRange().getValues();
+  var header   = todas[0];
 
-  // Remover linhas existentes para esta tarefa (em ordem reversa)
-  var linhas = sheet.getDataRange().getValues();
-  for (var i = linhas.length - 1; i >= 1; i--) {
-    if (String(linhas[i][1]) === idTarefa) sheet.deleteRow(i + 1);
-  }
-
-  var itens = dados.itens || [];
-  if (!itens.length) return { sucesso: true };
-
-  // Calcular próximo ID
-  var linhasApos = sheet.getDataRange().getValues();
-  var idMax = 0;
-  for (var j = 1; j < linhasApos.length; j++) {
-    var n = parseInt(linhasApos[j][0], 10);
+  // Separar linhas de outras tarefas (manter) e calcular max ID
+  var manter = [];
+  var idMax  = 0;
+  for (var i = 1; i < todas.length; i++) {
+    if (!todas[i][0] && !todas[i][1]) continue;
+    if (String(todas[i][1]) !== idTarefa) manter.push(todas[i]);
+    var n = parseInt(todas[i][0], 10);
     if (!isNaN(n) && n > idMax) idMax = n;
   }
 
+  // Montar novas linhas para esta tarefa
+  var itens = dados.itens || [];
   var agora = new Date();
-  itens.forEach(function(it) {
+  var novas = itens.map(function(it) {
     var concluido = it.concluido === true || it.concluido === 'true';
     idMax++;
-    sheet.appendRow([
-      idMax,
-      idTarefa,
-      dados.template || '',
-      it.item,
-      it.ordem || 0,
-      concluido,
-      concluido ? agora : ''
-    ]);
+    return [idMax, idTarefa, dados.template || '', it.item, it.ordem || 0, concluido, concluido ? agora : ''];
   });
+
+  // Reescrever aba inteira: 3 API calls em vez de N deleteRow + N appendRow
+  var resultado = [header].concat(manter).concat(novas);
+  sheet.clearContents();
+  if (resultado.length > 0) {
+    sheet.getRange(1, 1, resultado.length, header.length).setValues(resultado);
+  }
 
   gravarLog('CHECKLIST', 'ID_Tarefa', '', idTarefa);
   return { sucesso: true };
@@ -568,12 +578,7 @@ function listarInteracoes(dados) {
 function adicionarInteracao(dados) {
   var sheet  = getSheet(ABA_INTERACOES);
   var editor = Session.getActiveUser().getEmail();
-  var linhas = sheet.getDataRange().getValues();
-  var idMax  = 0;
-  for (var i = 1; i < linhas.length; i++) {
-    var n = parseInt(linhas[i][0], 10);
-    if (!isNaN(n) && n > idMax) idMax = n;
-  }
+  var idMax  = sheet.getLastRow(); // O(1) — IDs são sequenciais e só appendamos
   sheet.appendRow([
     idMax + 1,
     dados.idTarefa,
