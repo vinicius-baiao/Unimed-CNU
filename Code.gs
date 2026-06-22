@@ -31,7 +31,7 @@ var COL = {
 // ── Roteador principal ────────────────────────────────────────
 function doGet(e) {
   var acao     = e.parameter.acao     || '';
-  var callback = e.parameter.callback || '';
+  var callback = /^[a-zA-Z_]\w{0,80}$/.test(e.parameter.callback || '') ? e.parameter.callback : '';
   var dados    = e.parameter.dados    ? JSON.parse(e.parameter.dados) : {};
 
   // Sem ação → serve o frontend HTML (permite embed no Google Sites)
@@ -165,8 +165,26 @@ function listarTarefas() {
   return { tarefas: lista };
 }
 
+// ── Validação de entrada ──────────────────────────────────────
+var STATUS_VALIDOS    = ['A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
+var PRIORIDADE_VALIDA = ['Crítica', 'Alta', 'Média', 'Baixa'];
+var DOMINIO_PERMITIDO = '@unimedcnu.coop.br';
+
+function validarTarefa(dados, criando) {
+  if (criando && (!dados.tarefa || !String(dados.tarefa).trim())) return 'Campo "tarefa" é obrigatório.';
+  if (dados.tarefa !== undefined && String(dados.tarefa).length > 500) return 'Campo "tarefa" excede 500 caracteres.';
+  if (dados.status !== undefined && STATUS_VALIDOS.indexOf(dados.status) === -1) return 'Status inválido: ' + dados.status;
+  if (dados.prioridade !== undefined && PRIORIDADE_VALIDA.indexOf(dados.prioridade) === -1) return 'Prioridade inválida: ' + dados.prioridade;
+  if (dados.responsavel && String(dados.responsavel).indexOf(DOMINIO_PERMITIDO) === -1) return 'Responsável deve ser do domínio ' + DOMINIO_PERMITIDO;
+  if (dados.observacoes && String(dados.observacoes).length > 2000) return 'Campo "observações" excede 2000 caracteres.';
+  return null;
+}
+
 // ── criarTarefa ───────────────────────────────────────────────
 function criarTarefa(dados) {
+  var erroValidacao = validarTarefa(dados, true);
+  if (erroValidacao) return { erro: erroValidacao };
+
   // Lock garante que criações simultâneas não gerem IDs duplicados
   var lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -207,6 +225,10 @@ function criarTarefa(dados) {
 
 // ── atualizarTarefa ───────────────────────────────────────────
 function atualizarTarefa(dados) {
+  if (!dados.id) return { erro: 'ID da tarefa é obrigatório.' };
+  var erroValidacao = validarTarefa(dados);
+  if (erroValidacao) return { erro: erroValidacao };
+
   var sheet  = getSheet(ABA_TAREFAS);
   var linhas = sheet.getDataRange().getValues();
 
@@ -408,6 +430,11 @@ function salvarChecklist(dados) {
   return { sucesso: true };
 }
 
+// ── Helpers de segurança ──────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── Notificações e Calendar ───────────────────────────────────
 function notificarResponsavel(dados, tipo) {
   var assuntos = {
@@ -428,13 +455,13 @@ function notificarResponsavel(dados, tipo) {
     + '<div style="background:#fff;padding:20px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
     + '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">'
     + '<tr><td style="padding:7px 0;color:#6c757d;width:110px">Tarefa</td>'
-    +     '<td style="padding:7px 0;font-weight:600">' + (dados.tarefa || '') + '</td></tr>'
+    +     '<td style="padding:7px 0;font-weight:600">' + escHtml(dados.tarefa) + '</td></tr>'
     + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Projeto</td>'
-    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + (dados.projeto || '—') + '</td></tr>'
+    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + escHtml(dados.projeto || '—') + '</td></tr>'
     + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Prazo</td>'
-    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + prazoFmt + '</td></tr>'
+    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + escHtml(prazoFmt) + '</td></tr>'
     + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Prioridade</td>'
-    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + (dados.prioridade || '—') + '</td></tr>'
+    +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + escHtml(dados.prioridade || '—') + '</td></tr>'
     + '</table>'
     + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
     +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'

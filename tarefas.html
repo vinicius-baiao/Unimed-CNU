@@ -836,7 +836,7 @@ function carregarTudo() {
   chamarAPI({ acao: 'listarTarefas' }, function(data) {
     if (data.erro) {
       document.getElementById('board').innerHTML =
-        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + data.erro + '</div>';
+        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(data.erro) + '</div>';
       return;
     }
     p.tarefas = data.tarefas || [];
