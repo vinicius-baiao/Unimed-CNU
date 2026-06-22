@@ -240,6 +240,9 @@
     .card-btn-detalhes:hover { background: var(--verde); color: #fff; border-color: var(--verde); }
     .card-btn-excluir { display: none; }
     body.pode-excluir .card-btn-excluir { display: inline-block; }
+    #sidebarRespDivider, #sidebarRespSection { display: none; }
+    body.pode-excluir #sidebarRespDivider,
+    body.pode-excluir #sidebarRespSection  { display: block; }
     .card-btn-excluir:hover { background: var(--erro-cor); color: #fff; border-color: var(--erro-cor); }
     /* Modal de confirmação */
     #confirmOverlay {
@@ -712,8 +715,8 @@
         </button>
       </div>
     </div>
-    <div class="sidebar-divider"></div>
-    <div class="sidebar-section">
+    <div class="sidebar-divider" id="sidebarRespDivider"></div>
+    <div class="sidebar-section" id="sidebarRespSection">
       <div class="sidebar-label">Responsáveis</div>
       <div id="sidebarResponsaveis">
         <button class="sidebar-item active" onclick="setFiltroResponsavel('')">
