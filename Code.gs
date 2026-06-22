@@ -868,3 +868,35 @@ function jsonResponse(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ── Carga de teste — executar manualmente no editor do Apps Script ──
+// Reproduz o lote do JSON de teste sem depender do endpoint HTTP.
+function carregarDadosTeste() {
+  var criado_por = 'usuario@unimedcnu.coop.br';
+  var projeto    = 'Demandas Linhas de Cuidados - Oportunidades';
+
+  var tarefas = [
+    { tarefa: 'Pilotar automação do banco de dados e planilha status',       responsavel: 'aurelio.pereira.ext@unimedcnu.coop.br', prazo: '',           status: 'A fazer', prioridade: 'Alta',  observacoes: 'Realizar um projeto piloto focado no banco de dados mais complexo para testar automações e estruturar melhorias imediatas.' },
+    { tarefa: 'Criar canal de comunicação com a equipe técnica',              responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Criar um canal para alinhar dúvidas sobre o fluxo de dados entre Aurélio e a equipe administrativa.' },
+    { tarefa: 'Demonstrar processo de extração de senhas',                    responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Mostrar para o Aurélio o fluxo manual no Databricks e Tableau para posterior automação na integração com o sistema Nilo.' },
+    { tarefa: 'Definir papéis e responsáveis pelo compartilhamento de dados', responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Estruturar a governança do processo de dados junto com o Aurélio.' },
+    { tarefa: 'Priorizar as 11 demandas mapeadas',                            responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Alta',  observacoes: 'Definir a ordem de preferência para estruturar o cronograma técnico de automação.' },
+    { tarefa: 'Agendar reunião sobre reclamações da telemedicina',            responsavel: 'aurelio.pereira.ext@unimedcnu.coop.br', prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Reunião com Diego e Ana Carolina para revisar a centralização das denúncias.' },
+    { tarefa: 'Demonstrar a planilha operacional de acompanhamento',          responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Ilustrar o processo manual atual de acompanhamento para orientar a construção do novo painel dinâmico.' },
+    { tarefa: 'Apresentar o sistema Assertiva',                               responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Facilitar a análise para verificar viabilidade de cargas automáticas de busca de telefones e contatos em lote.' },
+    { tarefa: 'Transcrever reunião e organizar pontos sobrepostos',           responsavel: 'aurelio.pereira.ext@unimedcnu.coop.br', prazo: '',           status: 'A fazer', prioridade: 'Baixa', observacoes: 'Identificar sobreposições nas rotinas para otimizar soluções técnicas.' },
+    { tarefa: 'Agendar reunião com a Dra. Gláucia',                          responsavel: '',                                       prazo: '',           status: 'A fazer', prioridade: 'Média', observacoes: 'Definir as regras e padronizações para identificação unificada de pacientes.' },
+    { tarefa: 'Definir e reportar prioridades finais de implementação',       responsavel: '',                                       prazo: '2026-06-26', status: 'A fazer', prioridade: 'Alta',  observacoes: 'Definir as prioridades de execução junto com o grupo.' }
+  ];
+
+  var erros = 0;
+  tarefas.forEach(function(t) {
+    t.criado_por = criado_por;
+    t.projeto    = projeto;
+    var r = criarTarefa(t);
+    if (r.erro) { erros++; Logger.log('ERRO: ' + t.tarefa + ' → ' + r.erro); }
+    else        { Logger.log('OK #' + r.id + ': ' + t.tarefa); }
+  });
+
+  Logger.log('=== Concluído: ' + (tarefas.length - erros) + '/' + tarefas.length + ' tarefas criadas. Erros: ' + erros);
+}
