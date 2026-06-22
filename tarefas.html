@@ -174,6 +174,7 @@
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
       display: flex; flex-direction: column;
+      overflow: hidden;
     }
     .coluna[data-status="A fazer"]      { --col-accent: var(--col-afazer);    }
     .coluna[data-status="Em andamento"] { --col-accent: var(--col-andamento); }
@@ -185,9 +186,6 @@
       display: flex; justify-content: space-between; align-items: center;
       border-bottom: 1px solid var(--border);
       border-top: 3px solid var(--col-accent, var(--border));
-      border-radius: var(--radius) var(--radius) 0 0;
-      background: var(--bg-card);
-      position: sticky; top: 96px; z-index: 5;
     }
     .coluna-header-left { display: flex; align-items: center; gap: 8px; }
     .coluna-dot {
