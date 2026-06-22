@@ -1472,18 +1472,19 @@ function abrirModal(tarefa) {
   var tabsEl = document.getElementById('modalTabsEl');
   tabsEl.style.display = tarefa ? 'flex' : 'none';
 
-  // Permissão: apenas criador (ou admin) pode mudar prazo, concluir ou excluir
-  var eCriador = !tarefa || !currentUser || String(tarefa['Criado por']) === currentUser;
-  var podeTudo  = eCriador || currentUserIsAdmin;
+  // Permissão: criador, Admin ou Gestor podem editar prazo, concluir e excluir
+  var emailCriador = tarefa ? String(tarefa['Criado por'] || '').trim().toLowerCase() : '';
+  var eCriador = !tarefa || !currentUser || emailCriador === currentUser.trim().toLowerCase();
+  var podeTudo  = eCriador || currentUserPodeExcluir; // Admin + Gestor + Criador
   document.getElementById('campoPrazo').disabled = !!tarefa && !podeTudo;
   document.getElementById('permissaoNota').style.display = (tarefa && !podeTudo) ? 'block' : 'none';
   Array.from(document.getElementById('campoStatus').options).forEach(function(opt) {
     opt.disabled = (tarefa && !podeTudo && opt.value === 'Concluído');
   });
 
-  // Botão excluir: visível apenas para criador ou admin (ao editar)
+  // Botão excluir: visível para criador, Admin ou Gestor (ao editar)
   var btnEx = document.getElementById('btnExcluir');
-  btnEx.style.display = (tarefa && podeTudo) ? '' : 'none';
+  btnEx.style.display = (tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';
 
   // Checklist
   document.getElementById('campoTemplate').value = '';
