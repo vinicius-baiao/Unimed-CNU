@@ -512,13 +512,13 @@
 
     /* ── Home / Dashboard ────────────────────────────────── */
     #homeView {
-      padding: 32px 40px 48px;
-      max-width: 960px;
+      padding: 28px 40px 48px;
+      max-width: 1200px;
       margin: 0 auto;
     }
     .home-hero {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 32px; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
     }
     .home-greeting {
       font-size: 1.55rem; font-family: 'DM Serif Display', serif;
@@ -529,73 +529,84 @@
     }
     .home-stat-grid {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
     }
     .home-stat-card {
       background: var(--bg-card); border: 1px solid var(--border);
+      border-left: 3px solid var(--border-hover);
       border-radius: var(--radius); padding: 16px 20px;
       box-shadow: var(--shadow);
     }
-    .home-stat-card.alert { border-color: var(--erro-cor); background: var(--erro-bg); }
-    .home-stat-card.warn  { border-color: #f59f00; background: var(--aviso-bg); }
+    .home-stat-card.alert { border-left-color: var(--erro-cor); background: var(--erro-bg); }
+    .home-stat-card.warn  { border-left-color: #f59f00; background: var(--aviso-bg); }
     .stat-num {
-      font-size: 1.9rem; font-weight: 700; font-family: 'DM Serif Display', serif;
+      font-size: 2rem; font-weight: 700; font-family: 'DM Serif Display', serif;
       color: var(--text-primary); line-height: 1;
     }
     .home-stat-card.alert .stat-num { color: var(--erro-cor); }
     .home-stat-card.warn  .stat-num { color: var(--aviso-cor); }
     .stat-label {
-      font-size: .78rem; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em;
+      font-size: .74rem; color: var(--text-muted); margin-top: 6px;
+      text-transform: uppercase; letter-spacing: .05em;
     }
-    .home-section { margin-bottom: 32px; }
+    /* Grid 2 colunas */
+    .home-content-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      align-items: start;
+    }
+    .home-right-col { display: flex; flex-direction: column; gap: 24px; }
+    .home-section { }
     .home-section-title {
-      font-size: .7rem; font-weight: 600; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: .07em;
-      margin-bottom: 10px; padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
+      font-size: .68rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .09em;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .home-section-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
     }
     .home-cards { display: flex; flex-direction: column; gap: 6px; }
     .home-card {
-      background: var(--bg-card); border: 1.5px solid var(--border);
-      border-radius: var(--radius); padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--col-afazer);
+      border-radius: var(--radius); padding: 11px 14px;
       box-shadow: var(--shadow); display: flex; align-items: center;
-      gap: 14px; cursor: pointer;
-      transition: box-shadow .15s, border-color .15s, outline .1s;
-      outline: 2px solid transparent;
+      gap: 12px; cursor: pointer;
+      transition: box-shadow .15s, transform .12s;
     }
     .home-card:hover {
       box-shadow: var(--shadow-hover);
-      border-color: var(--verde);
-      outline: 2px solid rgba(0,78,76,.18);
-      outline-offset: 1px;
-    }
-    .home-card-dot {
-      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+      transform: translateX(2px);
     }
     .home-card-main { flex: 1; min-width: 0; }
     .home-card-titulo {
-      font-size: .9rem; font-weight: 500; color: var(--text-primary);
+      font-size: .88rem; font-weight: 500; color: var(--text-primary);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .home-card-meta {
-      font-size: .78rem; color: var(--text-muted); margin-top: 3px;
+      font-size: .75rem; color: var(--text-muted); margin-top: 3px;
     }
     .home-card-prazo {
-      font-size: .78rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;
-      padding: 3px 10px; border-radius: 4px; background: var(--cinza-50); color: var(--text-secondary);
+      font-size: .73rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+      padding: 2px 8px; border-radius: 4px; background: var(--cinza-50); color: var(--text-secondary);
     }
     .home-card-prazo.vence-hoje   { background: var(--aviso-bg); color: var(--aviso-cor); }
     .home-card-prazo.atrasado     { background: var(--erro-bg);  color: var(--erro-cor); }
     .home-empty {
-      padding: 20px; text-align: center; color: var(--text-muted); font-size: .875rem;
-      background: var(--bg-card); border: 1px dashed var(--border); border-radius: var(--radius);
+      padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: .84rem;
+      background: var(--bg-card); border: 1.5px dashed var(--border); border-radius: var(--radius);
     }
     .btn-home { display: flex; align-items: center; gap: 6px; }
-    .btn-inicio {
-      font-size: .8rem; padding: 4px 10px; height: auto;
+    .btn-inicio { font-size: .8rem; padding: 4px 10px; height: auto; }
+    @media (max-width: 900px) {
+      .home-content-grid { grid-template-columns: 1fr; }
+      .home-right-col { gap: 20px; }
     }
     @media (max-width: 640px) {
-      #homeView { padding: 20px 16px 32px; }
+      #homeView { padding: 16px 16px 32px; }
       .home-stat-grid { grid-template-columns: repeat(2, 1fr); }
       .home-hero { flex-direction: column; align-items: flex-start; }
     }
@@ -682,22 +693,27 @@
     </div>
   </div>
 
-  <!-- Minhas tarefas -->
-  <div class="home-section">
-    <div class="home-section-title">Minhas Tarefas</div>
-    <div id="homeMinhas"></div>
-  </div>
+  <!-- Grid 2 colunas -->
+  <div class="home-content-grid">
 
-  <!-- Atrasadas -->
-  <div class="home-section">
-    <div class="home-section-title">Atrasadas</div>
-    <div id="homeAtrasadas"></div>
-  </div>
+    <!-- Coluna principal: Minhas Tarefas -->
+    <div class="home-section">
+      <div class="home-section-title">Minhas Tarefas</div>
+      <div id="homeMinhas" class="home-cards"></div>
+    </div>
 
-  <!-- Vencem em breve -->
-  <div class="home-section">
-    <div class="home-section-title">Vencem nos próximos 7 dias</div>
-    <div id="homeProximas"></div>
+    <!-- Coluna lateral: Alertas -->
+    <div class="home-right-col">
+      <div class="home-section">
+        <div class="home-section-title">Atrasadas</div>
+        <div id="homeAtrasadas" class="home-cards"></div>
+      </div>
+      <div class="home-section">
+        <div class="home-section-title">Vencem em 7 dias</div>
+        <div id="homeProximas" class="home-cards"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1199,16 +1215,16 @@ function abrirTarefaPorId(id) {
 }
 
 function homeCard(t, atrasado) {
-  var dotCores = {
+  var statusCores = {
     'A fazer': 'var(--col-afazer)', 'Em andamento': 'var(--col-andamento)',
     'Bloqueado': 'var(--col-bloqueado)', 'Concluído': 'var(--col-concluido)'
   };
+  var accent   = atrasado ? 'var(--erro-cor)' : (statusCores[t.Status] || 'var(--col-afazer)');
   var prazoTxt = dataValida(t.Prazo) ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
   var prazoCls = atrasado ? 'atrasado' : prazoClass(t.Prazo);
   var resp = t['Responsável'] ? t['Responsável'].split('@')[0] : '';
   var proj = t.Projeto ? ' · ' + esc(t.Projeto) : '';
-  return '<div class="home-card" onclick="abrirTarefaPorId(' + Number(t.ID) + ')">'
-    + '<div class="home-card-dot" style="background:' + (dotCores[t.Status] || 'var(--col-afazer)') + '"></div>'
+  return '<div class="home-card" style="border-left-color:' + accent + '" onclick="abrirTarefaPorId(' + Number(t.ID) + ')">'
     + '<div class="home-card-main">'
     +   '<div class="home-card-titulo">' + esc(t.Tarefa) + '</div>'
     +   '<div class="home-card-meta">' + esc(resp) + esc(proj) + '</div>'
