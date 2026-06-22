@@ -229,7 +229,14 @@
       border-color: var(--border-hover);
     }
     .card.dragging { opacity: .45; cursor: grabbing; transform: rotate(1deg); }
-    .card-titulo { font-weight: 500; font-size: .875rem; margin-bottom: 4px; color: var(--text-primary); line-height: 1.4; }
+    .card-header { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+    .card-titulo { font-weight: 500; font-size: .875rem; color: var(--text-primary); line-height: 1.4; flex: 1; }
+    .card-btn-detalhes {
+      flex-shrink: 0; background: none; border: 1px solid var(--border); border-radius: 5px;
+      color: var(--text-muted); cursor: pointer; padding: 2px 5px; font-size: .75rem;
+      transition: background .15s, color .15s, border-color .15s; line-height: 1;
+    }
+    .card-btn-detalhes:hover { background: var(--verde); color: #fff; border-color: var(--verde); }
     .card-projeto {
       font-size: .74rem; color: var(--text-muted); margin-bottom: 8px;
       display: flex; align-items: center; gap: 4px;
@@ -937,7 +944,10 @@ function criarCard(t) {
     ? '<div class="avatar" title="' + esc(t['Responsável']) + '">' + avatarInitials(t['Responsável']) + '</div>'
     : '';
 
-  card.innerHTML = '<div class="card-titulo">' + esc(t.Tarefa) + '</div>'
+  card.innerHTML = '<div class="card-header">'
+    + '<span class="card-titulo">' + esc(t.Tarefa) + '</span>'
+    + '<button class="card-btn-detalhes" title="Ver detalhes">✎</button>'
+    + '</div>'
     + (t.Projeto ? '<div class="card-projeto">' + esc(t.Projeto) + '</div>' : '')
     + cklHtml
     + intHtml
@@ -949,10 +959,13 @@ function criarCard(t) {
     + avatarHtml
     + '</div>';
 
+  card.querySelector('.card-btn-detalhes').addEventListener('click', function(e) {
+    e.stopPropagation();
+    abrirModal(t);
+  });
   card.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', t.ID); card.classList.add('dragging'); });
   card.addEventListener('dragend',   function()  { card.classList.remove('dragging'); });
   card.addEventListener('dragover',  function(e) { e.preventDefault(); });
-  card.addEventListener('dblclick',  function()  { abrirModal(t); });
   return card;
 }
 
