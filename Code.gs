@@ -10,7 +10,7 @@ var ABA_CKL_STATUS   = 'Checklist_Status';
 var ABA_INTERACOES   = 'Interações';
 var ABA_USUARIOS     = 'Usuários';
 var ABA_ARQUIVO      = 'Arquivo';
-var EMAIL_REPORTE    = '';  // e-mail(s) para o relatório diário, separados por vírgula
+var EMAIL_REPORTE    = 'aurelio.pereira.ext@unimedcnu.coop.br';
 
 // Índices das colunas (base 0) na aba Tarefas
 var COL = {
