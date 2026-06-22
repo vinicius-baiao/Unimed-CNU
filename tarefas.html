@@ -767,21 +767,32 @@ var filtroResponsavelAtual = '';
 // ── JSONP ─────────────────────────────────────────────────────
 function chamarAPI(params, callback) {
   var cbName = '_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
-  window[cbName] = function(data) {
+
+  function limpar() {
     delete window[cbName];
     var s = document.getElementById(cbName + '_s');
     if (s) s.remove();
+  }
+
+  window[cbName] = function(data) {
+    limpar();
     callback(data);
   };
+
   params.callback = cbName;
   var qs = Object.keys(params).map(function(k) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(
       typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
     );
   }).join('&');
-  var s   = document.createElement('script');
-  s.id    = cbName + '_s';
-  s.src   = WEBAPP_URL + '?' + qs;
+
+  var s = document.createElement('script');
+  s.id  = cbName + '_s';
+  s.src = WEBAPP_URL + '?' + qs;
+  s.onerror = function() {
+    limpar();
+    callback({ erro: 'Falha de rede ao contatar o servidor.' });
+  };
   document.body.appendChild(s);
 }
 
@@ -806,25 +817,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function carregarTudo() {
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
-  chamarAPI({ acao: 'listarTarefas' }, function(data) {
-    tarefas = data.tarefas || [];
+
+  // Dispara as 3 chamadas em paralelo; renderiza quando todas retornarem
+  var pendente = 3;
+  var p = { tarefas: null, templates: null, ckl: null };
+
+  function tentar() {
+    pendente--;
+    if (pendente > 0) return;
+    tarefas   = p.tarefas;
+    templates = p.templates;
+    cklStatus = p.ckl;
     popularFiltros();
+    popularSelectTemplates();
+    renderView();
+  }
 
+  chamarAPI({ acao: 'listarTarefas' }, function(data) {
+    if (data.erro) {
+      document.getElementById('board').innerHTML =
+        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + data.erro + '</div>';
+      return;
+    }
+    p.tarefas = data.tarefas || [];
+    tentar();
+  });
+
+  if (templates.length) {
+    // Templates já carregados — reutiliza cache local
+    p.templates = templates;
+    tentar();
+  } else {
     chamarAPI({ acao: 'listarTemplates' }, function(d2) {
-      templates = d2.templates || [];
-      popularSelectTemplates();
-
-      chamarAPI({ acao: 'listarChecklist_Status' }, function(d3) {
-        var linhas = d3.itens || [];
-        cklStatus = {};
-        linhas.forEach(function(l) {
-          var tid = String(l.ID_Tarefa);
-          if (!cklStatus[tid]) cklStatus[tid] = [];
-          cklStatus[tid].push(l);
-        });
-        renderView();
-      });
+      p.templates = d2.templates || [];
+      tentar();
     });
+  }
+
+  chamarAPI({ acao: 'listarChecklist_Status' }, function(d3) {
+    var linhas = d3.itens || [];
+    p.ckl = {};
+    linhas.forEach(function(l) {
+      var tid = String(l.ID_Tarefa);
+      if (!p.ckl[tid]) p.ckl[tid] = [];
+      p.ckl[tid].push(l);
+    });
+    tentar();
   });
 }
 

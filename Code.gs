@@ -277,30 +277,40 @@ function atualizarTarefa(dados) {
 
 // ── excluirTarefa (soft delete) ───────────────────────────────
 function excluirTarefa(dados) {
-  var sheet  = getSheet(ABA_TAREFAS);
-  var linhas = sheet.getDataRange().getValues();
+  var sheet    = getSheet(ABA_TAREFAS);
+  var linhas   = sheet.getDataRange().getValues();
+  var editor   = Session.getActiveUser().getEmail();
+  var encontrou = false;
+  var calendarFeito = false;
 
   for (var i = 1; i < linhas.length; i++) {
     if (String(linhas[i][COL.ID]) !== String(dados.id)) continue;
-    var editor  = Session.getActiveUser().getEmail();
+    if (linhas[i][COL.ATIVO] === false) continue; // já inativo, pula
+
     var criador = String(linhas[i][COL.CRIADO_POR] || '');
     if (editor !== criador && !podeExcluir(editor)) {
       return { erro: 'Sem permissão para excluir esta tarefa.' };
     }
-    // Remove evento do Calendar se existir
-    var eventId = String(linhas[i][COL.EVENT_ID] || '');
-    if (eventId) {
-      try {
-        var ev = CalendarApp.getEventById(eventId);
-        if (ev) ev.deleteEvent();
-      } catch(e) { Logger.log('Calendar delete erro: ' + e.message); }
+
+    // Remove evento do Calendar apenas uma vez (primeira ocorrência)
+    if (!calendarFeito) {
+      var eventId = String(linhas[i][COL.EVENT_ID] || '');
+      if (eventId) {
+        try {
+          var ev = CalendarApp.getEventById(eventId);
+          if (ev) ev.deleteEvent();
+        } catch(e) { Logger.log('Calendar delete erro: ' + e.message); }
+      }
+      calendarFeito = true;
     }
+
     sheet.getRange(i + 1, COL.ATIVO + 1).setValue(false);
-    gravarLog('EXCLUIR', 'Ativo', true, false);
-    return { sucesso: true };
+    encontrou = true;
   }
 
-  return { erro: 'Tarefa não encontrada: ' + dados.id };
+  if (!encontrou) return { erro: 'Tarefa não encontrada: ' + dados.id };
+  gravarLog('EXCLUIR', 'ID', dados.id, 'inativo');
+  return { sucesso: true };
 }
 
 // ── listarTemplates ───────────────────────────────────────────
