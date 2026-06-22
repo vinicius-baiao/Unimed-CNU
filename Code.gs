@@ -54,7 +54,8 @@ function doGet(e) {
       case 'listarUsuarios':        resultado = listarUsuarios();                              break;
       case 'getUsuario': {
         var _u = Session.getActiveUser().getEmail();
-        resultado = { email: _u, admin: isAdmin(_u) };
+        var _p = getPerfil(_u);
+        resultado = { email: _u, perfil: _p, admin: _p === 'Admin', podeExcluir: _p === 'Admin' || _p === 'Gestor' };
         break;
       }
       default:
@@ -76,15 +77,25 @@ function doGet(e) {
 }
 
 // ── Usuários / Admin ──────────────────────────────────────────
-function isAdmin(email) {
+function getPerfil(email) {
   var sheet = getSheet(ABA_USUARIOS);
-  if (!sheet) return false;
+  if (!sheet) return '';
   var rows = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]).toLowerCase() === String(email).toLowerCase()
-        && rows[i][2] === true) return true;
+    if (String(rows[i][1]).toLowerCase() === String(email).toLowerCase()) {
+      return String(rows[i][2]);
+    }
   }
-  return false;
+  return '';
+}
+
+function isAdmin(email) {
+  return getPerfil(email) === 'Admin';
+}
+
+function podeExcluir(email) {
+  var p = getPerfil(email);
+  return p === 'Admin' || p === 'Gestor';
 }
 
 function listarUsuarios() {
@@ -94,7 +105,7 @@ function listarUsuarios() {
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][0] && !rows[i][1]) continue;
-    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), admin: rows[i][2] === true });
+    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]) });
   }
   return { usuarios: lista };
 }
@@ -250,8 +261,8 @@ function excluirTarefa(dados) {
     if (String(linhas[i][COL.ID]) !== String(dados.id)) continue;
     var editor  = Session.getActiveUser().getEmail();
     var criador = String(linhas[i][COL.CRIADO_POR] || '');
-    if (editor !== criador && !isAdmin(editor)) {
-      return { erro: 'Apenas o criador da tarefa pode excluí-la.' };
+    if (editor !== criador && !podeExcluir(editor)) {
+      return { erro: 'Sem permissão para excluir esta tarefa.' };
     }
     sheet.getRange(i + 1, COL.ATIVO + 1).setValue(false);
     gravarLog('EXCLUIR', 'Ativo', true, false);
@@ -469,14 +480,14 @@ function setup() {
 
   // ── Aba Usuários ─────────────────────────────────────────────
   var usu = ss.getSheetByName(ABA_USUARIOS) || ss.insertSheet(ABA_USUARIOS);
-  var hUsu = ['Nome', 'Email', 'Admin'];
+  var hUsu = ['Nome', 'Email', 'Perfil'];
   usu.getRange(1, 1, 1, hUsu.length).setValues([hUsu])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   usu.setFrozenRows(1);
   usu.getRange(2, 3, 999).setDataValidation(
     SpreadsheetApp.newDataValidation()
-      .requireValueInList(['TRUE','FALSE'], true).build());
-  [220, 280, 80].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
+      .requireValueInList(['Admin','Gestor','Usuário Padrão'], true).build());
+  [220, 280, 140].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
 
   SpreadsheetApp.flush();
   Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários');
@@ -494,26 +505,26 @@ function popularUsuarios() {
   var ultima = usu.getLastRow();
   if (ultima > 1) usu.getRange(2, 1, ultima - 1, 3).clearContent();
 
-  // [Nome, Email, Admin]
+  // [Nome, Email, Perfil]
   var usuarios = [
-    ['Vinicius Baião',              'vinicius.baiao@unimedcnu.coop.br',           true],
-    ['Aurélio Corujeira',           'aurelio.pereira.ext@unimedcnu.coop.br',       true],
-    ['Carlos Christian Simões',     'carlos.simoes@unimedcnu.coop.br',             false],
-    ['Carolina Hashimoto',          'carolina.lopes@unimedcnu.coop.br',            false],
-    ['Eduardo Caporicci',           'eduardo.caporicci@unimedcnu.coop.br',         false],
-    ['Anastacia Semaan',            'tacia@unimedcnu.coop.br',                     false],
-    ['Andressa Souza',              'andressa.souza.ext@unimedcnu.coop.br',        false],
-    ['Lorena Paiva',                'redesalvador@unimedcnu.coop.br',              false],
-    ['Flavia Coelho',               'flavia.coelho@unimedcnu.coop.br',             false],
-    ['Tainara Bramont',             'tainara.conceicao@unimedcnu.coop.br',         false],
-    ['Gabriel Boaventura',          'gabriel.boaventura@unimedcnu.coop.br',        false],
-    ['Thais Conceição',             'thais.conceicao@unimedcnu.coop.br',           false],
-    ['Priscila Amazonas',           'priscila.amazonas@unimedcnu.coop.br',         false],
-    ['Mateus Cruz',                 'mateus.silva@unimedcnu.coop.br',              false],
-    ['Maiara Atagiba',              'maiara.cardoso@unimedcnu.coop.br',            false],
-    ['Ana Tarsis',                  'anatarsis.santos@unimedcnu.coop.br',          false],
-    ['Marcos Paulo Pereira',        'marcos.pereira@unimedcnu.coop.br',            false],
-    ['Andressa De Jesus Lima',      'andressa.lima@unimedcnu.coop.br',             false]
+    ['Vinicius Baião',              'vinicius.baiao@unimedcnu.coop.br',           'Admin'],
+    ['Aurélio Corujeira',           'aurelio.pereira.ext@unimedcnu.coop.br',       'Admin'],
+    ['Carlos Christian Simões',     'carlos.simoes@unimedcnu.coop.br',             'Gestor'],
+    ['Carolina Hashimoto',          'carolina.lopes@unimedcnu.coop.br',            'Gestor'],
+    ['Eduardo Caporicci',           'eduardo.caporicci@unimedcnu.coop.br',         'Gestor'],
+    ['Anastacia Semaan',            'tacia@unimedcnu.coop.br',                     'Gestor'],
+    ['Andressa Souza',              'andressa.souza.ext@unimedcnu.coop.br',        'Usuário Padrão'],
+    ['Lorena Paiva',                'redesalvador@unimedcnu.coop.br',              'Usuário Padrão'],
+    ['Flavia Coelho',               'flavia.coelho@unimedcnu.coop.br',             'Usuário Padrão'],
+    ['Tainara Bramont',             'tainara.conceicao@unimedcnu.coop.br',         'Usuário Padrão'],
+    ['Gabriel Boaventura',          'gabriel.boaventura@unimedcnu.coop.br',        'Usuário Padrão'],
+    ['Thais Conceição',             'thais.conceicao@unimedcnu.coop.br',           'Usuário Padrão'],
+    ['Priscila Amazonas',           'priscila.amazonas@unimedcnu.coop.br',         'Usuário Padrão'],
+    ['Mateus Cruz',                 'mateus.silva@unimedcnu.coop.br',              'Usuário Padrão'],
+    ['Maiara Atagiba',              'maiara.cardoso@unimedcnu.coop.br',            'Usuário Padrão'],
+    ['Ana Tarsis',                  'anatarsis.santos@unimedcnu.coop.br',          'Usuário Padrão'],
+    ['Marcos Paulo Pereira',        'marcos.pereira@unimedcnu.coop.br',            'Usuário Padrão'],
+    ['Andressa De Jesus Lima',      'andressa.lima@unimedcnu.coop.br',             'Usuário Padrão']
   ];
 
   usu.getRange(2, 1, usuarios.length, 3).setValues(usuarios);

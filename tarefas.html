@@ -231,12 +231,29 @@
     .card.dragging { opacity: .45; cursor: grabbing; transform: rotate(1deg); }
     .card-header { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
     .card-titulo { font-weight: 500; font-size: .875rem; color: var(--text-primary); line-height: 1.4; flex: 1; }
-    .card-btn-detalhes {
-      flex-shrink: 0; background: none; border: 1px solid var(--border); border-radius: 5px;
-      color: var(--text-muted); cursor: pointer; padding: 2px 5px; font-size: .75rem;
-      transition: background .15s, color .15s, border-color .15s; line-height: 1;
+    .card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .card-btn-detalhes, .card-btn-excluir {
+      background: none; border: 1px solid var(--border); border-radius: 5px;
+      color: var(--text-muted); cursor: pointer; padding: 2px 6px; font-size: .8rem;
+      transition: background .15s, color .15s, border-color .15s; line-height: 1.4;
     }
     .card-btn-detalhes:hover { background: var(--verde); color: #fff; border-color: var(--verde); }
+    .card-btn-excluir { display: none; }
+    body.pode-excluir .card-btn-excluir { display: inline-block; }
+    .card-btn-excluir:hover { background: var(--erro-cor); color: #fff; border-color: var(--erro-cor); }
+    /* Modal de confirmação */
+    #confirmOverlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 1100; align-items: center; justify-content: center;
+    }
+    #confirmOverlay.open { display: flex; }
+    #confirmBox {
+      background: var(--bg-card); border-radius: 12px; padding: 28px 32px;
+      max-width: 380px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.28);
+    }
+    #confirmBox p { margin: 0 0 6px; color: var(--text-primary); font-size: .95rem; font-weight: 500; }
+    #confirmBox small { color: var(--text-muted); font-size: .8rem; }
+    #confirmBox .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
     .card-projeto {
       font-size: .74rem; color: var(--text-muted); margin-bottom: 8px;
       display: flex; align-items: center; gap: 4px;
@@ -593,6 +610,18 @@
 </div><!-- /.app-layout -->
 
 <!-- Modal -->
+<!-- Modal de confirmação de exclusão -->
+<div id="confirmOverlay" onclick="fecharConfirm()">
+  <div id="confirmBox" onclick="event.stopPropagation()">
+    <p id="confirmNome"></p>
+    <small>Esta ação não pode ser desfeita.</small>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" onclick="fecharConfirm()">Cancelar</button>
+      <button id="confirmOk" class="btn btn-primary" style="background:var(--erro-cor);border-color:var(--erro-cor)">Excluir</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay" onclick="fecharModalFora(event)">
   <div class="modal">
     <div class="modal-header">
@@ -723,8 +752,9 @@ var templates   = [];
 var usuarios    = [];         // [{nome, email, admin}]
 var cklStatus   = {};         // {id_tarefa: [{item, ordem, concluido}]}
 var interacoesCache = {};     // {id_tarefa: [interacoes]} — cache lazy
-var currentUser        = '';  // e-mail do usuário logado
-var currentUserIsAdmin = false;
+var currentUser          = '';
+var currentUserIsAdmin   = false;
+var currentUserPodeExcluir = false;
 
 var viewAtual    = 'kanban';
 var sortCol      = 'ID';
@@ -763,8 +793,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Buscar usuário logado (assíncrono, não bloqueia o carregamento)
   if (WEBAPP_URL) {
     chamarAPI({ acao: 'getUsuario' }, function(d) {
-      currentUser        = d.email  || '';
-      currentUserIsAdmin = d.admin  || false;
+      currentUser            = d.email       || '';
+      currentUserIsAdmin     = d.admin       || false;
+      currentUserPodeExcluir = d.podeExcluir || false;
+      if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
     });
     chamarAPI({ acao: 'listarUsuarios' }, function(d) {
       usuarios = d.usuarios || [];
@@ -946,7 +978,10 @@ function criarCard(t) {
 
   card.innerHTML = '<div class="card-header">'
     + '<span class="card-titulo">' + esc(t.Tarefa) + '</span>'
-    + '<button class="card-btn-detalhes" title="Ver detalhes">✎</button>'
+    + '<div class="card-actions">'
+    + '<button class="card-btn-detalhes" title="Editar tarefa">✎</button>'
+    + '<button class="card-btn-excluir" title="Excluir tarefa">✕</button>'
+    + '</div>'
     + '</div>'
     + (t.Projeto ? '<div class="card-projeto">' + esc(t.Projeto) + '</div>' : '')
     + cklHtml
@@ -962,6 +997,10 @@ function criarCard(t) {
   card.querySelector('.card-btn-detalhes').addEventListener('click', function(e) {
     e.stopPropagation();
     abrirModal(t);
+  });
+  card.querySelector('.card-btn-excluir').addEventListener('click', function(e) {
+    e.stopPropagation();
+    excluirTarefaById(t.ID, t.Tarefa);
   });
   card.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', t.ID); card.classList.add('dragging'); });
   card.addEventListener('dragend',   function()  { card.classList.remove('dragging'); });
@@ -1079,16 +1118,32 @@ function popularSelectResponsaveis(emailAtual) {
   });
 }
 
-function confirmarExcluir() {
-  var id = document.getElementById('campoId').value;
-  if (!id) return;
-  if (!confirm('Excluir esta tarefa? A ação não pode ser desfeita.')) return;
-  chamarAPI({ acao: 'excluirTarefa', dados: { id: id } }, function(data) {
-    if (data.erro) { toast('Erro: ' + data.erro, true); return; }
-    fecharModal();
-    toast('Tarefa excluída.', false, true);
-    carregarTudo();
+function abrirConfirm(nome, onOk) {
+  document.getElementById('confirmNome').textContent = 'Excluir "' + nome + '"?';
+  document.getElementById('confirmOk').onclick = function() { fecharConfirm(); onOk(); };
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+function fecharConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
+
+function excluirTarefaById(id, nome) {
+  abrirConfirm(nome, function() {
+    chamarAPI({ acao: 'excluirTarefa', dados: { id: id } }, function(data) {
+      if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+      toast('Tarefa excluída.', false, true);
+      carregarTudo();
+    });
   });
+}
+
+function confirmarExcluir() {
+  var id   = document.getElementById('campoId').value;
+  var nome = document.getElementById('campoTarefa').value;
+  if (!id) return;
+  fecharModal();
+  excluirTarefaById(id, nome);
 }
 
 // ── Modal / formulário ────────────────────────────────────────
