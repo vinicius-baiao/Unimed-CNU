@@ -23,7 +23,8 @@ var COL = {
   CRIADO_POR:  7,
   DATA_CRIACAO:8,
   OBSERVACOES: 9,
-  ATIVO:       10
+  ATIVO:       10,
+  EVENT_ID:    11
 };
 
 // ── Roteador principal ────────────────────────────────────────
@@ -161,6 +162,12 @@ function criarTarefa(dados) {
 
   var prazo = dados.prazo ? new Date(dados.prazo) : '';
 
+  var eventId = '';
+  if (dados.responsavel) {
+    try { notificarResponsavel(dados, 'criacao'); }              catch(e) { Logger.log('Email erro: ' + e.message); }
+    try { eventId = criarEventoCalendar(dados, prazo) || ''; }  catch(e) { Logger.log('Calendar erro: ' + e.message); }
+  }
+
   sheet.appendRow([
     id,
     dados.tarefa      || '',
@@ -172,15 +179,11 @@ function criarTarefa(dados) {
     criador,
     agora,
     dados.observacoes || '',
-    true
+    true,
+    eventId
   ]);
 
   gravarLog('CRIAR', 'Tarefa', '', dados.tarefa);
-
-  if (dados.responsavel) {
-    try { notificarResponsavel(dados, 'criacao'); } catch(e) { Logger.log('Email erro: ' + e.message); }
-    try { criarEventoCalendar(dados, prazo); }      catch(e) { Logger.log('Calendar erro: ' + e.message); }
-  }
 
   return { sucesso: true, id: id };
 }
@@ -263,6 +266,14 @@ function excluirTarefa(dados) {
     var criador = String(linhas[i][COL.CRIADO_POR] || '');
     if (editor !== criador && !podeExcluir(editor)) {
       return { erro: 'Sem permissão para excluir esta tarefa.' };
+    }
+    // Remove evento do Calendar se existir
+    var eventId = String(linhas[i][COL.EVENT_ID] || '');
+    if (eventId) {
+      try {
+        var ev = CalendarApp.getEventById(eventId);
+        if (ev) ev.deleteEvent();
+      } catch(e) { Logger.log('Calendar delete erro: ' + e.message); }
     }
     sheet.getRange(i + 1, COL.ATIVO + 1).setValue(false);
     gravarLog('EXCLUIR', 'Ativo', true, false);
@@ -400,12 +411,13 @@ function notificarResponsavel(dados, tipo) {
 }
 
 function criarEventoCalendar(dados, prazo) {
-  if (!prazo) return;
+  if (!prazo) return null;
   var titulo = '[' + (dados.tarefa || 'Tarefa') + '] — [' + (dados.projeto || '') + ']';
   var evento = CalendarApp.getDefaultCalendar().createAllDayEvent(titulo, prazo);
   if (dados.responsavel) {
     evento.addGuest(dados.responsavel);
   }
+  return evento.getId();
 }
 
 // ── Setup inicial da planilha ─────────────────────────────────
@@ -420,12 +432,12 @@ function setup() {
   var tarefas = ss.getSheetByName(ABA_TAREFAS) || ss.insertSheet(ABA_TAREFAS);
 
   var hTarefas = ['ID','Tarefa','Projeto','Responsável','Prazo','Status',
-                  'Prioridade','Criado por','Data criação','Observações','Ativo'];
+                  'Prioridade','Criado por','Data criação','Observações','Ativo','Event ID'];
   tarefas.getRange(1, 1, 1, hTarefas.length).setValues([hTarefas])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   tarefas.setFrozenRows(1);
 
-  var larguras = [50, 260, 160, 210, 100, 120, 100, 210, 140, 260, 55];
+  var larguras = [50, 260, 160, 210, 100, 120, 100, 210, 140, 260, 55, 220];
   larguras.forEach(function(w, i) { tarefas.setColumnWidth(i + 1, w); });
 
   tarefas.getRange(2, 6, 999).setDataValidation(
