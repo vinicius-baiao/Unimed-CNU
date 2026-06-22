@@ -9,6 +9,7 @@ var ABA_CHECKLISTS   = 'Checklists';
 var ABA_CKL_STATUS   = 'Checklist_Status';
 var ABA_INTERACOES   = 'Interações';
 var ABA_USUARIOS     = 'Usuários';
+var ABA_ARQUIVO      = 'Arquivo';
 var EMAIL_REPORTE    = '';  // e-mail(s) para o relatório diário, separados por vírgula
 
 // Índices das colunas (base 0) na aba Tarefas
@@ -166,6 +167,10 @@ function listarTarefas() {
 
 // ── criarTarefa ───────────────────────────────────────────────
 function criarTarefa(dados) {
+  // Lock garante que criações simultâneas não gerem IDs duplicados
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+
   var sheet = getSheet(ABA_TAREFAS);
   var id    = proximoId();
   var agora = new Date();
@@ -195,6 +200,7 @@ function criarTarefa(dados) {
   ]);
 
   gravarLog('CRIAR', 'Tarefa', '', dados.tarefa);
+  lock.releaseLock();
 
   return { sucesso: true, id: id };
 }
@@ -324,15 +330,29 @@ function listarTemplates() {
 
 // ── listarChecklist_Status ────────────────────────────────────
 function listarChecklist_Status() {
-  var sheet = getSheet(ABA_CKL_STATUS);
-  if (!sheet) return { itens: [] };
-  var dados  = sheet.getDataRange().getValues();
+  var sheetC = getSheet(ABA_CKL_STATUS);
+  if (!sheetC) return { itens: [] };
+
+  // Montar conjunto de IDs de tarefas ativas para filtrar órfãos
+  var sheetT = getSheet(ABA_TAREFAS);
+  var idsAtivos = {};
+  if (sheetT) {
+    var rowsT = sheetT.getDataRange().getValues();
+    for (var t = 1; t < rowsT.length; t++) {
+      if (rowsT[t][COL.ATIVO] !== false && rowsT[t][COL.ATIVO] !== 'false') {
+        idsAtivos[String(rowsT[t][COL.ID])] = true;
+      }
+    }
+  }
+
+  var dados  = sheetC.getDataRange().getValues();
   var header = dados[0];
   var lista  = [];
 
   for (var i = 1; i < dados.length; i++) {
     var linha = dados[i];
     if (!linha[0] && !linha[1]) continue;
+    if (!idsAtivos[String(linha[1])]) continue; // ignora itens de tarefas excluídas/arquivadas
     var obj = {};
     header.forEach(function(col, idx) { obj[col] = linha[idx]; });
     lista.push(obj);
@@ -511,8 +531,17 @@ function setup() {
       .requireValueInList(['Admin','Gestor','Usuário Padrão'], true).build());
   [220, 280, 140].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
 
+  // ── Aba Arquivo ──────────────────────────────────────────────
+  var arq = ss.getSheetByName(ABA_ARQUIVO) || ss.insertSheet(ABA_ARQUIVO);
+  if (arq.getLastRow() === 0) {
+    arq.getRange(1, 1, 1, hTarefas.length).setValues([hTarefas])
+      .setBackground('#5f6368').setFontColor('#ffffff').setFontWeight('bold');
+    arq.setFrozenRows(1);
+    larguras.forEach(function(w, i) { arq.setColumnWidth(i + 1, w); });
+  }
+
   SpreadsheetApp.flush();
-  Logger.log('Setup concluído — abas criadas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários');
+  Logger.log('Setup concluído — abas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários, Arquivo');
 }
 
 // ── popularUsuarios ── rodar 1x após setup() ──────────────────
@@ -698,4 +727,56 @@ function lembretesDiarios() {
       htmlBody: htmlLem
     });
   }
+}
+
+// ── arquivarTarefasAntigas ────────────────────────────────────
+// Configurar trigger mensal: Apps Script → Gatilhos → arquivarTarefasAntigas → Mês.
+// Move tarefas Concluídas com mais de 30 dias para a aba Arquivo,
+// mantendo a aba Tarefas enxuta indefinidamente.
+function arquivarTarefasAntigas() {
+  var ss = SHEET_ID
+    ? SpreadsheetApp.openById(SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+
+  var sheetT   = ss.getSheetByName(ABA_TAREFAS);
+  var sheetArq = ss.getSheetByName(ABA_ARQUIVO) || ss.insertSheet(ABA_ARQUIVO);
+
+  // Garantir cabeçalho na aba Arquivo
+  if (sheetArq.getLastRow() === 0) {
+    var header = sheetT.getRange(1, 1, 1, sheetT.getLastColumn()).getValues();
+    sheetArq.getRange(1, 1, 1, header[0].length).setValues(header);
+  }
+
+  var limite = new Date();
+  limite.setDate(limite.getDate() - 30);
+
+  var linhas = sheetT.getDataRange().getValues();
+  var paraArquivar  = [];
+  var indicesToDel  = []; // índices de linha (1-based), em ordem decrescente
+
+  for (var i = linhas.length - 1; i >= 1; i--) {
+    var linha = linhas[i];
+    if (linha[COL.STATUS] !== 'Concluído') continue;
+    if (linha[COL.ATIVO] === false || linha[COL.ATIVO] === 'false') continue;
+    var criado = new Date(linha[COL.DATA_CRIACAO]);
+    if (isNaN(criado) || criado >= limite) continue;
+    paraArquivar.unshift(linha);    // mantém ordem cronológica
+    indicesToDel.push(i + 1);      // já em ordem decrescente (loop reverso)
+  }
+
+  if (!paraArquivar.length) {
+    Logger.log('arquivarTarefasAntigas: nenhuma tarefa para arquivar.');
+    return;
+  }
+
+  // Copiar para Arquivo em batch
+  var ultimaArq = sheetArq.getLastRow();
+  sheetArq.getRange(ultimaArq + 1, 1, paraArquivar.length, paraArquivar[0].length)
+    .setValues(paraArquivar);
+
+  // Deletar da aba Tarefas (índices decrescentes preservam posição correta)
+  indicesToDel.forEach(function(row) { sheetT.deleteRow(row); });
+
+  SpreadsheetApp.flush();
+  Logger.log('arquivarTarefasAntigas: ' + paraArquivar.length + ' tarefas movidas para Arquivo.');
 }
