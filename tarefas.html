@@ -1102,6 +1102,8 @@ function setModo(m) {
   document.getElementById('homeView').style.display   = isHome ? 'block' : 'none';
   document.getElementById('appLayout').style.display  = isHome ? 'none'  : 'flex';
   document.getElementById('btnInicio').style.display  = isHome ? 'none'  : '';
+  var vt = document.querySelector('.view-toggle');
+  if (vt) vt.style.display = isHome ? 'none' : '';
   if (isHome) {
     renderHome();
   } else {
@@ -1134,12 +1136,12 @@ function renderHome() {
 
   var minhas   = ativas.filter(function(t) { return t['Responsável'] === currentUser; });
   var atrasadas = ativas.filter(function(t) {
-    if (!t.Prazo) return false;
+    if (!dataValida(t.Prazo)) return false;
     var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
     return d < agora;
   });
   var proximas = ativas.filter(function(t) {
-    if (!t.Prazo) return false;
+    if (!dataValida(t.Prazo)) return false;
     var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
     return d >= agora && d <= em7dias;
   });
@@ -1198,7 +1200,7 @@ function homeCard(t, atrasado) {
     'A fazer': 'var(--col-afazer)', 'Em andamento': 'var(--col-andamento)',
     'Bloqueado': 'var(--col-bloqueado)', 'Concluído': 'var(--col-concluido)'
   };
-  var prazoTxt = t.Prazo ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
+  var prazoTxt = dataValida(t.Prazo) ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
   var prazoCls = atrasado ? 'atrasado' : prazoClass(t.Prazo);
   var resp = t['Responsável'] ? t['Responsável'].split('@')[0] : '';
   var proj = t.Projeto ? ' · ' + esc(t.Projeto) : '';
@@ -1467,6 +1469,7 @@ function abrirModal(tarefa) {
   document.getElementById('campoId').value          = tarefa ? tarefa.ID              : '';
   document.getElementById('campoTarefa').value      = tarefa ? tarefa.Tarefa          : '';
   document.getElementById('campoProjeto').value     = tarefa ? tarefa.Projeto         : '';
+  document.getElementById('campoPrazo').min         = new Date().toISOString().slice(0, 10);
   document.getElementById('campoPrazo').value       = tarefa && tarefa.Prazo ? isoDate(tarefa.Prazo) : '';
   document.getElementById('campoStatus').value      = tarefa ? tarefa.Status          : 'A fazer';
   document.getElementById('campoPrioridade').value  = tarefa ? tarefa.Prioridade      : 'Média';
@@ -1694,11 +1697,16 @@ function toast(msg, erro, sucesso) {
 function esc(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+function dataValida(val) {
+  if (!val) return false;
+  var d = new Date(val);
+  return !isNaN(d.getTime()) && d.getFullYear() >= 2000;
+}
 function isoDate(val) {
-  var d = new Date(val); return isNaN(d) ? '' : d.toISOString().slice(0, 10);
+  return dataValida(val) ? new Date(val).toISOString().slice(0, 10) : '';
 }
 function formatarData(val) {
-  if (!val) return ''; var d = new Date(val); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
+  return dataValida(val) ? new Date(val).toLocaleDateString('pt-BR') : '';
 }
 function nomeDeEmail(email) {
   return email ? email.split('@')[0] : '';
@@ -1714,7 +1722,7 @@ function uniq(arr) {
   return arr.filter(function(v, i, a) { return v && a.indexOf(v) === i; });
 }
 function prazoClass(val) {
-  if (!val) return '';
+  if (!dataValida(val)) return '';
   var d = new Date(val); d.setHours(0, 0, 0, 0);
   var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   var aman = new Date(hoje); aman.setDate(hoje.getDate() + 1);
