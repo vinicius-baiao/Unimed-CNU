@@ -192,7 +192,7 @@ function criarTarefa(dados) {
   var sheet = getSheet(ABA_TAREFAS);
   var id    = proximoId();
   var agora = new Date();
-  var criador = Session.getActiveUser().getEmail();
+  var criador = dados.criado_por || Session.getActiveUser().getEmail();
 
   var prazo = dados.prazo ? new Date(dados.prazo) : '';
 
@@ -816,4 +816,54 @@ function arquivarTarefasAntigas() {
 
   SpreadsheetApp.flush();
   Logger.log('arquivarTarefasAntigas: ' + paraArquivar.length + ' tarefas movidas para Arquivo.');
+}
+
+// ── doPost — endpoint para integrações externas (Gem Gemini) ──
+// Aceita POST com JSON: { token, acao, dados }
+// Requer token secreto; não depende de sessão autenticada.
+var TOKEN_GEMINI = 'CNU_TAREFAS_SECRET_2026';
+
+function doPost(e) {
+  var json;
+  try {
+    json = JSON.parse(e.postData.contents);
+  } catch(err) {
+    return jsonResponse({ erro: 'Payload inválido: ' + err.message });
+  }
+
+  if (json.token !== TOKEN_GEMINI) {
+    return jsonResponse({ erro: 'Token inválido.' });
+  }
+
+  var acao = json.acao || '';
+
+  if (acao === 'criarTarefa') {
+    var dados = json.dados;
+    if (Array.isArray(dados)) {
+      // Criação em lote (ex: extraídas de uma ata pelo Gem)
+      var resultados = [];
+      var erros = 0;
+      for (var i = 0; i < dados.length; i++) {
+        var r = criarTarefa(dados[i]);
+        if (r.erro) erros++;
+        resultados.push(r);
+      }
+      return jsonResponse({
+        sucesso: erros === 0,
+        quantidade: dados.length,
+        erros: erros,
+        detalhes: resultados
+      });
+    } else {
+      return jsonResponse(criarTarefa(dados));
+    }
+  }
+
+  return jsonResponse({ erro: 'Ação não suportada: ' + acao });
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
