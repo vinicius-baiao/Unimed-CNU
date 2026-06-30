@@ -900,3 +900,18 @@ function carregarDadosTeste() {
 
   Logger.log('=== Concluído: ' + (tarefas.length - erros) + '/' + tarefas.length + ' tarefas criadas. Erros: ' + erros);
 }
+
+// ── Limpeza total — executar manualmente no editor do Apps Script ──
+// Apaga TODAS as linhas de dados da aba Tarefas (mantém o cabeçalho).
+// Não mexe em Log, Checklists, Checklist_Status, Interações ou Usuários.
+function limparTarefas() {
+  var sheet    = getSheet(ABA_TAREFAS);
+  var lastRow  = sheet.getLastRow();
+  var lastCol  = sheet.getLastColumn();
+  if (lastRow <= 1) { Logger.log('Aba Tarefas já está vazia.'); return; }
+
+  var qtd = lastRow - 1;
+  sheet.getRange(2, 1, qtd, lastCol).clearContent();
+  gravarLog('LIMPAR_TUDO', 'Tarefas', qtd + ' linhas', '0 linhas');
+  Logger.log('=== Concluído: ' + qtd + ' tarefa(s) removida(s) da aba Tarefas.');
+}
