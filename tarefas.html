@@ -1039,7 +1039,7 @@
 // ── Configuração ──────────────────────────────────────────────
 var WEBAPP_URL  = 'https://script.google.com/a/macros/unimedcnu.coop.br/s/AKfycbyFDVgvECw8xT70q5K-feokScLs-Z85Q6Ka4_qFyJe10cSE10K_TXEl4ws5nC3lkAF8/exec';  // URL do Apps Script Web App
 var COLUNAS     = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
-var UNIDADES    = ['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Operações de Rede','Qualificação','Regulamentação','NSP'];
+var UNIDADES    = ['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Negociação de Rede - NNE','Operações de Rede','Qualificação','Regulamentação','NSP'];
 
 var tarefas     = [];
 var templates   = [];
@@ -1644,14 +1644,16 @@ function popularFiltroUnidade() {
 function popularSelectResponsaveis(emailAtual) {
   var filtro = document.getElementById('filtroUnidade').value;
   var lista  = filtro
-    ? usuarios.filter(function(u) { return u.unidade === filtro; })
+    ? usuarios.filter(function(u) {
+        return (u.unidade || '').split(',').some(function(s) { return s.trim() === filtro; });
+      })
     : usuarios;
   var sel = document.getElementById('campoResponsavel');
   sel.innerHTML = '<option value="">— Selecionar responsável —</option>';
   lista.forEach(function(u) {
     var opt = document.createElement('option');
     opt.value = u.email;
-    opt.textContent = u.nome + ' (' + u.email.split('@')[0] + ')';
+    opt.textContent = u.nome + (u.cargo ? ' · ' + u.cargo : '') + ' (' + u.email.split('@')[0] + ')';
     if (u.email === emailAtual) opt.selected = true;
     sel.appendChild(opt);
   });
