@@ -805,6 +805,95 @@ function popularUsuarios() {
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }
 
+// ── popularTarefas ── insere demandas reais sem disparar e-mails/Calendar ──
+// Rodar 1x para popular o board com as demandas da reunião de 22/06/2026
+function popularTarefas() {
+  var ss    = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(ABA_TAREFAS);
+  if (!sheet) { Logger.log('Aba Tarefas não encontrada.'); return; }
+
+  var criador = 'aurelio.pereira.ext@unimedcnu.coop.br';
+  var agora   = new Date();
+
+  // [ID, Tarefa, Projeto, Responsável, Prazo, Status, Prioridade, Criado por, Data criação, Observações, Ativo]
+  var tarefas = [
+    [null, 'Banco de dados x P. Status',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Alta', criador, agora,
+      'De/Para de atualização semanal de planilha status x banco de dados.\nPrograma: TODOS E TELEMEDICINA | Equipe: AMBOS\n\nAção reunião 22/06: Apresentar as premissas e ações desse processo.\nResponsáveis externos: Pâmela (Sexta 26/jun), Kelly, Amanda Flores',
+      true],
+    [null, 'Envio de senhas / Acompanhamento de P.S e Internação',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Alta', criador, agora,
+      '1. Para Prestador via compartilha\n2. Para próprio, envio para a Nilo\nPrograma: TODOS PROGRAMAS | Equipe: AMBOS\n\nAção reunião 22/06: Validação com prestadores — organizar acompanhamento e evidências de envio (Francisco). Nilo: Ketlyn apresentar junto com Pâmela ao Aurélio o processo.\nResponsáveis externos: Pâmela (Segunda 29/jun), Kelly, Amanda Flores',
+      true],
+    [null, 'Envio de vidas para captação',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Média', criador, agora,
+      '1. Análise dos aceites das empresas\n2. Análise sobre duplicidade (se será duplicado no banco)\nPrograma: TODOS PROGRAMAS | Equipe: ADM\n\nAção reunião 22/06: Análise de coexistências entre programas x serviço APS',
+      true],
+    [null, 'Atualização de Status do Plano',
+      'Gestão de Demandas', '', '',
+      'Em andamento', 'Alta', criador, agora,
+      '1. Consumir do TOP Saúde e envio automático para os prestadores e plataforma\nPrograma: TODOS PROGRAMAS | Equipe: ADM\n\nAção reunião 22/06: Demonstrar o processo ao Aurélio.\nResponsável externo: Pâmela (Quarta-feira, 01/jul)',
+      true],
+    [null, 'Operação e Input de Informações',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Alta', criador, agora,
+      '1. Otimizar o recurso da planilha para evolução de um sistema paliativo, até implantação da Nilo\nPrograma: NAVEGAÇÃO CLÍNICA | Equipe: AMBOS\n\nAção reunião 22/06: Vinculado ao processo de senhas de PS e Internações.',
+      true],
+    [null, 'ATA x Planilha Operação e Clínica',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Média', criador, agora,
+      '1. Integração de ATA com Planilha\n2. Lembrete do prazo para FUP\nPrograma: TODOS PROGRAMAS | Equipe: TÉCNICO\n\nAção reunião 22/06: Automatizar ATAS de reuniões (planilhas operacionais e clínicas)',
+      true],
+    [null, 'Alertas sobre FUP e Tentativa de Repescagem — Navegação',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Alta', criador, agora,
+      '1. Carteirizar e trazer lembrete via e-mail\nPrograma: NAVEGAÇÃO CLÍNICA | Equipe: TÉCNICO\n\nAção reunião 22/06: Avaliar gestão de alertas para novas tentativas de contato com os beneficiários',
+      true],
+    [null, 'Reclamações da Dr. Online',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Alta', criador, agora,
+      '1. Apresentar o processo e entender viabilidade de ação para reduzir impacto\nPrograma: TELEMEDICINA | Equipe: AMBOS\n\nAção reunião 22/06: Reclamações advindas de 4 canais (WKF, Salesforce, Gestão de Nips e Canal de Denúncias) — todas registradas manualmente em uma única planilha.',
+      true],
+    [null, 'Busca de Telefones/E-mail Manuais',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Média', criador, agora,
+      '1. Demonstrar que o ADM consome de diversos lugares e reduzir a quantidade de PROCV\nPrograma: TODOS PROGRAMAS | Equipe: AMBOS\n\nAção reunião 22/06: Canais de enriquecimento de bases — Databricks / Looqbox e Telemedicina para busca de telefones dos beneficiários.\nResponsável externo: Pâmela (Quarta 24/jun)',
+      true],
+    [null, 'Identificar Pacientes Excluídos dos Programas (Nova Média)',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Média', criador, agora,
+      '1. Criar regras para identificar padrões que antecipem a identificação do paciente para uma linha de cuidado\nPrograma: TODOS PROGRAMAS | Equipe: AMBOS\n\nAção reunião 22/06: Avaliar perfis para Linha de Cuidados (transição de linhas). Criar parâmetros clínicos para identificar e determinar a melhor linha de cuidado para o perfil apresentado.\nResponsáveis externos: Kelly, Carina, Dra. Glaucia, Amanda Flores',
+      true],
+    [null, 'Identificar Padrão de Hiperutilização de PA Virtual',
+      'Gestão de Demandas', '', '',
+      'A fazer', 'Média', criador, agora,
+      '1. Identificar padrão de hiperutilização de PA virtual e encaminhar para os outros programas\nPrograma: TELEMEDICINA | Equipe: AMBOS\n\nAção reunião 22/06: Regra que direcione aos programas de acordo com os CIDs apresentados nos atendimentos realizados na PA Virtual.',
+      true]
+  ];
+
+  // Gera IDs sequenciais a partir do maior existente
+  var ultimaLinha = sheet.getLastRow();
+  var idBase = 0;
+  if (ultimaLinha > 1) {
+    var ids = sheet.getRange(2, 1, ultimaLinha - 1, 1).getValues();
+    ids.forEach(function(r) {
+      var n = parseInt(r[0], 10);
+      if (!isNaN(n) && n > idBase) idBase = n;
+    });
+  }
+
+  tarefas.forEach(function(t) {
+    t[0] = ++idBase;
+    sheet.appendRow(t);
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log('popularTarefas: ' + tarefas.length + ' tarefas inseridas. Último ID: ' + idBase);
+}
+
 // ── popularProjetos ── rodar 1x após setup() ──────────────────
 function popularProjetos() {
   var sheet = getSheet(ABA_PROJETOS);
