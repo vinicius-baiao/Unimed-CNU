@@ -2056,7 +2056,8 @@ function salvarNovoProjeto() {
     document.getElementById('projDesc').value = '';
     renderListaProjetos();
     popularFiltros();
-    toast('✓ Projeto "' + nome + '" criado.', false, true);
+    fecharGerenciarProjetos();
+    toast('✓ Projeto "' + nome + '" criado.');
   });
 }
 
