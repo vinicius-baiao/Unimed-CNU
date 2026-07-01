@@ -705,11 +705,19 @@
 
 <!-- Header -->
 <header>
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unimed">
-    <rect x="12" y="2" width="8" height="28" rx="2" fill="#fff"/>
-    <rect x="2" y="12" width="28" height="8" rx="2" fill="#fff"/>
+  <svg height="34" viewBox="0 0 196 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unimed CNU">
+    <!-- Wordmark -->
+    <text x="1" y="38" font-family="'Arial Black',Arial,sans-serif" font-weight="900" font-size="33" fill="#ffffff" letter-spacing="-0.5">Unimed</text>
+    <!-- Vertical separator -->
+    <line x1="140" y1="1" x2="140" y2="47" stroke="#ffffff" stroke-width="1.4"/>
+    <!-- Horizontal separator -->
+    <line x1="140" y1="24" x2="196" y2="24" stroke="#ffffff" stroke-width="1.4"/>
+    <!-- Symbol: two angular peaks above horizontal line -->
+    <polygon points="144,24 153,5 162,24" fill="#ffffff"/>
+    <polygon points="165,24 175,3 185,24" fill="#ffffff"/>
   </svg>
-  <h1>Gestão de Tarefas</h1>
+  <div style="width:1px;height:28px;background:rgba(255,255,255,.25);margin:0 4px"></div>
+  <h1 style="font-size:1rem;font-weight:500;letter-spacing:.02em;opacity:.9">Gestão de Tarefas</h1>
   <div style="flex:1"></div>
   <button class="btn btn-dourado" onclick="abrirModal()">+ Nova Tarefa</button>
 </header>
