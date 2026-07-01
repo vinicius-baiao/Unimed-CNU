@@ -515,7 +515,7 @@ function salvarChecklist(dados) {
   var novas = itens.map(function(it) {
     var concluido = it.concluido === true || it.concluido === 'true';
     idMax++;
-    return [idMax, idTarefa, dados.template || '', it.item, it.ordem || 0, concluido, concluido ? agora : ''];
+    return [idMax, idTarefa, dados.template || '', it.item, it.ordem || 0, concluido, concluido ? agora : '', it.responsavel || ''];
   });
 
   // Reescrever aba inteira: 3 API calls em vez de N deleteRow + N appendRow
@@ -525,8 +525,38 @@ function salvarChecklist(dados) {
     sheet.getRange(1, 1, resultado.length, header.length).setValues(resultado);
   }
 
+  // Notificar colegas marcados em itens da checklist
+  var marcados = [];
+  itens.forEach(function(it) {
+    if (it.responsavel && marcados.indexOf(it.responsavel) === -1) marcados.push(it.responsavel);
+  });
+  if (marcados.length && dados.nomeTarefa) {
+    marcados.forEach(function(email) {
+      try { notificarMarcadoChecklist(email, dados.nomeTarefa, dados.idTarefa); } catch(e) { Logger.log('Email checklist erro: ' + e.message); }
+    });
+  }
+
   gravarLog('CHECKLIST', 'ID_Tarefa', '', idTarefa);
   return { sucesso: true };
+}
+
+function notificarMarcadoChecklist(email, nomeTarefa, idTarefa) {
+  var url  = ScriptApp.getService().getUrl();
+  var html = '<div style="font-family:Arial,sans-serif;max-width:600px;color:#212529">'
+    + '<div style="background:#004e4c;padding:16px 24px;border-radius:8px 8px 0 0">'
+    + '<h2 style="color:#fff;margin:0;font-size:16px">[Tarefas CNU] Você foi marcado em uma checklist</h2>'
+    + '<p style="color:#a8d5d4;margin:4px 0 0;font-size:12px">Unimed CNU · Rede Ambulatorial</p>'
+    + '</div>'
+    + '<div style="background:#fff;padding:20px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
+    + '<p style="font-size:14px;margin-top:0">Você foi designado como responsável por um item de checklist na tarefa:</p>'
+    + '<p style="font-size:15px;font-weight:600;color:#004e4c">' + escHtml(nomeTarefa) + '</p>'
+    + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
+    +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'
+    + 'Abrir Gestão de Tarefas →</a>'
+    + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
+    + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
+    + '</div></div>';
+  MailApp.sendEmail({ to: email, subject: '[Tarefas CNU] Você foi marcado em uma checklist', htmlBody: html });
 }
 
 // ── Helpers de segurança ──────────────────────────────────────
@@ -639,14 +669,14 @@ function setup() {
   // ── Aba Checklist_Status (estado por tarefa) ─────────────────
   var cks = ss.getSheetByName('Checklist_Status') || ss.insertSheet('Checklist_Status');
 
-  var hCks = ['ID','ID_Tarefa','ID_Template','Item','Ordem','Concluído','Data conclusão'];
+  var hCks = ['ID','ID_Tarefa','ID_Template','Item','Ordem','Concluído','Data conclusão','Responsavel'];
   cks.getRange(1, 1, 1, hCks.length).setValues([hCks])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   cks.setFrozenRows(1);
   cks.getRange(2, 6, 999).setDataValidation(
     SpreadsheetApp.newDataValidation()
       .requireValueInList(['TRUE','FALSE'], true).build());
-  [50, 80, 80, 300, 60, 80, 140].forEach(function(w, i) { cks.setColumnWidth(i + 1, w); });
+  [50, 80, 80, 300, 60, 80, 140, 220].forEach(function(w, i) { cks.setColumnWidth(i + 1, w); });
 
   // ── Aba Interações ───────────────────────────────────────────
   var inter  = ss.getSheetByName(ABA_INTERACOES) || ss.insertSheet(ABA_INTERACOES);

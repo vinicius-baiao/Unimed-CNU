@@ -487,20 +487,37 @@
 
     /* ── Checklist no modal ──────────────────────────────── */
     .ckl-section { margin-top: 4px; }
-    .ckl-section label { margin-bottom: 6px; }
-    .ckl-template-row { display: flex; gap: 8px; align-items: center; }
-    .ckl-template-row select { flex: 1; }
-    .ckl-items { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .ckl-section > label { margin-bottom: 6px; }
+    .ckl-items { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
     .ckl-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 12px; background: var(--bg-app);
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; background: var(--bg-app);
       border-radius: 8px; border: 1.5px solid var(--border);
       transition: border-color .15s;
     }
     .ckl-item:hover { border-color: var(--border-hover); }
     .ckl-item input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--verde); flex-shrink: 0; }
-    .ckl-item span { font-size: .875rem; flex: 1; }
-    .ckl-item.concluido span { text-decoration: line-through; color: var(--text-muted); }
+    .ckl-item-text { font-size: .875rem; flex: 1; }
+    .ckl-item.concluido .ckl-item-text { text-decoration: line-through; color: var(--text-muted); }
+    .ckl-responsavel-sel {
+      font-size: .75rem; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg-card); color: var(--text-secondary);
+      padding: 2px 6px; max-width: 130px; cursor: pointer; flex-shrink: 0;
+    }
+    .ckl-responsavel-sel:focus { outline: none; border-color: var(--verde); }
+    .ckl-responsavel-marcado {
+      font-size: .72rem; color: var(--verde); font-weight: 600;
+      background: #e6f4f1; border-radius: 4px; padding: 1px 6px; flex-shrink: 0;
+      white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ckl-delete {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      font-size: 1rem; padding: 0 2px; line-height: 1; flex-shrink: 0;
+    }
+    .ckl-delete:hover { color: var(--erro-cor); }
+    .ckl-add-row { display: flex; gap: 6px; margin-top: 8px; }
+    .ckl-add-row input { flex: 1; font-size: .875rem; }
+    .ckl-add-btn { flex-shrink: 0; font-size: 1.1rem; padding: 6px 14px; }
     .ckl-progress {
       margin-top: 8px; font-size: .78rem; color: var(--text-secondary);
       display: flex; align-items: center; gap: 8px;
@@ -897,7 +914,6 @@
       <h2 id="modalTitulo">Nova Tarefa</h2>
       <div class="modal-tabs" id="modalTabsEl" style="display:none">
         <button class="mtab active" id="mt-dados"     onclick="setModalTab('dados')">Dados</button>
-        <button class="mtab"        id="mt-checklist" onclick="setModalTab('checklist')">Checklist</button>
         <button class="mtab"        id="mt-historico" onclick="setModalTab('historico')">Histórico</button>
       </div>
     </div>
@@ -957,22 +973,18 @@
             <label>Observações</label>
             <textarea id="campoObservacoes"></textarea>
           </div>
-        </div>
-      </div>
-
-      <!-- Pane: Checklist -->
-      <div id="pane-checklist" style="display:none">
-        <div class="ckl-section">
-          <label>Checklist</label>
-          <div class="ckl-template-row">
-            <select id="campoTemplate" onchange="aplicarTemplate()">
-              <option value="">— Selecionar template —</option>
-            </select>
-          </div>
-          <div class="ckl-items" id="cklItems"></div>
-          <div class="ckl-progress" id="cklProgress" style="display:none">
-            <span id="cklProgText"></span>
-            <div class="ckl-bar"><div class="ckl-bar-fill" id="cklProgFill"></div></div>
+          <div class="full ckl-section">
+            <label>Checklist</label>
+            <div class="ckl-items" id="cklItems"></div>
+            <div class="ckl-progress" id="cklProgress" style="display:none">
+              <span id="cklProgText"></span>
+              <div class="ckl-bar"><div class="ckl-bar-fill" id="cklProgFill"></div></div>
+            </div>
+            <div class="ckl-add-row">
+              <input type="text" id="cklNovoItem" placeholder="Adicionar item…"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarItemCkl();}">
+              <button type="button" class="btn btn-ghost ckl-add-btn" onclick="adicionarItemCkl()">+</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1304,7 +1316,19 @@ function renderHome() {
 
   var ativas = tarefas.filter(function(t) { return t.Status !== 'Concluído'; });
 
-  var minhas   = ativas.filter(function(t) { return t['Responsável'] === currentUser; });
+  // IDs de tarefas onde o usuário atual está marcado em algum item de checklist
+  var idsTagged = {};
+  if (currentUser) {
+    Object.keys(cklStatus).forEach(function(tid) {
+      (cklStatus[tid] || []).forEach(function(i) {
+        if (String(i.Responsavel || '') === currentUser) idsTagged[tid] = true;
+      });
+    });
+  }
+
+  var minhas = ativas.filter(function(t) {
+    return t['Responsável'] === currentUser || idsTagged[String(t.ID)];
+  });
   var atrasadas = ativas.filter(function(t) {
     if (!dataValida(t.Prazo)) return false;
     var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
@@ -1583,14 +1607,12 @@ function renderList() {
 // ── Modal tabs ────────────────────────────────────────────────
 function setModalTab(tab) {
   modalTabAtual = tab;
-  ['dados', 'checklist'].forEach(function(p) {
-    document.getElementById('pane-' + p).style.display = p === tab ? 'block' : 'none';
-  });
+  document.getElementById('pane-dados').style.display     = tab === 'dados'     ? 'block' : 'none';
   document.getElementById('pane-historico').style.display = tab === 'historico' ? 'block' : 'none';
   document.getElementById('actFormulario').style.display  = tab === 'historico' ? 'none'  : 'flex';
   document.getElementById('actHistorico').style.display   = tab === 'historico' ? 'flex'  : 'none';
 
-  ['dados', 'checklist', 'historico'].forEach(function(t) {
+  ['dados', 'historico'].forEach(function(t) {
     var btn = document.getElementById('mt-' + t);
     if (btn) btn.classList.toggle('active', t === tab);
   });
@@ -1661,11 +1683,21 @@ function confirmarExcluir() {
 }
 
 // ── Modal / formulário ────────────────────────────────────────
+function serializarCkl() {
+  var itens = document.querySelectorAll('#cklItems .ckl-item');
+  return Array.from(itens).map(function(el) {
+    return el.querySelector('.ckl-item-text').textContent + '|'
+      + el.querySelector('input[type="checkbox"]').checked + '|'
+      + el.querySelector('.ckl-responsavel-sel').value;
+  }).join(';;');
+}
+
 function verificarMudancasModal() {
   var btn = document.getElementById('btnSalvar');
   if (!btn || btn.textContent === 'Salvando…') return;
   if (modalIsNova) {
-    btn.disabled = !document.getElementById('campoTarefa').value.trim();
+    var temTexto  = !!document.getElementById('campoTarefa').value.trim();
+    btn.disabled  = !temTexto;
     return;
   }
   if (!modalSnapshot) { btn.disabled = false; return; }
@@ -1676,7 +1708,8 @@ function verificarMudancasModal() {
     document.getElementById('campoPrazo').value       !== modalSnapshot.prazo ||
     document.getElementById('campoStatus').value      !== modalSnapshot.status ||
     document.getElementById('campoPrioridade').value  !== modalSnapshot.prioridade ||
-    document.getElementById('campoObservacoes').value !== modalSnapshot.observacoes;
+    document.getElementById('campoObservacoes').value !== modalSnapshot.observacoes ||
+    serializarCkl()                                   !== modalSnapshot.ckl;
   btn.disabled = !mudou;
 }
 
@@ -1717,13 +1750,15 @@ function abrirModal(tarefa) {
   btnEx.style.display = (tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';
 
   // Checklist
-  document.getElementById('campoTemplate').value = '';
   var itensEl = document.getElementById('cklItems');
   itensEl.innerHTML = '';
+  document.getElementById('cklNovoItem').value = '';
   if (tarefa) {
     var ckl = (cklStatus[String(tarefa.ID)] || []).slice()
       .sort(function(a, b) { return (a.Ordem || 0) - (b.Ordem || 0); });
-    ckl.forEach(function(i) { itensEl.appendChild(criarItemCkl(i.Item, i.Ordem, i.Concluído === true || i.Concluído === 'TRUE')); });
+    ckl.forEach(function(i) {
+      itensEl.appendChild(criarItemCkl(i.Item, i.Ordem, i.Concluído === true || i.Concluído === 'TRUE', String(i.Responsavel || '')));
+    });
   }
   atualizarProgressoCkl();
 
@@ -1741,7 +1776,8 @@ function abrirModal(tarefa) {
     prazo:       document.getElementById('campoPrazo').value,
     status:      document.getElementById('campoStatus').value,
     prioridade:  document.getElementById('campoPrioridade').value,
-    observacoes: document.getElementById('campoObservacoes').value
+    observacoes: document.getElementById('campoObservacoes').value,
+    ckl:         serializarCkl()
   } : null;
 
   ['campoTarefa','campoProjeto','campoResponsavel','campoPrazo','campoStatus','campoPrioridade','campoObservacoes'].forEach(function(id) {
@@ -1791,7 +1827,8 @@ function salvarTarefa(e) {
       return;
     }
     var tid = id || String(data.id);
-    salvarCkl(tid, function() {
+    var nomeTarefa = document.getElementById('campoTarefa').value;
+    salvarCkl(tid, nomeTarefa, function() {
       fecharModal();
       toast(id ? '✓ Tarefa atualizada com sucesso.' : '✓ Tarefa criada com sucesso.', false, true);
       if (id) delete interacoesCache[String(id)];
@@ -1801,42 +1838,71 @@ function salvarTarefa(e) {
 }
 
 // ── Checklist ─────────────────────────────────────────────────
-function popularSelectTemplates() {
-  var sel = document.getElementById('campoTemplate');
-  sel.innerHTML = '<option value="">— Selecionar template —</option>';
-  templates.forEach(function(t) {
-    sel.innerHTML += '<option value="' + esc(t.nome) + '">' + esc(t.nome) + '</option>';
+function criarSelectColega(emailAtual) {
+  var sel = document.createElement('select');
+  sel.className = 'ckl-responsavel-sel';
+  var opt0 = document.createElement('option');
+  opt0.value = ''; opt0.textContent = '+ Colega';
+  sel.appendChild(opt0);
+  usuarios.forEach(function(u) {
+    var opt = document.createElement('option');
+    opt.value = u.email;
+    opt.textContent = u.nome.split(' ')[0];
+    if (u.email === emailAtual) opt.selected = true;
+    sel.appendChild(opt);
   });
+  return sel;
 }
 
-function aplicarTemplate() {
-  var nomeTemplate = document.getElementById('campoTemplate').value;
-  if (!nomeTemplate) return;
-  var tpl = templates.find(function(t) { return t.nome === nomeTemplate; });
-  if (!tpl) return;
-  var itensEl = document.getElementById('cklItems');
-  itensEl.innerHTML = '';
-  tpl.itens.forEach(function(i) { itensEl.appendChild(criarItemCkl(i.item, i.ordem, false)); });
-  atualizarProgressoCkl();
-}
-
-function criarItemCkl(texto, ordem, concluido) {
+function criarItemCkl(texto, ordem, concluido, responsavel) {
   var div = document.createElement('div');
-  div.className  = 'ckl-item' + (concluido ? ' concluido' : '');
+  div.className     = 'ckl-item' + (concluido ? ' concluido' : '');
   div.dataset.ordem = ordem;
 
-  var chk   = document.createElement('input');
-  chk.type  = 'checkbox';
+  var chk = document.createElement('input');
+  chk.type    = 'checkbox';
   chk.checked = concluido;
   chk.addEventListener('change', function() {
     div.classList.toggle('concluido', chk.checked);
     atualizarProgressoCkl();
+    verificarMudancasModal();
   });
-  var span  = document.createElement('span');
+
+  var span = document.createElement('span');
+  span.className   = 'ckl-item-text';
   span.textContent = texto;
+
+  var sel = criarSelectColega(responsavel || '');
+  sel.addEventListener('change', verificarMudancasModal);
+
+  var del = document.createElement('button');
+  del.type      = 'button';
+  del.className = 'ckl-delete';
+  del.textContent = '×';
+  del.addEventListener('click', function() {
+    div.remove();
+    atualizarProgressoCkl();
+    verificarMudancasModal();
+  });
+
   div.appendChild(chk);
   div.appendChild(span);
+  div.appendChild(sel);
+  div.appendChild(del);
   return div;
+}
+
+function adicionarItemCkl() {
+  var input = document.getElementById('cklNovoItem');
+  var texto = input.value.trim();
+  if (!texto) return;
+  var itensEl = document.getElementById('cklItems');
+  var ordem   = itensEl.querySelectorAll('.ckl-item').length + 1;
+  itensEl.appendChild(criarItemCkl(texto, ordem, false, ''));
+  input.value = '';
+  input.focus();
+  atualizarProgressoCkl();
+  verificarMudancasModal();
 }
 
 function atualizarProgressoCkl() {
@@ -1844,7 +1910,7 @@ function atualizarProgressoCkl() {
   var progEl = document.getElementById('cklProgress');
   if (!itens.length) { progEl.style.display = 'none'; return; }
   var done = 0;
-  itens.forEach(function(i) { if (i.querySelector('input').checked) done++; });
+  itens.forEach(function(i) { if (i.querySelector('input[type="checkbox"]').checked) done++; });
   var pct = Math.round(done / itens.length * 100);
   progEl.style.display = 'flex';
   document.getElementById('cklProgText').textContent = done + '/' + itens.length + ' concluídos';
@@ -1853,15 +1919,19 @@ function atualizarProgressoCkl() {
   fill.className   = 'ckl-bar-fill' + (done === itens.length ? ' completo' : '');
 }
 
-function salvarCkl(idTarefa, callback) {
+function salvarCkl(idTarefa, nomeTarefa, callback) {
   var itens = document.querySelectorAll('#cklItems .ckl-item');
   if (!itens.length) { callback(); return; }
   var items = [];
   itens.forEach(function(el, idx) {
-    items.push({ item: el.querySelector('span').textContent, ordem: idx + 1, concluido: el.querySelector('input').checked });
+    items.push({
+      item:        el.querySelector('.ckl-item-text').textContent,
+      ordem:       idx + 1,
+      concluido:   el.querySelector('input[type="checkbox"]').checked,
+      responsavel: el.querySelector('.ckl-responsavel-sel').value
+    });
   });
-  var template = document.getElementById('campoTemplate').value;
-  chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: idTarefa, template: template, itens: items } }, function(data) {
+  chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: idTarefa, nomeTarefa: nomeTarefa, itens: items } }, function(data) {
     if (data.erro) toast('Aviso checklist: ' + data.erro, true);
     callback();
   });
