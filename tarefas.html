@@ -126,6 +126,64 @@
     .sidebar-divider {
       height: 1px; background: var(--border); margin: 8px 16px;
     }
+    .sidebar-proj-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      display: inline-block;
+    }
+    .sidebar-item-mgr {
+      color: var(--text-muted); font-size: .76rem; margin-top: 4px;
+      border-top: 1px solid var(--border); width: 100%; padding-top: 8px;
+    }
+    .sidebar-item-mgr:hover { color: var(--verde); background: var(--verde-bg); }
+
+    /* ── Modal Gerenciar Projetos ─────────────────────────── */
+    #projOverlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,23,42,.45); backdrop-filter: blur(2px);
+      z-index: 110; align-items: flex-start; justify-content: center;
+      padding: 40px 16px; overflow-y: auto;
+    }
+    #projOverlay.open { display: flex; }
+    #projModal {
+      background: var(--bg-card); border-radius: 14px; padding: 28px;
+      width: 100%; max-width: 520px; box-shadow: var(--shadow-modal);
+      align-self: flex-start; animation: modalIn .2s ease-out;
+    }
+    #projModal h2 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 20px; }
+    .proj-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .proj-list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border: 1.5px solid var(--border);
+      border-radius: var(--radius); background: var(--bg-card);
+      transition: border-color .15s;
+    }
+    .proj-list-item:hover { border-color: var(--border-hover); }
+    .proj-color-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid rgba(0,0,0,.12);
+    }
+    .proj-list-nome { flex: 1; font-size: .875rem; font-weight: 500; }
+    .proj-list-desc { font-size: .75rem; color: var(--text-muted); }
+    .proj-list-actions { display: flex; gap: 6px; }
+    .proj-btn-edit, .proj-btn-archive {
+      padding: 3px 10px; border-radius: 5px; border: 1px solid var(--border);
+      font-size: .75rem; cursor: pointer; background: none;
+      font-family: inherit; transition: background .12s, color .12s;
+    }
+    .proj-btn-edit:hover    { background: var(--verde-bg); color: var(--verde); border-color: var(--verde); }
+    .proj-btn-archive:hover { background: var(--erro-bg); color: var(--erro-cor); border-color: var(--erro-cor); }
+
+    /* Formulário novo projeto */
+    .proj-form { border-top: 1px solid var(--border); padding-top: 18px; }
+    .proj-form-title { font-size: .78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; letter-spacing: .02em; }
+    .proj-color-palette { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .proj-color-swatch {
+      width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+      border: 3px solid transparent; transition: transform .12s, border-color .12s;
+    }
+    .proj-color-swatch:hover   { transform: scale(1.15); }
+    .proj-color-swatch.selected { border-color: var(--text-primary); }
+    .proj-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
     /* ── Main content ────────────────────────────────────── */
     .main-content { flex: 1; min-width: 0; overflow: hidden; }
@@ -790,6 +848,37 @@
 </div><!-- /.app-layout -->
 
 <!-- Modal -->
+<!-- Modal Gerenciar Projetos -->
+<div id="projOverlay" onclick="fecharGerenciarProjetos()">
+  <div id="projModal" onclick="event.stopPropagation()">
+    <h2>Gerenciar Projetos</h2>
+    <div id="projList" class="proj-list"></div>
+
+    <div class="proj-form">
+      <div class="proj-form-title">Novo Projeto</div>
+      <div class="form-grid">
+        <div class="full">
+          <label>Nome *</label>
+          <input type="text" id="projNome" placeholder="Nome do projeto">
+        </div>
+        <div class="full">
+          <label>Descrição</label>
+          <input type="text" id="projDesc" placeholder="Descrição opcional">
+        </div>
+        <div class="full">
+          <label>Cor</label>
+          <div class="proj-color-palette" id="projPaleta"></div>
+          <input type="hidden" id="projCor" value="#004e4c">
+        </div>
+      </div>
+      <div class="proj-form-actions">
+        <button class="btn btn-ghost" onclick="fecharGerenciarProjetos()">Fechar</button>
+        <button class="btn btn-primary" onclick="salvarNovoProjeto()">Criar Projeto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de confirmação de exclusão -->
 <div id="confirmOverlay" onclick="fecharConfirm()">
   <div id="confirmBox" onclick="event.stopPropagation()">
@@ -830,7 +919,7 @@
           </div>
           <div>
             <label>Projeto</label>
-            <input type="text" id="campoProjeto">
+            <select id="campoProjeto"></select>
           </div>
           <div>
             <label>Responsável</label>
@@ -930,6 +1019,7 @@ var COLUNAS     = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluíd
 
 var tarefas     = [];
 var templates   = [];
+var projetos    = [];         // [{id, nome, descricao, cor}]
 var usuarios    = [];         // [{nome, email, admin}]
 var cklStatus   = {};         // {id_tarefa: [{item, ordem, concluido}]}
 var interacoesCache = {};     // {id_tarefa: [interacoes]} — cache lazy
@@ -1008,9 +1098,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function carregarTudo() {
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
 
-  // Dispara as 3 chamadas em paralelo; renderiza quando todas retornarem
-  var pendente = 3;
-  var p = { tarefas: null, templates: null, ckl: null };
+  // Dispara as 4 chamadas em paralelo; renderiza quando todas retornarem
+  var pendente = 4;
+  var p = { tarefas: null, templates: null, ckl: null, projetos: null };
 
   function tentar() {
     pendente--;
@@ -1018,6 +1108,7 @@ function carregarTudo() {
     tarefas   = p.tarefas;
     templates = p.templates;
     cklStatus = p.ckl;
+    projetos  = p.projetos;
     if (modoAtual === 'home') {
       renderHome();
     } else {
@@ -1038,7 +1129,6 @@ function carregarTudo() {
   });
 
   if (templates.length) {
-    // Templates já carregados — reutiliza cache local
     p.templates = templates;
     tentar();
   } else {
@@ -1056,6 +1146,11 @@ function carregarTudo() {
       if (!p.ckl[tid]) p.ckl[tid] = [];
       p.ckl[tid].push(l);
     });
+    tentar();
+  });
+
+  chamarAPI({ acao: 'listarProjetos' }, function(d4) {
+    p.projetos = d4.projetos || [];
     tentar();
   });
 }
@@ -1077,8 +1172,34 @@ function setFiltroResponsavel(val) {
   renderView();
 }
 
+function corDoProjeto(nome) {
+  var proj = projetos.filter(function(p) { return p.nome === nome; })[0];
+  return proj ? proj.cor : '#64748b';
+}
+
+function popularSelectProjetos(nomeAtual) {
+  var sel = document.getElementById('campoProjeto');
+  sel.innerHTML = '<option value="">— Selecionar projeto —</option>';
+  projetos.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.nome;
+    opt.textContent = p.nome;
+    if (p.nome === nomeAtual) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (nomeAtual && !projetos.some(function(p) { return p.nome === nomeAtual; })) {
+    var opt = document.createElement('option');
+    opt.value = nomeAtual; opt.textContent = nomeAtual; opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
 function popularFiltros() {
-  var projs = uniq(tarefas.map(function(t) { return t.Projeto; })).sort();
+  // Usa projetos cadastrados + projetos de tarefas órfãs (retrocompatibilidade)
+  var nomesProj = projetos.map(function(p) { return p.nome; });
+  var orfs = uniq(tarefas.map(function(t) { return t.Projeto; }))
+    .filter(function(n) { return n && nomesProj.indexOf(n) === -1; }).sort();
+  var todosProjs = nomesProj.concat(orfs);
   var resps = uniq(tarefas.map(function(t) { return t['Responsável']; })).sort();
 
   var spEl = document.getElementById('sidebarProjetos');
@@ -1086,14 +1207,23 @@ function popularFiltros() {
     + '<span class="sidebar-item-label">Todos os projetos</span>'
     + '<span class="sidebar-count">' + tarefas.length + '</span>'
     + '</button>';
-  projs.forEach(function(p) {
-    var cnt = tarefas.filter(function(t) { return t.Projeto === p; }).length;
-    var safe = esc(p).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    spEl.innerHTML += '<button class="sidebar-item" data-val="' + esc(p) + '" onclick="setFiltroProjeto(\'' + safe + '\')">'
-      + '<span class="sidebar-item-label" title="' + esc(p) + '">' + esc(p) + '</span>'
+  todosProjs.forEach(function(nome) {
+    if (!nome) return;
+    var cnt  = tarefas.filter(function(t) { return t.Projeto === nome; }).length;
+    var cor  = corDoProjeto(nome);
+    var safe = esc(nome).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    spEl.innerHTML += '<button class="sidebar-item" data-val="' + esc(nome) + '" onclick="setFiltroProjeto(\'' + safe + '\')">'
+      + '<span class="sidebar-proj-dot" style="background:' + cor + '"></span>'
+      + '<span class="sidebar-item-label" title="' + esc(nome) + '">' + esc(nome) + '</span>'
       + '<span class="sidebar-count">' + cnt + '</span>'
       + '</button>';
   });
+  // Botão Gerenciar Projetos (apenas admin/gestor)
+  if (currentUserPodeExcluir) {
+    spEl.innerHTML += '<button class="sidebar-item sidebar-item-mgr" onclick="abrirGerenciarProjetos()">'
+      + '<span style="font-size:.8rem">⚙ Gerenciar projetos</span>'
+      + '</button>';
+  }
 
   var srEl = document.getElementById('sidebarResponsaveis');
   srEl.innerHTML = '<button class="sidebar-item active" data-val="" onclick="setFiltroResponsavel(\'\')">'
@@ -1533,7 +1663,7 @@ function abrirModal(tarefa) {
 
   document.getElementById('campoId').value          = tarefa ? tarefa.ID              : '';
   document.getElementById('campoTarefa').value      = tarefa ? tarefa.Tarefa          : '';
-  document.getElementById('campoProjeto').value     = tarefa ? tarefa.Projeto         : '';
+  popularSelectProjetos(tarefa ? tarefa.Projeto : '');
   document.getElementById('campoPrazo').min         = new Date().toISOString().slice(0, 10);
   document.getElementById('campoPrazo').value       = tarefa && tarefa.Prazo ? isoDate(tarefa.Prazo) : '';
   document.getElementById('campoStatus').value      = tarefa ? tarefa.Status          : 'A fazer';
@@ -1828,6 +1958,92 @@ function badgePrio(p) {
 }
 function badgeStatus(s) {
   return ({ 'Backlog': 'badge-baixa', 'Concluído': 'badge-media', 'Em andamento': 'badge-alta', 'Bloqueado': 'badge-critica', 'A fazer': 'badge-baixa' })[s] || 'badge-baixa';
+}
+
+// ── Gerenciar Projetos ────────────────────────────────────────
+var PALETA_CORES = ['#004e4c','#0052cc','#c9a84c','#e8384f','#7c3aed','#f59f00','#16a34a','#64748b'];
+
+function abrirGerenciarProjetos() {
+  renderListaProjetos();
+  renderPaleta();
+  document.getElementById('projNome').value = '';
+  document.getElementById('projDesc').value = '';
+  document.getElementById('projCor').value  = PALETA_CORES[0];
+  document.getElementById('projOverlay').classList.add('open');
+}
+
+function fecharGerenciarProjetos() {
+  document.getElementById('projOverlay').classList.remove('open');
+}
+
+function renderPaleta() {
+  var palEl = document.getElementById('projPaleta');
+  var corAtual = document.getElementById('projCor').value || PALETA_CORES[0];
+  palEl.innerHTML = '';
+  PALETA_CORES.forEach(function(cor) {
+    var sw = document.createElement('div');
+    sw.className = 'proj-color-swatch' + (cor === corAtual ? ' selected' : '');
+    sw.style.background = cor;
+    sw.title = cor;
+    sw.onclick = function() {
+      document.getElementById('projCor').value = cor;
+      document.querySelectorAll('.proj-color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+      sw.classList.add('selected');
+    };
+    palEl.appendChild(sw);
+  });
+}
+
+function renderListaProjetos() {
+  var el = document.getElementById('projList');
+  if (!projetos.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:.84rem;padding:8px 0">Nenhum projeto cadastrado.</div>';
+    return;
+  }
+  el.innerHTML = projetos.map(function(p) {
+    return '<div class="proj-list-item">'
+      + '<div class="proj-color-dot" style="background:' + p.cor + '"></div>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div class="proj-list-nome">' + esc(p.nome) + '</div>'
+      +   (p.descricao ? '<div class="proj-list-desc">' + esc(p.descricao) + '</div>' : '')
+      + '</div>'
+      + '<div class="proj-list-actions">'
+      +   '<button class="proj-btn-archive" onclick="arquivarProjetoById(' + Number(p.id) + ',\'' + esc(p.nome).replace(/'/g,"\\'") + '\')">Arquivar</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function salvarNovoProjeto() {
+  var nome = document.getElementById('projNome').value.trim();
+  if (!nome) { toast('Informe o nome do projeto.', true); return; }
+  var desc = document.getElementById('projDesc').value.trim();
+  var cor  = document.getElementById('projCor').value || PALETA_CORES[0];
+
+  var btn = document.querySelector('#projModal .btn-primary');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  chamarAPI({ acao: 'criarProjeto', dados: { nome: nome, descricao: desc, cor: cor } }, function(data) {
+    btn.disabled = false; btn.textContent = 'Criar Projeto';
+    if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+    projetos.push({ id: data.id, nome: nome, descricao: desc, cor: cor });
+    document.getElementById('projNome').value = '';
+    document.getElementById('projDesc').value = '';
+    renderListaProjetos();
+    popularFiltros();
+    toast('✓ Projeto "' + nome + '" criado.', false, true);
+  });
+}
+
+function arquivarProjetoById(id, nome) {
+  if (!confirm('Arquivar o projeto "' + nome + '"? As tarefas existentes não serão afetadas.')) return;
+  chamarAPI({ acao: 'arquivarProjeto', dados: { id: id } }, function(data) {
+    if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+    projetos = projetos.filter(function(p) { return Number(p.id) !== id; });
+    renderListaProjetos();
+    popularFiltros();
+    toast('Projeto arquivado.');
+  });
 }
 </script>
 </body>

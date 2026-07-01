@@ -10,6 +10,7 @@ var ABA_CKL_STATUS   = 'Checklist_Status';
 var ABA_INTERACOES   = 'Interações';
 var ABA_USUARIOS     = 'Usuários';
 var ABA_ARQUIVO      = 'Arquivo';
+var ABA_PROJETOS     = 'Projetos';
 var EMAIL_REPORTE    = 'aurelio.pereira.ext@unimedcnu.coop.br';
 
 // Índices das colunas (base 0) na aba Tarefas
@@ -53,7 +54,11 @@ function doGet(e) {
       case 'salvarChecklist':        resultado = salvarChecklist(dados);        break;
       case 'listarInteracoes':      resultado = listarInteracoes(dados);       break;
       case 'adicionarInteracao':    resultado = adicionarInteracao(dados);     break;
-      case 'listarUsuarios':        resultado = listarUsuarios();                              break;
+      case 'listarUsuarios':        resultado = listarUsuarios();              break;
+      case 'listarProjetos':        resultado = listarProjetos();              break;
+      case 'criarProjeto':          resultado = criarProjeto(dados);           break;
+      case 'atualizarProjeto':      resultado = atualizarProjeto(dados);       break;
+      case 'arquivarProjeto':       resultado = arquivarProjeto(dados);        break;
       case 'getUsuario': {
         var _u = Session.getActiveUser().getEmail();
         var _p = getPerfil(_u);
@@ -76,6 +81,87 @@ function doGet(e) {
   return ContentService
     .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Projetos ──────────────────────────────────────────────────
+var COL_PROJ = { ID: 0, NOME: 1, DESCRICAO: 2, COR: 3, ATIVO: 4 };
+
+function proximoIdProjeto() {
+  var sheet  = getSheet(ABA_PROJETOS);
+  var ultima = sheet.getLastRow();
+  if (ultima <= 1) return 1;
+  var lastId = parseInt(sheet.getRange(ultima, 1).getValue(), 10);
+  return (isNaN(lastId) ? ultima - 1 : lastId) + 1;
+}
+
+function listarProjetos() {
+  var sheet = getSheet(ABA_PROJETOS);
+  if (!sheet) return { projetos: [] };
+  var rows  = sheet.getDataRange().getValues();
+  var lista = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][COL_PROJ.NOME]) continue;
+    if (rows[i][COL_PROJ.ATIVO] === false || rows[i][COL_PROJ.ATIVO] === 'false') continue;
+    lista.push({
+      id:       rows[i][COL_PROJ.ID],
+      nome:     String(rows[i][COL_PROJ.NOME]),
+      descricao: String(rows[i][COL_PROJ.DESCRICAO] || ''),
+      cor:      String(rows[i][COL_PROJ.COR] || '#64748b')
+    });
+  }
+  return { projetos: lista };
+}
+
+function criarProjeto(dados) {
+  var editor = Session.getActiveUser().getEmail();
+  if (!podeExcluir(editor)) return { erro: 'Apenas Admin ou Gestor pode criar projetos.' };
+  if (!dados.nome || !String(dados.nome).trim()) return { erro: 'Nome do projeto é obrigatório.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  var sheet = getSheet(ABA_PROJETOS);
+  var id    = proximoIdProjeto();
+  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', dados.cor || '#64748b', true]);
+  gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome);
+  lock.releaseLock();
+  return { sucesso: true, id: id };
+}
+
+function atualizarProjeto(dados) {
+  if (!dados.id) return { erro: 'ID do projeto é obrigatório.' };
+  var editor = Session.getActiveUser().getEmail();
+  if (!podeExcluir(editor)) return { erro: 'Sem permissão.' };
+
+  var sheet = getSheet(ABA_PROJETOS);
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
+    var row = rows[i].slice();
+    if (dados.nome      !== undefined) row[COL_PROJ.NOME]     = dados.nome;
+    if (dados.descricao !== undefined) row[COL_PROJ.DESCRICAO] = dados.descricao;
+    if (dados.cor       !== undefined) row[COL_PROJ.COR]      = dados.cor;
+    sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
+    gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, dados.nome || '');
+    return { sucesso: true };
+  }
+  return { erro: 'Projeto não encontrado.' };
+}
+
+function arquivarProjeto(dados) {
+  if (!dados.id) return { erro: 'ID do projeto é obrigatório.' };
+  var editor = Session.getActiveUser().getEmail();
+  if (!podeExcluir(editor)) return { erro: 'Sem permissão.' };
+
+  var sheet = getSheet(ABA_PROJETOS);
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
+    sheet.getRange(i + 1, COL_PROJ.ATIVO + 1).setValue(false);
+    gravarLog('ARQUIVAR_PROJETO', 'ID', dados.id, 'inativo');
+    return { sucesso: true };
+  }
+  return { erro: 'Projeto não encontrado.' };
 }
 
 // ── Usuários / Admin ──────────────────────────────────────────
@@ -578,8 +664,19 @@ function setup() {
     larguras.forEach(function(w, i) { arq.setColumnWidth(i + 1, w); });
   }
 
+  // ── Aba Projetos ─────────────────────────────────────────────
+  var proj = ss.getSheetByName(ABA_PROJETOS) || ss.insertSheet(ABA_PROJETOS);
+  var hProj = ['ID', 'Nome', 'Descrição', 'Cor', 'Ativo'];
+  proj.getRange(1, 1, 1, hProj.length).setValues([hProj])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+  proj.setFrozenRows(1);
+  proj.getRange(2, 5, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['TRUE','FALSE'], true).build());
+  [60, 220, 300, 90, 60].forEach(function(w, i) { proj.setColumnWidth(i + 1, w); });
+
   SpreadsheetApp.flush();
-  Logger.log('Setup concluído — abas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários, Arquivo');
+  Logger.log('Setup concluído — abas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários, Arquivo, Projetos');
 }
 
 // ── popularUsuarios ── rodar 1x após setup() ──────────────────
@@ -619,6 +716,29 @@ function popularUsuarios() {
   usu.getRange(2, 1, usuarios.length, 3).setValues(usuarios);
   SpreadsheetApp.flush();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
+}
+
+// ── popularProjetos ── rodar 1x após setup() ──────────────────
+function popularProjetos() {
+  var sheet = getSheet(ABA_PROJETOS);
+  if (!sheet) { Logger.log('Aba Projetos não existe. Rode setup() primeiro.'); return; }
+
+  var ultima = sheet.getLastRow();
+  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, 5).clearContent();
+
+  var lista = [
+    [1, 'Gestão de Demandas',                               '', '#004e4c', true],
+    [2, 'Rede Higiene',                                     '', '#0052cc', true],
+    [3, 'Cuidado Transicional',                             '', '#c9a84c', true],
+    [4, 'Alto Custo',                                       '', '#e8384f', true],
+    [5, 'Demandas Linhas de Cuidados - Oportunidades',      '', '#7c3aed', true],
+    [6, 'Negociação de Rede - SSA',                         '', '#16a34a', true],
+    [7, 'Atenção à Saúde',                                  '', '#f59f00', true]
+  ];
+
+  sheet.getRange(2, 1, lista.length, 5).setValues(lista);
+  SpreadsheetApp.flush();
+  Logger.log('popularProjetos: ' + lista.length + ' projetos inseridos.');
 }
 
 // ── listarInteracoes ──────────────────────────────────────────
