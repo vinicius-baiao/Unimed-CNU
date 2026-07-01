@@ -193,7 +193,7 @@ function listarUsuarios() {
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][0] && !rows[i][1]) continue;
-    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]) });
+    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]), unidade: String(rows[i][3] || '') });
   }
   return { usuarios: lista };
 }
@@ -646,14 +646,17 @@ function setup() {
 
   // ── Aba Usuários ─────────────────────────────────────────────
   var usu = ss.getSheetByName(ABA_USUARIOS) || ss.insertSheet(ABA_USUARIOS);
-  var hUsu = ['Nome', 'Email', 'Perfil'];
+  var hUsu = ['Nome', 'Email', 'Perfil', 'Unidade'];
   usu.getRange(1, 1, 1, hUsu.length).setValues([hUsu])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   usu.setFrozenRows(1);
   usu.getRange(2, 3, 999).setDataValidation(
     SpreadsheetApp.newDataValidation()
       .requireValueInList(['Admin','Gestor','Usuário Padrão'], true).build());
-  [220, 280, 140].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
+  usu.getRange(2, 4, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Operações de Rede','Qualificação','Regulamentação','NSP'], true).build());
+  [220, 280, 140, 200].forEach(function(w, i) { usu.setColumnWidth(i + 1, w); });
 
   // ── Aba Arquivo ──────────────────────────────────────────────
   var arq = ss.getSheetByName(ABA_ARQUIVO) || ss.insertSheet(ABA_ARQUIVO);
@@ -689,31 +692,31 @@ function popularUsuarios() {
 
   // Limpa dados existentes (mantém cabeçalho)
   var ultima = usu.getLastRow();
-  if (ultima > 1) usu.getRange(2, 1, ultima - 1, 3).clearContent();
+  if (ultima > 1) usu.getRange(2, 1, ultima - 1, 4).clearContent();
 
-  // [Nome, Email, Perfil]
+  // [Nome, Email, Perfil, Unidade] — preencha a coluna Unidade na planilha
   var usuarios = [
-    ['Vinicius Baião',              'vinicius.baiao@unimedcnu.coop.br',           'Admin'],
-    ['Aurélio Corujeira',           'aurelio.pereira.ext@unimedcnu.coop.br',       'Admin'],
-    ['Carlos Christian Simões',     'carlos.simoes@unimedcnu.coop.br',             'Gestor'],
-    ['Carolina Hashimoto',          'carolina.lopes@unimedcnu.coop.br',            'Gestor'],
-    ['Eduardo Caporicci',           'eduardo.caporicci@unimedcnu.coop.br',         'Gestor'],
-    ['Anastacia Semaan',            'tacia@unimedcnu.coop.br',                     'Gestor'],
-    ['Andressa Souza',              'andressa.souza.ext@unimedcnu.coop.br',        'Usuário Padrão'],
-    ['Lorena Paiva',                'redesalvador@unimedcnu.coop.br',              'Usuário Padrão'],
-    ['Flavia Coelho',               'flavia.coelho@unimedcnu.coop.br',             'Usuário Padrão'],
-    ['Tainara Bramont',             'tainara.conceicao@unimedcnu.coop.br',         'Usuário Padrão'],
-    ['Gabriel Boaventura',          'gabriel.boaventura@unimedcnu.coop.br',        'Usuário Padrão'],
-    ['Thais Conceição',             'thais.conceicao@unimedcnu.coop.br',           'Usuário Padrão'],
-    ['Priscila Amazonas',           'priscila.amazonas@unimedcnu.coop.br',         'Usuário Padrão'],
-    ['Mateus Cruz',                 'mateus.silva@unimedcnu.coop.br',              'Usuário Padrão'],
-    ['Maiara Atagiba',              'maiara.cardoso@unimedcnu.coop.br',            'Usuário Padrão'],
-    ['Ana Tarsis',                  'anatarsis.santos@unimedcnu.coop.br',          'Usuário Padrão'],
-    ['Marcos Paulo Pereira',        'marcos.pereira@unimedcnu.coop.br',            'Usuário Padrão'],
-    ['Andressa De Jesus Lima',      'andressa.lima@unimedcnu.coop.br',             'Usuário Padrão']
+    ['Vinicius Baião',              'vinicius.baiao@unimedcnu.coop.br',           'Admin',          ''],
+    ['Aurélio Corujeira',           'aurelio.pereira.ext@unimedcnu.coop.br',       'Admin',          ''],
+    ['Carlos Christian Simões',     'carlos.simoes@unimedcnu.coop.br',             'Gestor',         ''],
+    ['Carolina Hashimoto',          'carolina.lopes@unimedcnu.coop.br',            'Gestor',         ''],
+    ['Eduardo Caporicci',           'eduardo.caporicci@unimedcnu.coop.br',         'Gestor',         ''],
+    ['Anastacia Semaan',            'tacia@unimedcnu.coop.br',                     'Gestor',         ''],
+    ['Andressa Souza',              'andressa.souza.ext@unimedcnu.coop.br',        'Usuário Padrão', ''],
+    ['Lorena Paiva',                'redesalvador@unimedcnu.coop.br',              'Usuário Padrão', ''],
+    ['Flavia Coelho',               'flavia.coelho@unimedcnu.coop.br',             'Usuário Padrão', ''],
+    ['Tainara Bramont',             'tainara.conceicao@unimedcnu.coop.br',         'Usuário Padrão', ''],
+    ['Gabriel Boaventura',          'gabriel.boaventura@unimedcnu.coop.br',        'Usuário Padrão', ''],
+    ['Thais Conceição',             'thais.conceicao@unimedcnu.coop.br',           'Usuário Padrão', ''],
+    ['Priscila Amazonas',           'priscila.amazonas@unimedcnu.coop.br',         'Usuário Padrão', ''],
+    ['Mateus Cruz',                 'mateus.silva@unimedcnu.coop.br',              'Usuário Padrão', ''],
+    ['Maiara Atagiba',              'maiara.cardoso@unimedcnu.coop.br',            'Usuário Padrão', ''],
+    ['Ana Tarsis',                  'anatarsis.santos@unimedcnu.coop.br',          'Usuário Padrão', ''],
+    ['Marcos Paulo Pereira',        'marcos.pereira@unimedcnu.coop.br',            'Usuário Padrão', ''],
+    ['Andressa De Jesus Lima',      'andressa.lima@unimedcnu.coop.br',             'Usuário Padrão', '']
   ];
 
-  usu.getRange(2, 1, usuarios.length, 3).setValues(usuarios);
+  usu.getRange(2, 1, usuarios.length, 4).setValues(usuarios);
   SpreadsheetApp.flush();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }

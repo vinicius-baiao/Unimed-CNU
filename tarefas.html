@@ -923,6 +923,9 @@
           </div>
           <div>
             <label>Responsável</label>
+            <select id="filtroUnidade" onchange="filtrarResponsaveis()" style="margin-bottom:5px;font-size:.78rem;color:var(--text-secondary);border-color:var(--border)">
+              <option value="">Todas as unidades</option>
+            </select>
             <select id="campoResponsavel">
               <option value="">— Selecionar responsável —</option>
             </select>
@@ -1016,6 +1019,7 @@
 // ── Configuração ──────────────────────────────────────────────
 var WEBAPP_URL  = 'https://script.google.com/a/macros/unimedcnu.coop.br/s/AKfycbyFDVgvECw8xT70q5K-feokScLs-Z85Q6Ka4_qFyJe10cSE10K_TXEl4ws5nC3lkAF8/exec';  // URL do Apps Script Web App
 var COLUNAS     = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
+var UNIDADES    = ['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Operações de Rede','Qualificação','Regulamentação','NSP'];
 
 var tarefas     = [];
 var templates   = [];
@@ -1597,16 +1601,35 @@ function setModalTab(tab) {
   }
 }
 
+function popularFiltroUnidade() {
+  var sel = document.getElementById('filtroUnidade');
+  sel.innerHTML = '<option value="">Todas as unidades</option>';
+  UNIDADES.forEach(function(u) {
+    var opt = document.createElement('option');
+    opt.value = u; opt.textContent = u;
+    sel.appendChild(opt);
+  });
+}
+
 function popularSelectResponsaveis(emailAtual) {
+  var filtro = document.getElementById('filtroUnidade').value;
+  var lista  = filtro
+    ? usuarios.filter(function(u) { return u.unidade === filtro; })
+    : usuarios;
   var sel = document.getElementById('campoResponsavel');
   sel.innerHTML = '<option value="">— Selecionar responsável —</option>';
-  usuarios.forEach(function(u) {
+  lista.forEach(function(u) {
     var opt = document.createElement('option');
     opt.value = u.email;
     opt.textContent = u.nome + ' (' + u.email.split('@')[0] + ')';
     if (u.email === emailAtual) opt.selected = true;
     sel.appendChild(opt);
   });
+}
+
+function filtrarResponsaveis() {
+  var emailAtual = document.getElementById('campoResponsavel').value;
+  popularSelectResponsaveis(emailAtual);
 }
 
 function abrirConfirm(nome, onOk) {
@@ -1671,6 +1694,8 @@ function abrirModal(tarefa) {
   document.getElementById('campoObservacoes').value = tarefa ? tarefa['Observações']  : '';
   document.getElementById('modalTitulo').textContent = tarefa ? 'Editar Tarefa' : 'Nova Tarefa';
 
+  popularFiltroUnidade();
+  document.getElementById('filtroUnidade').value = '';
   popularSelectResponsaveis(tarefa ? tarefa['Responsável'] : '');
 
   // Tabs: mostrar "Histórico" só ao editar
