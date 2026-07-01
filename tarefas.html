@@ -42,6 +42,7 @@
       --info-cor:     #1868db;
 
       /* Status universais (Asana) */
+      --col-backlog:   #64748b;
       --col-afazer:    #8993a4;
       --col-andamento: #0052cc;
       --col-bloqueado: #e8384f;
@@ -164,7 +165,7 @@
     .board {
       display: flex; gap: 14px; padding: 20px 20px;
       overflow-x: auto; min-height: calc(100vh - 96px);
-      align-items: flex-start;
+      align-items: stretch;
     }
 
     /* Colunas */
@@ -176,6 +177,7 @@
       display: flex; flex-direction: column;
       overflow: hidden;
     }
+    .coluna[data-status="Backlog"]      { --col-accent: var(--col-backlog);   }
     .coluna[data-status="A fazer"]      { --col-accent: var(--col-afazer);    }
     .coluna[data-status="Em andamento"] { --col-accent: var(--col-andamento); }
     .coluna[data-status="Bloqueado"]    { --col-accent: var(--col-bloqueado); }
@@ -843,6 +845,7 @@
           <div>
             <label>Status</label>
             <select id="campoStatus">
+              <option>Backlog</option>
               <option>A fazer</option>
               <option>Em andamento</option>
               <option>Bloqueado</option>
@@ -923,7 +926,7 @@
 <script>
 // ── Configuração ──────────────────────────────────────────────
 var WEBAPP_URL  = 'https://script.google.com/a/macros/unimedcnu.coop.br/s/AKfycbyFDVgvECw8xT70q5K-feokScLs-Z85Q6Ka4_qFyJe10cSE10K_TXEl4ws5nC3lkAF8/exec';  // URL do Apps Script Web App
-var COLUNAS     = ['A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
+var COLUNAS     = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
 
 var tarefas     = [];
 var templates   = [];
@@ -939,6 +942,8 @@ var viewAtual    = 'kanban';
 var sortCol      = 'ID';
 var sortAsc      = true;
 var modalTabAtual = 'dados';
+var modalSnapshot = null;
+var modalIsNova   = false;
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
@@ -1181,9 +1186,9 @@ function renderHome() {
   var painel = document.getElementById('homePainel');
   if (currentUserPodeExcluir) {
     painel.style.display = '';
-    var ps = { 'A fazer': 0, 'Em andamento': 0, 'Bloqueado': 0 };
+    var ps = { 'Backlog': 0, 'A fazer': 0, 'Em andamento': 0, 'Bloqueado': 0 };
     ativas.forEach(function(t) { if (ps[t.Status] !== undefined) ps[t.Status]++; });
-    document.getElementById('statAfazer').textContent    = ps['A fazer'];
+    document.getElementById('statAfazer').textContent    = ps['Backlog'] + ps['A fazer'];
     document.getElementById('statAndamento').textContent = ps['Em andamento'];
     document.getElementById('statBloqueado').textContent = ps['Bloqueado'];
     document.getElementById('statAtrasado').textContent  = atrasadas.length;
@@ -1228,8 +1233,9 @@ function abrirTarefaPorId(id) {
 
 function homeCard(t, atrasado) {
   var statusCores = {
-    'A fazer': 'var(--col-afazer)', 'Em andamento': 'var(--col-andamento)',
-    'Bloqueado': 'var(--col-bloqueado)', 'Concluído': 'var(--col-concluido)'
+    'Backlog': 'var(--col-backlog)', 'A fazer': 'var(--col-afazer)',
+    'Em andamento': 'var(--col-andamento)', 'Bloqueado': 'var(--col-bloqueado)',
+    'Concluído': 'var(--col-concluido)'
   };
   var accent   = atrasado ? 'var(--erro-cor)' : (statusCores[t.Status] || 'var(--col-afazer)');
   var prazoTxt = dataValida(t.Prazo) ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
@@ -1502,6 +1508,25 @@ function confirmarExcluir() {
 }
 
 // ── Modal / formulário ────────────────────────────────────────
+function verificarMudancasModal() {
+  var btn = document.getElementById('btnSalvar');
+  if (!btn || btn.textContent === 'Salvando…') return;
+  if (modalIsNova) {
+    btn.disabled = !document.getElementById('campoTarefa').value.trim();
+    return;
+  }
+  if (!modalSnapshot) { btn.disabled = false; return; }
+  var mudou =
+    document.getElementById('campoTarefa').value      !== modalSnapshot.tarefa ||
+    document.getElementById('campoProjeto').value     !== modalSnapshot.projeto ||
+    document.getElementById('campoResponsavel').value !== modalSnapshot.responsavel ||
+    document.getElementById('campoPrazo').value       !== modalSnapshot.prazo ||
+    document.getElementById('campoStatus').value      !== modalSnapshot.status ||
+    document.getElementById('campoPrioridade').value  !== modalSnapshot.prioridade ||
+    document.getElementById('campoObservacoes').value !== modalSnapshot.observacoes;
+  btn.disabled = !mudou;
+}
+
 function abrirModal(tarefa) {
   modalTabAtual = 'dados';
   setModalTab('dados');
@@ -1546,6 +1571,29 @@ function abrirModal(tarefa) {
     ckl.forEach(function(i) { itensEl.appendChild(criarItemCkl(i.Item, i.Ordem, i.Concluído === true || i.Concluído === 'TRUE')); });
   }
   atualizarProgressoCkl();
+
+  // Reset do botão (fix: estado "Salvando…" persiste entre modais)
+  var btnS = document.getElementById('btnSalvar');
+  btnS.disabled = true;
+  btnS.textContent = 'Salvar';
+
+  // Snapshot para detecção de mudanças
+  modalIsNova = !tarefa;
+  modalSnapshot = tarefa ? {
+    tarefa:      document.getElementById('campoTarefa').value,
+    projeto:     document.getElementById('campoProjeto').value,
+    responsavel: document.getElementById('campoResponsavel').value,
+    prazo:       document.getElementById('campoPrazo').value,
+    status:      document.getElementById('campoStatus').value,
+    prioridade:  document.getElementById('campoPrioridade').value,
+    observacoes: document.getElementById('campoObservacoes').value
+  } : null;
+
+  ['campoTarefa','campoProjeto','campoResponsavel','campoPrazo','campoStatus','campoPrioridade','campoObservacoes'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.oninput  = verificarMudancasModal;
+    el.onchange = verificarMudancasModal;
+  });
 
   document.getElementById('overlay').classList.add('open');
 }
@@ -1779,7 +1827,7 @@ function badgePrio(p) {
   return ({ 'Crítica': 'badge-critica', 'Alta': 'badge-alta', 'Média': 'badge-media', 'Baixa': 'badge-baixa' })[p] || 'badge-baixa';
 }
 function badgeStatus(s) {
-  return ({ 'Concluído': 'badge-media', 'Em andamento': 'badge-alta', 'Bloqueado': 'badge-critica', 'A fazer': 'badge-baixa' })[s] || 'badge-baixa';
+  return ({ 'Backlog': 'badge-baixa', 'Concluído': 'badge-media', 'Em andamento': 'badge-alta', 'Bloqueado': 'badge-critica', 'A fazer': 'badge-baixa' })[s] || 'badge-baixa';
 }
 </script>
 </body>

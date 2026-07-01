@@ -166,7 +166,7 @@ function listarTarefas() {
 }
 
 // ── Validação de entrada ──────────────────────────────────────
-var STATUS_VALIDOS    = ['A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
+var STATUS_VALIDOS    = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluído'];
 var PRIORIDADE_VALIDA = ['Crítica', 'Alta', 'Média', 'Baixa'];
 var DOMINIO_PERMITIDO = '@unimedcnu.coop.br';
 
