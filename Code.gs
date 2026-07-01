@@ -724,6 +724,29 @@ function setup() {
   Logger.log('Setup concluído — abas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários, Arquivo, Projetos');
 }
 
+// ── repararValidacaoUsuarios ── corrige header e validação da aba Usuários ──
+// Rodar quando a coluna Perfil mostrar dropdown TRUE/FALSE em vez de Admin/Gestor/Usuário Padrão
+function repararValidacaoUsuarios() {
+  var ss  = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  var usu = ss.getSheetByName(ABA_USUARIOS);
+  if (!usu) { Logger.log('Aba Usuários não encontrada.'); return; }
+
+  // Corrige cabeçalhos (linha 1)
+  usu.getRange(1, 1, 1, 4).setValues([['Nome','Email','Perfil','Unidade']])
+    .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
+
+  // Remove validações antigas e aplica as corretas
+  usu.getRange(2, 3, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Admin','Gestor','Usuário Padrão'], true).build());
+  usu.getRange(2, 4, 999).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Operações de Rede','Qualificação','Regulamentação','NSP'], true).build());
+
+  SpreadsheetApp.flush();
+  Logger.log('Validação da aba Usuários corrigida. Verifique os valores na coluna Perfil.');
+}
+
 // ── popularUsuarios ── rodar 1x após setup() ──────────────────
 function popularUsuarios() {
   var ss = SHEET_ID
