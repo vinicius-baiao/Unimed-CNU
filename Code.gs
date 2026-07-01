@@ -86,8 +86,21 @@ function doGet(e) {
 // ── Projetos ──────────────────────────────────────────────────
 var COL_PROJ = { ID: 0, NOME: 1, DESCRICAO: 2, COR: 3, ATIVO: 4 };
 
+function getOrCreateProjetosSheet() {
+  var ss    = _ss || (_ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet());
+  var sheet = ss.getSheetByName(ABA_PROJETOS);
+  if (!sheet) {
+    sheet = ss.insertSheet(ABA_PROJETOS);
+    var hProj = ['ID','Nome','Descrição','Cor','Ativo'];
+    sheet.getRange(1, 1, 1, hProj.length).setValues([hProj]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, hProj.length, 100);
+  }
+  return sheet;
+}
+
 function proximoIdProjeto() {
-  var sheet  = getSheet(ABA_PROJETOS);
+  var sheet  = getOrCreateProjetosSheet();
   var ultima = sheet.getLastRow();
   if (ultima <= 1) return 1;
   var lastId = parseInt(sheet.getRange(ultima, 1).getValue(), 10);
@@ -95,8 +108,7 @@ function proximoIdProjeto() {
 }
 
 function listarProjetos() {
-  var sheet = getSheet(ABA_PROJETOS);
-  if (!sheet) return { projetos: [] };
+  var sheet = getOrCreateProjetosSheet();
   var rows  = sheet.getDataRange().getValues();
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
@@ -120,7 +132,7 @@ function criarProjeto(dados) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
 
-  var sheet = getSheet(ABA_PROJETOS);
+  var sheet = getOrCreateProjetosSheet();
   var id    = proximoIdProjeto();
   sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', dados.cor || '#64748b', true]);
   gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome);
@@ -133,7 +145,7 @@ function atualizarProjeto(dados) {
   var editor = Session.getActiveUser().getEmail();
   if (!podeExcluir(editor)) return { erro: 'Sem permissão.' };
 
-  var sheet = getSheet(ABA_PROJETOS);
+  var sheet = getOrCreateProjetosSheet();
   var rows  = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
@@ -153,7 +165,7 @@ function arquivarProjeto(dados) {
   var editor = Session.getActiveUser().getEmail();
   if (!podeExcluir(editor)) return { erro: 'Sem permissão.' };
 
-  var sheet = getSheet(ABA_PROJETOS);
+  var sheet = getOrCreateProjetosSheet();
   var rows  = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
