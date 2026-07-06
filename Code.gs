@@ -13,6 +13,10 @@ var ABA_ARQUIVO      = 'Arquivo';
 var ABA_PROJETOS     = 'Projetos';
 var EMAIL_REPORTE    = 'aurelio.pereira.ext@unimedcnu.coop.br';
 
+// Arquivo HTML servido pelo doGet (sem a extensão .html).
+// Trocar para 'tarefas' para voltar ao layout clássico.
+var HTML_FILE        = 'tarefas-shadcn';
+
 // Índices das colunas (base 0) na aba Tarefas
 var COL = {
   ID:          0,
@@ -37,7 +41,7 @@ function doGet(e) {
 
   // Sem ação → serve o frontend HTML (permite embed no Google Sites)
   if (!acao) {
-    return HtmlService.createHtmlOutputFromFile('tarefas')
+    return HtmlService.createHtmlOutputFromFile(HTML_FILE)
       .setTitle('Gestão de Tarefas — Rede Ambulatorial CNU')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
