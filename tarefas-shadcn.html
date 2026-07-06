@@ -722,7 +722,7 @@
 
     <!-- Nota de permissão -->
     <div class="permissao-nota" id="permissaoNota">
-      ⚠️ Somente o criador desta tarefa pode alterar o prazo ou marcá-la como Concluída.
+      ⚠️ Somente o criador da tarefa ou um Admin/Gestor pode alterar o prazo.
     </div>
 
     <!-- Pane: Dados -->
@@ -942,7 +942,11 @@ function renderUserBadge() {
 }
 
 // Regra de edição: criador da tarefa OU Admin/Gestor. (Mesma lógica do modal.)
-function podeEditarTarefa(t) {
+function podeEditarTarefa() {
+  return true; // todos podem editar (o prazo continua restrito ao criador/Admin no formulário)
+}
+// Só o criador ou Admin/Gestor pode alterar o prazo.
+function podeAlterarPrazo(t) {
   if (!t) return true;
   var criador = String(t['Criado por'] || '').trim().toLowerCase();
   var eCriador = !currentUser || criador === currentUser.trim().toLowerCase();
@@ -1417,11 +1421,6 @@ function moverCard(id, novoStatus) {
   var t = tarefas.find(function(x) { return String(x.ID) === String(id); });
   if (!t || t.Status === novoStatus) return;
 
-  if (novoStatus === 'Concluído' && currentUser && t['Criado por'] !== currentUser) {
-    toast('Somente o criador pode mover para Concluído.', true);
-    return;
-  }
-
   t.Status = novoStatus;
   renderBoard();
   chamarAPI({ acao: 'atualizarTarefa', dados: { id: id, status: novoStatus } }, function(data) {
@@ -1649,9 +1648,6 @@ function abrirModal(tarefa, modo) {
   });
   document.getElementById('campoPrazo').disabled = !modoEdicao || (!!tarefa && !podeTudo);
   document.getElementById('permissaoNota').style.display = (modoEdicao && tarefa && !podeTudo) ? 'block' : 'none';
-  Array.from(document.getElementById('campoStatus').options).forEach(function(opt) {
-    opt.disabled = (modoEdicao && tarefa && !podeTudo && opt.value === 'Concluído');
-  });
 
   // Botão excluir: visível só em modo edição, para criador/Admin/Gestor
   document.getElementById('btnExcluir').style.display = (modoEdicao && tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';

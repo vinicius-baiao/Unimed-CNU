@@ -376,12 +376,10 @@ function atualizarTarefa(dados) {
     var criador = String(linhas[i][COL.CRIADO_POR] || '').trim().toLowerCase();
     var eCriador = editor === criador;
     var admin    = isAdmin(editor) || podeExcluir(editor); // Admin + Gestor
-    if (!admin && !eCriador && dados.status === 'Concluído' && dados.status !== linhas[i][COL.STATUS]) {
-      return { erro: 'Apenas quem criou a tarefa pode marcá-la como Concluída.' };
-    }
+    // Todos podem editar; apenas o prazo é restrito ao criador ou Admin/Gestor.
     var prazoAtualStr = linhas[i][COL.PRAZO] ? new Date(linhas[i][COL.PRAZO]).toISOString().slice(0,10) : '';
     if (!admin && !eCriador && dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr) {
-      return { erro: 'Apenas quem criou a tarefa pode alterar o prazo.' };
+      return { erro: 'Apenas o criador ou um Admin/Gestor pode alterar o prazo.' };
     }
 
     var statusAnterior  = String(linhas[i][COL.STATUS] || '');
