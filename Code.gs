@@ -13,6 +13,12 @@ var ABA_ARQUIVO      = 'Arquivo';
 var ABA_PROJETOS     = 'Projetos';
 var EMAIL_REPORTE    = 'aurelio.pereira.ext@unimedcnu.coop.br';
 
+// Remetente das notificações. Precisa estar configurado como "Enviar e-mail como"
+// (Gmail → Config. → Contas → Enviar e-mail como) na conta que executa o script.
+// Se não for um alias válido, o envio cai no remetente padrão (mantendo o nome).
+var EMAIL_REMETENTE  = 'taskcenter@unimedcnu.coop.br';
+var EMAIL_NOME       = 'Tarefas CNU';
+
 // Arquivo HTML servido pelo doGet (sem a extensão .html).
 // Trocar para 'tarefas' para voltar ao layout clássico.
 var HTML_FILE        = 'tarefas-shadcn';
@@ -600,12 +606,27 @@ function notificarMarcadoChecklist(email, nomeTarefa, idTarefa) {
     + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
     + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
     + '</div></div>';
-  MailApp.sendEmail({ to: email, subject: '[Tarefas CNU] Você foi marcado em uma checklist', htmlBody: html });
+  enviarEmail(email, '[Tarefas CNU] Você foi marcado em uma checklist', html);
 }
 
 // ── Helpers de segurança ──────────────────────────────────────
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Envio centralizado. Usa EMAIL_REMETENTE como remetente quando ele for um
+// alias válido ("Send mail as"); caso contrário, usa o remetente padrão da conta.
+function enviarEmail(to, subject, htmlBody) {
+  try {
+    var opts = { htmlBody: htmlBody, name: EMAIL_NOME };
+    if (EMAIL_REMETENTE && GmailApp.getAliases().indexOf(EMAIL_REMETENTE) !== -1) {
+      opts.from = EMAIL_REMETENTE;
+    }
+    GmailApp.sendEmail(to, subject, '', opts);
+  } catch (e) {
+    Logger.log('enviarEmail fallback (' + to + '): ' + e.message);
+    MailApp.sendEmail({ to: to, subject: subject, htmlBody: htmlBody, name: EMAIL_NOME });
+  }
 }
 
 // ── Notificações e Calendar ───────────────────────────────────
@@ -643,11 +664,7 @@ function notificarResponsavel(dados, tipo) {
     + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
     + '</div></div>';
 
-  MailApp.sendEmail({
-    to:       dados.responsavel,
-    subject:  assuntos[tipo] || assuntos.criacao,
-    htmlBody: html
-  });
+  enviarEmail(dados.responsavel, assuntos[tipo] || assuntos.criacao, html);
 }
 
 function criarEventoCalendar(dados, prazo) {
@@ -1078,11 +1095,7 @@ function relatorioDiario() {
     + 'Gerado automaticamente pelo sistema de Gestão de Tarefas CNU</p>'
     + '</div></div>';
 
-  MailApp.sendEmail({
-    to:       EMAIL_REPORTE,
-    subject:  '[Tarefas CNU] Resumo do dia — ' + hoje.toLocaleDateString('pt-BR'),
-    htmlBody: html
-  });
+  enviarEmail(EMAIL_REPORTE, '[Tarefas CNU] Resumo do dia — ' + hoje.toLocaleDateString('pt-BR'), html);
 }
 
 // ── Trigger diário: lembretes D-1 ────────────────────────────
@@ -1125,11 +1138,7 @@ function lembretesDiarios() {
       + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
       + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
       + '</div></div>';
-    MailApp.sendEmail({
-      to:       responsavel,
-      subject:  '[Tarefas CNU] Lembrete: tarefa vence amanhã',
-      htmlBody: htmlLem
-    });
+    enviarEmail(responsavel, '[Tarefas CNU] Lembrete: tarefa vence amanhã', htmlLem);
   }
 }
 
