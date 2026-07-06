@@ -159,7 +159,7 @@
     .btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
     .btn-primary { background: var(--primary); color: var(--primary-foreground); }
     .btn-primary:hover { background: var(--primary-hover); }
-    .btn-dourado { background: var(--dourado); color: #fff; }
+    .btn-dourado { background: var(--dourado); color: #2a2205; font-weight: 600; }
     .btn-dourado:hover { background: var(--dourado-hover); }
     .btn-ghost { background: var(--surface); color: var(--foreground); border-color: var(--input); box-shadow: var(--shadow-sm); }
     .btn-ghost:hover { background: var(--accent); color: var(--accent-foreground); }
@@ -479,6 +479,14 @@
 
     @media (max-width: 900px) { .home-content-grid { grid-template-columns: 1fr; } .home-right-col { gap: 20px; } }
     @media (max-width: 640px) { #homeView { padding: 20px 16px 32px; } .home-stat-grid { grid-template-columns: repeat(2, 1fr); } .home-hero { flex-direction: column; align-items: flex-start; } }
+    /* Mobile: sidebar de filtros ocultada; colunas do board deslizáveis */
+    @media (max-width: 860px) {
+      .sidebar { display: none; }
+      .board { padding: 16px; }
+      .coluna { min-width: 82vw; max-width: 90vw; }
+      .list-view { padding: 16px; overflow-x: auto; }
+      #userBadge span:last-child { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -501,6 +509,7 @@
   <div style="width:1px;height:28px;background:rgba(255,255,255,.25);margin:0 4px"></div>
   <h1 style="font-size:1rem;font-weight:500;letter-spacing:.02em;opacity:.9">Gestão de Tarefas</h1>
   <div style="flex:1"></div>
+  <span id="userBadge" style="display:none;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.9);margin-right:4px"></span>
   <button class="btn btn-dourado" onclick="abrirModal()">+ Nova Tarefa</button>
 </header>
 
@@ -519,7 +528,7 @@
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
       <circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/>
     </svg>
-    <input type="text" id="filtroBusca" placeholder="Buscar tarefa…" oninput="renderView()">
+    <input type="text" id="filtroBusca" placeholder="Buscar por tarefa, projeto, responsável…" oninput="renderView(); atualizarBotaoLimpar();">
   </div>
   <div class="view-toggle">
     <button class="toggle-btn active" id="btnKanban" onclick="setView('kanban')" title="Kanban">
@@ -836,6 +845,7 @@ var interacoesCache = {};     // {id_tarefa: [interacoes]} — cache lazy
 var currentUser          = '';
 var currentUserIsAdmin   = false;
 var currentUserPodeExcluir = false;
+var currentUserPerfil      = '';
 
 var modoAtual    = 'home';   // 'home' | 'tarefas'
 var viewAtual    = 'kanban';
@@ -895,16 +905,49 @@ document.addEventListener('DOMContentLoaded', function() {
       currentUser            = d.email       || '';
       currentUserIsAdmin     = d.admin       || false;
       currentUserPodeExcluir = d.podeExcluir || false;
+      currentUserPerfil      = d.perfil      || '';
       if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
+      renderUserBadge();
       // Atualiza saudação e painel assim que o perfil chegar
       if (modoAtual === 'home' && tarefas.length) renderHome();
     });
     chamarAPI({ acao: 'listarUsuarios' }, function(d) {
       usuarios = d.usuarios || [];
-      if (modoAtual === 'home' && tarefas.length) renderHome();
+      renderUserBadge();
+      // Re-renderiza para trocar logins de e-mail pelos nomes reais
+      if (tarefas.length) { if (modoAtual === 'home') renderHome(); else { popularFiltros(); renderView(); } }
     });
   }
+
+  // Fechar modais com a tecla Esc
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('confirmOverlay').classList.contains('open')) { fecharConfirm(); return; }
+    if (document.getElementById('projOverlay').classList.contains('open'))    { fecharGerenciarProjetos(); return; }
+    if (document.getElementById('overlay').classList.contains('open')) {
+      if (modalTemMudancas()) { toast('Você tem alterações não salvas. Use Salvar ou Fechar.', true); return; }
+      fecharModal();
+    }
+  });
 });
+
+function renderUserBadge() {
+  var badge = document.getElementById('userBadge');
+  if (!badge || !currentUser) return;
+  var perfil = currentUserPerfil || (currentUserIsAdmin ? 'Admin' : (currentUserPodeExcluir ? 'Gestor' : ''));
+  badge.style.display = 'flex';
+  badge.innerHTML = '<span class="avatar" style="width:24px;height:24px;font-size:.55rem;border-color:rgba(255,255,255,.35)">'
+    + esc(avatarInitials(currentUser)) + '</span>'
+    + '<span>' + esc(nomeDeUsuario(currentUser)) + (perfil ? ' · ' + esc(perfil) : '') + '</span>';
+}
+
+function modalTemMudancas() {
+  var overlay = document.getElementById('overlay');
+  if (!overlay.classList.contains('open')) return false;
+  var btn = document.getElementById('btnSalvar');
+  // Salvar visível e habilitado ⇒ há alterações (ou nova tarefa com título preenchido)
+  return !!btn && btn.style.display !== 'none' && !btn.disabled;
+}
 
 function carregarTudo() {
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
@@ -972,6 +1015,7 @@ function setFiltroProjeto(val) {
     el.classList.toggle('active', el.dataset.val === val);
   });
   renderView();
+  atualizarBotaoLimpar();
 }
 
 function setFiltroResponsavel(val) {
@@ -979,6 +1023,15 @@ function setFiltroResponsavel(val) {
   document.querySelectorAll('#sidebarResponsaveis .sidebar-item').forEach(function(el) {
     el.classList.toggle('active', el.dataset.val === val);
   });
+  renderView();
+  atualizarBotaoLimpar();
+}
+
+function limparFiltros() {
+  filtroProjetoAtual = '';
+  filtroResponsavelAtual = '';
+  var b = document.getElementById('filtroBusca'); if (b) b.value = '';
+  popularFiltros();
   renderView();
 }
 
@@ -1042,13 +1095,32 @@ function popularFiltros() {
     + '</button>';
   resps.forEach(function(r) {
     var cnt  = tarefas.filter(function(t) { return t['Responsável'] === r; }).length;
-    var nome = nomeDeEmail(r);
+    var nome = nomeDeUsuario(r);
     var safe = esc(r).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     srEl.innerHTML += '<button class="sidebar-item" data-val="' + esc(r) + '" onclick="setFiltroResponsavel(\'' + safe + '\')">'
       + '<span class="sidebar-item-label" title="' + esc(r) + '">' + esc(nome) + '</span>'
       + '<span class="sidebar-count">' + cnt + '</span>'
       + '</button>';
   });
+
+  atualizarBotaoLimpar();
+}
+
+// "Limpar filtros" — só aparece quando há algum filtro ativo
+function atualizarBotaoLimpar() {
+  var srEl = document.getElementById('sidebarResponsaveis');
+  if (!srEl) return;
+  var ex = document.getElementById('btnLimparFiltros');
+  if (ex) ex.remove();
+  var buscaAtual = (document.getElementById('filtroBusca') || {}).value || '';
+  if (filtroProjetoAtual || filtroResponsavelAtual || buscaAtual) {
+    var b = document.createElement('button');
+    b.id = 'btnLimparFiltros'; b.className = 'sidebar-item';
+    b.style.cssText = 'color:var(--accent);font-weight:600;margin-top:6px';
+    b.textContent = 'Limpar filtros';
+    b.onclick = limparFiltros;
+    srEl.appendChild(b);
+  }
 }
 
 function tarefasFiltradas() {
@@ -1056,7 +1128,11 @@ function tarefasFiltradas() {
   return tarefas.filter(function(t) {
     if (filtroProjetoAtual     && t.Projeto !== filtroProjetoAtual) return false;
     if (filtroResponsavelAtual && t['Responsável'] !== filtroResponsavelAtual) return false;
-    if (busca && !(t.Tarefa || '').toLowerCase().includes(busca)) return false;
+    if (busca) {
+      var alvo = [t.Tarefa, t.Projeto, t['Responsável'], nomeDeUsuario(t['Responsável']), t['Observações']]
+        .join('  ').toLowerCase();
+      if (alvo.indexOf(busca) === -1) return false;
+    }
     return true;
   });
 }
@@ -1191,7 +1267,7 @@ function homeCard(t, atrasado) {
   var accent   = atrasado ? 'var(--erro-cor)' : (statusCores[t.Status] || 'var(--col-afazer)');
   var prazoTxt = dataValida(t.Prazo) ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
   var prazoCls = atrasado ? 'atrasado' : prazoClass(t.Prazo);
-  var resp = t['Responsável'] ? t['Responsável'].split('@')[0] : '';
+  var resp = t['Responsável'] ? nomeDeUsuario(t['Responsável']) : '';
   var proj = t.Projeto ? ' · ' + esc(t.Projeto) : '';
   return '<div class="home-card" style="border-left-color:' + accent + '" onclick="abrirTarefaPorId(' + Number(t.ID) + ')">'
     + '<div class="home-card-main">'
@@ -1215,6 +1291,15 @@ function renderBoard() {
 
   COLUNAS.forEach(function(status) {
     var cards = filtradas.filter(function(t) { return t.Status === status; });
+    var _prio = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 };
+    cards.sort(function(a, b) {
+      var pa = _prio[a.Prioridade] != null ? _prio[a.Prioridade] : 9;
+      var pb = _prio[b.Prioridade] != null ? _prio[b.Prioridade] : 9;
+      if (pa !== pb) return pa - pb;
+      var da = dataValida(a.Prazo) ? new Date(a.Prazo).getTime() : Infinity;
+      var db = dataValida(b.Prazo) ? new Date(b.Prazo).getTime() : Infinity;
+      return da - db;
+    });
     var col   = document.createElement('div');
     col.className      = 'coluna';
     col.dataset.status = status;
@@ -1276,7 +1361,7 @@ function criarCard(t) {
   }
 
   var avatarHtml = t['Responsável']
-    ? '<div class="avatar" title="' + esc(t['Responsável']) + '">' + avatarInitials(t['Responsável']) + '</div>'
+    ? '<div class="avatar" title="' + esc(nomeDeUsuario(t['Responsável'])) + '">' + avatarInitials(t['Responsável']) + '</div>'
     : '';
 
   card.innerHTML = '<div class="card-header">'
@@ -1385,7 +1470,7 @@ function renderList() {
     tr.innerHTML = '<td class="td-id">'   + esc(t.ID)    + '</td>'
       + '<td class="td-tarefa">'          + esc(t.Tarefa) + '</td>'
       + '<td class="td-projeto">'         + esc(t.Projeto || '') + '</td>'
-      + '<td class="td-resp">'            + esc(nomeDeEmail(t['Responsável'] || '')) + '</td>'
+      + '<td class="td-resp">'            + esc(nomeDeUsuario(t['Responsável'] || '')) + '</td>'
       + '<td class="td-prazo ' + prazoClass(t.Prazo) + '">' + formatarData(t.Prazo) + '</td>'
       + '<td><span class="badge ' + badgeStatus(t.Status)     + '">' + esc(t.Status     || '') + '</span></td>'
       + '<td><span class="badge ' + badgePrio(t.Prioridade)   + '">' + esc(t.Prioridade || '') + '</span></td>'
@@ -1453,9 +1538,16 @@ function filtrarResponsaveis() {
   popularSelectResponsaveis(emailAtual);
 }
 
-function abrirConfirm(nome, onOk) {
-  document.getElementById('confirmNome').textContent = 'Excluir "' + nome + '"?';
-  document.getElementById('confirmOk').onclick = function() { fecharConfirm(); onOk(); };
+function abrirConfirm(nome, onOk, opts) {
+  opts = opts || {};
+  document.getElementById('confirmNome').textContent = (opts.prefixo || 'Excluir') + ' "' + nome + '"?';
+  var sub = document.querySelector('#confirmBox small');
+  if (sub) sub.textContent = opts.sub || 'Esta ação não pode ser desfeita.';
+  var okBtn = document.getElementById('confirmOk');
+  okBtn.textContent  = opts.okLabel || 'Excluir';
+  okBtn.style.background  = opts.okBg || 'var(--erro-cor)';
+  okBtn.style.borderColor = opts.okBg || 'var(--erro-cor)';
+  okBtn.onclick = function() { fecharConfirm(); onOk(); };
   document.getElementById('confirmOverlay').classList.add('open');
 }
 
@@ -1522,7 +1614,7 @@ function abrirModal(tarefa, modo) {
   document.getElementById('campoId').value          = tarefa ? tarefa.ID              : '';
   document.getElementById('campoTarefa').value      = tarefa ? tarefa.Tarefa          : '';
   popularSelectProjetos(tarefa ? tarefa.Projeto : '');
-  document.getElementById('campoPrazo').min         = new Date().toISOString().slice(0, 10);
+  document.getElementById('campoPrazo').removeAttribute('min'); // permite registrar prazo no passado
   document.getElementById('campoPrazo').value       = tarefa && tarefa.Prazo ? isoDate(tarefa.Prazo) : '';
   document.getElementById('campoStatus').value      = tarefa ? tarefa.Status          : 'A fazer';
   document.getElementById('campoPrioridade').value  = tarefa ? tarefa.Prioridade      : 'Média';
@@ -1608,6 +1700,11 @@ function abrirModal(tarefa, modo) {
   }
 
   document.getElementById('overlay').classList.add('open');
+  // Foco no primeiro campo editável ao abrir
+  if (modoEdicao) setTimeout(function() {
+    var f = document.getElementById('campoTarefa');
+    if (f && !f.disabled) f.focus();
+  }, 60);
 }
 
 function entrarModoEdicao() {
@@ -1615,7 +1712,11 @@ function entrarModoEdicao() {
 }
 
 function fecharModal()      { document.getElementById('overlay').classList.remove('open'); }
-function fecharModalFora(e) { if (e.target === document.getElementById('overlay')) fecharModal(); }
+function fecharModalFora(e) {
+  if (e.target !== document.getElementById('overlay')) return;
+  if (modalTemMudancas()) { toast('Você tem alterações não salvas. Use Salvar ou Fechar.', true); return; }
+  fecharModal();
+}
 
 function salvarTarefa(e) {
   e.preventDefault();
@@ -1849,8 +1950,13 @@ function formatarData(val) {
 function nomeDeEmail(email) {
   return email ? email.split('@')[0] : '';
 }
+function nomeDeUsuario(email) {
+  if (!email) return '';
+  var u = usuarios.filter(function(x) { return String(x.email).toLowerCase() === String(email).toLowerCase(); })[0];
+  return u && u.nome ? u.nome : nomeDeEmail(email);
+}
 function avatarInitials(email) {
-  var nome = nomeDeEmail(email).replace(/[._]/g, ' ');
+  var nome = nomeDeUsuario(email).replace(/[._]/g, ' ');
   var partes = nome.trim().split(/\s+/);
   return partes.length > 1
     ? (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
@@ -1957,14 +2063,15 @@ function salvarNovoProjeto() {
 }
 
 function arquivarProjetoById(id, nome) {
-  if (!confirm('Arquivar o projeto "' + nome + '"? As tarefas existentes não serão afetadas.')) return;
-  chamarAPI({ acao: 'arquivarProjeto', dados: { id: id } }, function(data) {
-    if (data.erro) { toast('Erro: ' + data.erro, true); return; }
-    projetos = projetos.filter(function(p) { return Number(p.id) !== id; });
-    renderListaProjetos();
-    popularFiltros();
-    toast('Projeto arquivado.');
-  });
+  abrirConfirm(nome, function() {
+    chamarAPI({ acao: 'arquivarProjeto', dados: { id: id } }, function(data) {
+      if (data.erro) { toast('Erro: ' + data.erro, true); return; }
+      projetos = projetos.filter(function(p) { return Number(p.id) !== id; });
+      renderListaProjetos();
+      popularFiltros();
+      toast('Projeto arquivado.');
+    });
+  }, { prefixo: 'Arquivar', okLabel: 'Arquivar', sub: 'As tarefas existentes não serão afetadas.', okBg: 'var(--accent)' });
 }
 </script>
 <script>

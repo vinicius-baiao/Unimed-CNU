@@ -21,6 +21,20 @@ var HTML_FILE        = 'tarefas-shadcn';
 // Além deste flag, remova/desative o gatilho no Apps Script → Gatilhos.
 var RESUMO_DIARIO_ATIVO = false;
 
+// Piloto: restringe o acesso aos e-mails abaixo. Desligar com PILOTO_ATIVO = false.
+var PILOTO_ATIVO  = true;
+var EMAILS_PILOTO = [
+  'aurelio.pereira.ext@unimedcnu.coop.br',
+  'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',
+  'guilherme.silva.ext@unimedcnu.coop.br',
+  'thiago.viana.ext@unimedcnu.coop.br'
+];
+function acessoPermitido(email) {
+  if (!PILOTO_ATIVO) return true;
+  if (!email) return true; // fail-open se o e-mail não resolver (evita lockout acidental)
+  return EMAILS_PILOTO.indexOf(String(email).toLowerCase()) !== -1;
+}
+
 // Índices das colunas (base 0) na aba Tarefas
 var COL = {
   ID:          0,
@@ -45,6 +59,14 @@ function doGet(e) {
 
   // Sem ação → serve o frontend HTML (permite embed no Google Sites)
   if (!acao) {
+    if (!acessoPermitido(Session.getActiveUser().getEmail())) {
+      return HtmlService.createHtmlOutput(
+        '<div style="font-family:system-ui,Arial,sans-serif;max-width:460px;margin:64px auto;text-align:center;color:#15211f">'
+        + '<h2 style="color:#004e4c;margin:0 0 8px">Acesso restrito</h2>'
+        + '<p style="color:#5b6b68">Este piloto está liberado apenas para usuários autorizados. '
+        + 'Fale com o Aurélio para solicitar acesso.</p></div>')
+        .setTitle('Acesso restrito — Gestão de Tarefas CNU');
+    }
     return HtmlService.createHtmlOutputFromFile(HTML_FILE)
       .setTitle('Gestão de Tarefas — Rede Ambulatorial CNU')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -52,6 +74,9 @@ function doGet(e) {
 
   var resultado;
   try {
+    if (!acessoPermitido(Session.getActiveUser().getEmail())) {
+      resultado = { erro: 'Acesso restrito ao piloto.' };
+    } else {
     switch (acao) {
       case 'listarTarefas':          resultado = listarTarefas();               break;
       case 'criarTarefa':            resultado = criarTarefa(dados);            break;
@@ -75,6 +100,7 @@ function doGet(e) {
       }
       default:
         resultado = { erro: 'Ação desconhecida: ' + acao };
+    }
     }
   } catch (err) {
     resultado = { erro: err.message };
@@ -813,12 +839,41 @@ function popularUsuarios() {
     ['Priscila Alves Ferrari',      'priscila.ferrari@unimednacional.coop.br',      'Usuário Padrão', '',                                         ''],
     ['Raquel Fuentes De Stefano',   'raquel.stefano@unimednacional.coop.br',        'Usuário Padrão', '',                                         ''],
     ['Thais Carvalho Freitas',      'thais.freitas@unimedcnu.coop.br',              'Usuário Padrão', '',                                         ''],
-    ['Vinicius Silva De Oliveira',  'viniciuss.oliveira@unimedcnu.coop.br',         'Usuário Padrão', '',                                         '']
+    ['Vinicius Silva De Oliveira',  'viniciuss.oliveira@unimedcnu.coop.br',         'Usuário Padrão', '',                                         ''],
+    ['Jacqueline Wahrhaftig',       'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',   'Usuário Padrão', '',                                         ''],
+    ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',     'Usuário Padrão', '',                                         ''],
+    ['Thiago Viana Santos',         'thiago.viana.ext@unimedcnu.coop.br',            'Usuário Padrão', '',                                         '']
   ];
 
   usu.getRange(2, 1, usuarios.length, 5).setValues(usuarios);
   SpreadsheetApp.flush();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
+}
+
+// ── adicionarUsuariosPiloto ── adiciona os 4 usuários do piloto sem apagar os demais ──
+// Idempotente: pula quem já existe (por e-mail). Rodar 1x manualmente no editor.
+function adicionarUsuariosPiloto() {
+  var sheet = getSheet(ABA_USUARIOS);
+  if (!sheet) { Logger.log('Aba Usuários não existe. Rode setup() primeiro.'); return; }
+
+  var pilotos = [
+    ['Jacqueline Wahrhaftig',           'jacqueline.wahrhaftig.ext@unimedcnu.coop.br', 'Usuário Padrão', '', ''],
+    ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',       'Usuário Padrão', '', ''],
+    ['Thiago Viana Santos',             'thiago.viana.ext@unimedcnu.coop.br',          'Usuário Padrão', '', '']
+  ];
+
+  var rows = sheet.getDataRange().getValues();
+  var existentes = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][1]) existentes[String(rows[i][1]).toLowerCase()] = true;
+  }
+
+  var novos = pilotos.filter(function(u) { return !existentes[u[1].toLowerCase()]; });
+  if (!novos.length) { Logger.log('adicionarUsuariosPiloto: todos já cadastrados.'); return; }
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, novos.length, 5).setValues(novos);
+  SpreadsheetApp.flush();
+  Logger.log('adicionarUsuariosPiloto: ' + novos.length + ' usuário(s) adicionado(s).');
 }
 
 // ── popularTarefas ── insere demandas reais sem disparar e-mails/Calendar ──
