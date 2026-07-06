@@ -741,9 +741,6 @@
           </div>
           <div>
             <label>Responsável</label>
-            <select id="filtroUnidade" onchange="filtrarResponsaveis()" style="margin-bottom:5px;font-size:.78rem;color:var(--text-secondary);border-color:var(--border)">
-              <option value="">Todas as unidades</option>
-            </select>
             <select id="campoResponsavel">
               <option value="">— Selecionar responsável —</option>
             </select>
@@ -1512,37 +1509,20 @@ function setModalTab(tab) {
   }
 }
 
-function popularFiltroUnidade() {
-  var sel = document.getElementById('filtroUnidade');
-  sel.innerHTML = '<option value="">Todas as unidades</option>';
-  UNIDADES.forEach(function(u) {
-    var opt = document.createElement('option');
-    opt.value = u; opt.textContent = u;
-    sel.appendChild(opt);
-  });
-}
-
 function popularSelectResponsaveis(emailAtual) {
-  var filtro = document.getElementById('filtroUnidade').value;
-  var lista  = filtro
-    ? usuarios.filter(function(u) {
-        return (u.unidade || '').split(',').some(function(s) { return s.trim() === filtro; });
-      })
-    : usuarios;
+  var lista = usuarios.slice().sort(function(a, b) {
+    return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+  });
   var sel = document.getElementById('campoResponsavel');
   sel.innerHTML = '<option value="">— Selecionar responsável —</option>';
   lista.forEach(function(u) {
+    if (!u.email) return;
     var opt = document.createElement('option');
     opt.value = u.email;
     opt.textContent = u.nome + (u.cargo ? ' · ' + u.cargo : '') + ' (' + u.email.split('@')[0] + ')';
     if (u.email === emailAtual) opt.selected = true;
     sel.appendChild(opt);
   });
-}
-
-function filtrarResponsaveis() {
-  var emailAtual = document.getElementById('campoResponsavel').value;
-  popularSelectResponsaveis(emailAtual);
 }
 
 function abrirConfirm(nome, onOk, opts) {
@@ -1629,9 +1609,6 @@ function abrirModal(tarefa, modo) {
   document.getElementById('modalTitulo').textContent =
     modo === 'create' ? 'Nova Tarefa' : (modo === 'view' ? 'Visualizar Tarefa' : 'Editar Tarefa');
 
-  popularFiltroUnidade();
-  document.getElementById('filtroUnidade').value = '';
-  document.getElementById('filtroUnidade').style.display = modoEdicao ? '' : 'none';
   popularSelectResponsaveis(tarefa ? tarefa['Responsável'] : '');
 
   // Tabs: mostrar "Histórico" ao visualizar ou editar tarefa existente
