@@ -523,10 +523,18 @@ function salvarChecklist(dados) {
   });
 
   // Reescrever aba inteira: 3 API calls em vez de N deleteRow + N appendRow
-  var resultado = [header].concat(manter).concat(novas);
+  // Detecta nº de colunas necessário e extende header se a aba tiver schema antigo (7 colunas)
+  var numCols = (novas.length > 0) ? novas[0].length : header.length;
+  while (header.length < numCols) header.push(header.length === 7 ? 'Responsavel' : '');
+  var mantPad = manter.map(function(r) {
+    var row = r.slice();
+    while (row.length < numCols) row.push('');
+    return row;
+  });
+  var resultado = [header].concat(mantPad).concat(novas);
   sheet.clearContents();
   if (resultado.length > 0) {
-    sheet.getRange(1, 1, resultado.length, header.length).setValues(resultado);
+    sheet.getRange(1, 1, resultado.length, numCols).setValues(resultado);
   }
 
   // Notificar colegas marcados em itens da checklist

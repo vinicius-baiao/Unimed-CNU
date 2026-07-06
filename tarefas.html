@@ -470,7 +470,7 @@
     input[type="email"]:focus, select:focus, textarea:focus {
       border-color: var(--verde); box-shadow: 0 0 0 3px rgba(0,78,76,.10);
     }
-    input:disabled, select:disabled {
+    input:disabled, select:disabled, textarea:disabled {
       background: var(--bg-app); color: var(--text-muted);
       cursor: not-allowed; border-color: var(--border);
     }
@@ -705,16 +705,18 @@
 
 <!-- Header -->
 <header>
-  <svg height="34" viewBox="0 0 196 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unimed CNU">
-    <!-- Wordmark -->
-    <text x="1" y="38" font-family="'Arial Black',Arial,sans-serif" font-weight="900" font-size="33" fill="#ffffff" letter-spacing="-0.5">Unimed</text>
-    <!-- Vertical separator -->
-    <line x1="140" y1="1" x2="140" y2="47" stroke="#ffffff" stroke-width="1.4"/>
-    <!-- Horizontal separator -->
-    <line x1="140" y1="24" x2="196" y2="24" stroke="#ffffff" stroke-width="1.4"/>
-    <!-- Symbol: two angular peaks above horizontal line -->
-    <polygon points="144,24 153,5 162,24" fill="#ffffff"/>
-    <polygon points="165,24 175,3 185,24" fill="#ffffff"/>
+  <!-- Logo oficial Unimed: paths brancos extraídos do SVG de marca, sem fundo verde -->
+  <svg height="38" viewBox="100 122 797 152" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" aria-label="Unimed">
+    <style>.ul{fill:#fff}.uc{fill-rule:evenodd;clip-rule:evenodd;fill:#fff}</style>
+    <!-- U --><g transform="translate(142.253 233.272)"><path class="ul" d="M3.5-100.1h-37.1V-41c0 28.6 21.3 39.7 48.3 39.7 29.3 0 48.7-10.4 48.7-41.9v-57H26.9v57.7c0 9.5-2.1 16.1-11.8 16.1-9 0-11.6-6.8-11.6-16.1v-57.6z"/></g>
+    <!-- n --><g transform="translate(157.844 211.328)"><path class="ul" d="M56.9 19.1h35v-41.9c0-4 0-9.7 6.4-9.7 6.2 0 6.2 5.7 6.2 9.7v41.9h35v-50.4c0-14.2-6.9-23.9-25.6-23.9-9.9 0-19.4 4-23.6 14.2H90v-12.5H56.9v72.6z"/></g>
+    <!-- i --><path class="ul" d="M344.4 126.1h-35v24.1h35v-24.1zm-35 104.3h35v-72.6h-35v72.6z"/>
+    <!-- m --><g transform="translate(189.714 211.328)"><path class="ul" d="M166.2 19.1h35v-41.9c0-4 0-9.7 6.4-9.7 5.9 0 5.9 5.7 5.9 9.7v41.9h35.2v-41.9c0-4 0-9.7 5.9-9.7 6.4 0 6.4 5.7 6.4 9.7v41.9h35v-43.5c0-14.2 0-30.8-25.5-30.8-8.8 0-20.8 4-23.2 12.5h-.2c-2.9-8.8-13-12.5-22.7-12.5-11.1 0-20.6 4-24.8 14.2h-.2v-12.5h-33.1v72.6z"/></g>
+    <!-- e --><g transform="translate(239.31 217.628)"><path class="ul" d="M336.3-15.1v-4.3c0-24.6-9.9-42.1-38.1-42.1-29.3 0-44.9 12.3-44.9 36.6 0 25.1 15.6 39.3 44.9 39.3 12.3 0 23.4-1.4 32.6-4.3V-8.5C325.4-5.7 316.7-4 307.2-4c-10.4 0-18.7-2.1-19.4-11.1h48.5zm-48.5-15.4c-.5-5.7 1.2-14.2 9.5-14.2 7.8 0 8.7 8.7 8.7 14.2h-18.2z"/></g>
+    <!-- d --><g transform="translate(253.158 219.602)"><path class="ul" d="M383.8-25.9c0 6.8-1.2 14.9-8.5 14.9-7.8 0-9-8-9-15.6s1.2-15.1 8.5-15.1c7.9 0 9 7.6 9 15.8m34.1 36.7V-93.5h-35v41.1h-.3c-5.4-7.8-12.5-11.1-22-11.1-21.8 0-30.7 17.2-30.7 36.9 0 20.8 8.5 39 31.9 39 11.3 0 18.4-4 23.2-14.9h.2v13.3h32.7z"/></g>
+    <!-- separador vertical --><path class="ul" d="M700.1 108.7h-5.8v139.1h5.8V108.7z"/>
+    <!-- cruz direita --><g transform="translate(290.989 234.87)"><path class="uc" d="M513.6-108.8h34.8l52.3 69.5h-34.8l26 34.8h-43.5l-26-34.8h17.3l-26-34.8h26l-26.1-34.7z"/></g>
+    <!-- cruz esquerda --><g transform="translate(290.989 234.87)"><path class="uc" d="M513.6-108.8h-34.8l-52.3 69.5h34.8l-26 34.8h43.5l26-34.8h-17.5L513.6-74h-26l26-34.8z"/></g>
   </svg>
   <div style="width:1px;height:28px;background:rgba(255,255,255,.25);margin:0 4px"></div>
   <h1 style="font-size:1rem;font-weight:500;letter-spacing:.02em;opacity:.9">Gestão de Tarefas</h1>
@@ -1000,7 +1002,8 @@
       <div class="modal-actions" id="actFormulario">
         <button type="button" id="btnExcluir" class="btn btn-ghost" style="color:var(--erro-cor);border-color:var(--erro-cor);display:none" onclick="confirmarExcluir()">Excluir</button>
         <div style="flex:1"></div>
-        <button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button type="button" class="btn btn-ghost" onclick="fecharModal()">Fechar</button>
+        <button type="button" id="btnEditar" class="btn btn-primary" style="display:none" onclick="entrarModoEdicao()">✏️ Editar</button>
         <button type="submit" id="btnSalvar" class="btn btn-primary">Salvar</button>
       </div>
     </form>
@@ -1056,8 +1059,9 @@ var viewAtual    = 'kanban';
 var sortCol      = 'ID';
 var sortAsc      = true;
 var modalTabAtual = 'dados';
-var modalSnapshot = null;
-var modalIsNova   = false;
+var modalSnapshot    = null;
+var modalIsNova      = false;
+var modalTarefaAtual = null;
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
@@ -1392,7 +1396,7 @@ function renderHome() {
 
 function abrirTarefaPorId(id) {
   var t = tarefas.filter(function(x) { return String(x.ID) === String(id); })[0];
-  if (t) abrirModal(t);
+  if (t) abrirModal(t, 'view');
 }
 
 function homeCard(t, atrasado) {
@@ -1512,7 +1516,7 @@ function criarCard(t) {
 
   card.querySelector('.card-btn-detalhes').addEventListener('click', function(e) {
     e.stopPropagation();
-    abrirModal(t);
+    abrirModal(t, 'view');
   });
   card.querySelector('.card-btn-excluir').addEventListener('click', function(e) {
     e.stopPropagation();
@@ -1604,8 +1608,12 @@ function renderList() {
       + '<td><span class="badge ' + badgePrio(t.Prioridade)   + '">' + esc(t.Prioridade || '') + '</span></td>'
       + '<td class="td-ckl">'  + esc(cklTxt)  + '</td>'
       + '<td class="td-int">'  + esc(intTxt)  + '</td>'
-      + '<td class="td-acao"><button onclick="abrirModal(' + JSON.stringify(t).replace(/</g, '\\u003c') + ')" title="Editar">✏️</button></td>';
-    tr.addEventListener('click', function(e) { if (e.target.tagName === 'BUTTON') return; abrirModal(t); });
+      + '<td class="td-acao"><button title="Editar">✏️</button></td>';
+    tr.addEventListener('click', function(e) { if (e.target.tagName === 'BUTTON') return; abrirModal(t, 'view'); });
+    tr.querySelector('.td-acao button').addEventListener('click', function(e) {
+      e.stopPropagation();
+      abrirModal(t, 'edit');
+    });
     tbody.appendChild(tr);
   });
 }
@@ -1721,7 +1729,10 @@ function verificarMudancasModal() {
   btn.disabled = !mudou;
 }
 
-function abrirModal(tarefa) {
+function abrirModal(tarefa, modo) {
+  if (modo === undefined) modo = tarefa ? 'view' : 'create';
+  var modoEdicao = (modo !== 'view');
+  modalTarefaAtual = tarefa || null;
   modalTabAtual = 'dados';
   setModalTab('dados');
 
@@ -1733,29 +1744,34 @@ function abrirModal(tarefa) {
   document.getElementById('campoStatus').value      = tarefa ? tarefa.Status          : 'A fazer';
   document.getElementById('campoPrioridade').value  = tarefa ? tarefa.Prioridade      : 'Média';
   document.getElementById('campoObservacoes').value = tarefa ? tarefa['Observações']  : '';
-  document.getElementById('modalTitulo').textContent = tarefa ? 'Editar Tarefa' : 'Nova Tarefa';
+  document.getElementById('modalTitulo').textContent =
+    modo === 'create' ? 'Nova Tarefa' : (modo === 'view' ? 'Visualizar Tarefa' : 'Editar Tarefa');
 
   popularFiltroUnidade();
   document.getElementById('filtroUnidade').value = '';
+  document.getElementById('filtroUnidade').style.display = modoEdicao ? '' : 'none';
   popularSelectResponsaveis(tarefa ? tarefa['Responsável'] : '');
 
-  // Tabs: mostrar "Histórico" só ao editar
-  var tabsEl = document.getElementById('modalTabsEl');
-  tabsEl.style.display = tarefa ? 'flex' : 'none';
+  // Tabs: mostrar "Histórico" ao visualizar ou editar tarefa existente
+  document.getElementById('modalTabsEl').style.display = tarefa ? 'flex' : 'none';
 
   // Permissão: criador, Admin ou Gestor podem editar prazo, concluir e excluir
   var emailCriador = tarefa ? String(tarefa['Criado por'] || '').trim().toLowerCase() : '';
   var eCriador = !tarefa || !currentUser || emailCriador === currentUser.trim().toLowerCase();
-  var podeTudo  = eCriador || currentUserPodeExcluir; // Admin + Gestor + Criador
-  document.getElementById('campoPrazo').disabled = !!tarefa && !podeTudo;
-  document.getElementById('permissaoNota').style.display = (tarefa && !podeTudo) ? 'block' : 'none';
+  var podeTudo  = eCriador || currentUserPodeExcluir;
+
+  // Desabilitar campos em modo visualização
+  ['campoTarefa','campoProjeto','campoResponsavel','campoStatus','campoPrioridade','campoObservacoes'].forEach(function(id) {
+    document.getElementById(id).disabled = !modoEdicao;
+  });
+  document.getElementById('campoPrazo').disabled = !modoEdicao || (!!tarefa && !podeTudo);
+  document.getElementById('permissaoNota').style.display = (modoEdicao && tarefa && !podeTudo) ? 'block' : 'none';
   Array.from(document.getElementById('campoStatus').options).forEach(function(opt) {
-    opt.disabled = (tarefa && !podeTudo && opt.value === 'Concluído');
+    opt.disabled = (modoEdicao && tarefa && !podeTudo && opt.value === 'Concluído');
   });
 
-  // Botão excluir: visível para criador, Admin ou Gestor (ao editar)
-  var btnEx = document.getElementById('btnExcluir');
-  btnEx.style.display = (tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';
+  // Botão excluir: visível só em modo edição, para criador/Admin/Gestor
+  document.getElementById('btnExcluir').style.display = (modoEdicao && tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';
 
   // Checklist
   var itensEl = document.getElementById('cklItems');
@@ -1770,14 +1786,26 @@ function abrirModal(tarefa) {
   }
   atualizarProgressoCkl();
 
-  // Reset do botão (fix: estado "Salvando…" persiste entre modais)
-  var btnS = document.getElementById('btnSalvar');
-  btnS.disabled = true;
-  btnS.textContent = 'Salvar';
+  // Linha de adição da checklist: oculta em visualização
+  var addRow = document.querySelector('.ckl-add-row');
+  if (addRow) addRow.style.display = modoEdicao ? '' : 'none';
 
-  // Snapshot para detecção de mudanças
-  modalIsNova = !tarefa;
-  modalSnapshot = tarefa ? {
+  // Em visualização: desabilita todos os controles dos itens de checklist
+  if (!modoEdicao) {
+    itensEl.querySelectorAll('input, select, button').forEach(function(el) { el.disabled = true; });
+  }
+
+  // Botão Salvar / Editar
+  var btnS = document.getElementById('btnSalvar');
+  var btnE = document.getElementById('btnEditar');
+  btnS.disabled    = true;
+  btnS.textContent = 'Salvar';
+  btnS.style.display = modoEdicao ? '' : 'none';
+  btnE.style.display = (!modoEdicao && tarefa && podeTudo) ? '' : 'none';
+
+  // Snapshot para detecção de mudanças (somente em edição)
+  modalIsNova = (modo === 'create');
+  modalSnapshot = (modoEdicao && tarefa) ? {
     tarefa:      document.getElementById('campoTarefa').value,
     projeto:     document.getElementById('campoProjeto').value,
     responsavel: document.getElementById('campoResponsavel').value,
@@ -1788,13 +1816,19 @@ function abrirModal(tarefa) {
     ckl:         serializarCkl()
   } : null;
 
-  ['campoTarefa','campoProjeto','campoResponsavel','campoPrazo','campoStatus','campoPrioridade','campoObservacoes'].forEach(function(id) {
-    var el = document.getElementById(id);
-    el.oninput  = verificarMudancasModal;
-    el.onchange = verificarMudancasModal;
-  });
+  if (modoEdicao) {
+    ['campoTarefa','campoProjeto','campoResponsavel','campoPrazo','campoStatus','campoPrioridade','campoObservacoes'].forEach(function(id) {
+      var el = document.getElementById(id);
+      el.oninput  = verificarMudancasModal;
+      el.onchange = verificarMudancasModal;
+    });
+  }
 
   document.getElementById('overlay').classList.add('open');
+}
+
+function entrarModoEdicao() {
+  abrirModal(modalTarefaAtual, 'edit');
 }
 
 function fecharModal()      { document.getElementById('overlay').classList.remove('open'); }
