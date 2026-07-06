@@ -941,6 +941,14 @@ function renderUserBadge() {
     + '<span>' + esc(nomeDeUsuario(currentUser)) + (perfil ? ' · ' + esc(perfil) : '') + '</span>';
 }
 
+// Regra de edição: criador da tarefa OU Admin/Gestor. (Mesma lógica do modal.)
+function podeEditarTarefa(t) {
+  if (!t) return true;
+  var criador = String(t['Criado por'] || '').trim().toLowerCase();
+  var eCriador = !currentUser || criador === currentUser.trim().toLowerCase();
+  return eCriador || currentUserPodeExcluir;
+}
+
 function modalTemMudancas() {
   var overlay = document.getElementById('overlay');
   if (!overlay.classList.contains('open')) return false;
@@ -1384,7 +1392,7 @@ function criarCard(t) {
 
   card.querySelector('.card-btn-detalhes').addEventListener('click', function(e) {
     e.stopPropagation();
-    abrirModal(t, 'view');
+    abrirModal(t, podeEditarTarefa(t) ? 'edit' : 'view');
   });
   card.querySelector('.card-btn-excluir').addEventListener('click', function(e) {
     e.stopPropagation();
@@ -1480,7 +1488,7 @@ function renderList() {
     tr.addEventListener('click', function(e) { if (e.target.tagName === 'BUTTON') return; abrirModal(t, 'view'); });
     tr.querySelector('.td-acao button').addEventListener('click', function(e) {
       e.stopPropagation();
-      abrirModal(t, 'edit');
+      abrirModal(t, podeEditarTarefa(t) ? 'edit' : 'view');
     });
     tbody.appendChild(tr);
   });
