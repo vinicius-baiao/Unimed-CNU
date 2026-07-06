@@ -17,6 +17,10 @@ var EMAIL_REPORTE    = 'aurelio.pereira.ext@unimedcnu.coop.br';
 // Trocar para 'tarefas' para voltar ao layout clássico.
 var HTML_FILE        = 'tarefas-shadcn';
 
+// Resumo diário por e-mail (relatorioDiario). Desativado no MVP.
+// Além deste flag, remova/desative o gatilho no Apps Script → Gatilhos.
+var RESUMO_DIARIO_ATIVO = false;
+
 // Índices das colunas (base 0) na aba Tarefas
 var COL = {
   ID:          0,
@@ -969,6 +973,7 @@ function adicionarInteracao(dados) {
 // ── relatorioDiario ───────────────────────────────────────────
 // Configurar via Apps Script → Triggers → relatorioDiario → Horário (17h).
 function relatorioDiario() {
+  if (!RESUMO_DIARIO_ATIVO) return; // desativado no MVP
   if (!EMAIL_REPORTE) return;
 
   var hoje  = new Date(); hoje.setHours(0, 0, 0, 0);
