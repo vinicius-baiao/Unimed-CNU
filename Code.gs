@@ -614,6 +614,17 @@ function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Diagnóstico: selecione esta função no editor, clique em Executar e veja
+// o resultado em "Registro de execução". Mostra quais endereços a conta pode
+// usar como remetente e se o taskcenter já está autorizado.
+function verificarAliases() {
+  var aliases = GmailApp.getAliases();
+  Logger.log('Conta que executa o script: ' + Session.getEffectiveUser().getEmail());
+  Logger.log('Remetentes disponíveis ("Enviar e-mail como"): ' + JSON.stringify(aliases));
+  Logger.log('EMAIL_REMETENTE = ' + EMAIL_REMETENTE);
+  Logger.log('taskcenter já pode ser usado como remetente? ' + (aliases.indexOf(EMAIL_REMETENTE) !== -1));
+}
+
 // Envio centralizado. Usa EMAIL_REMETENTE como remetente quando ele for um
 // alias válido ("Send mail as"); caso contrário, usa o remetente padrão da conta.
 function enviarEmail(to, subject, htmlBody) {
