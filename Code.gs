@@ -286,16 +286,49 @@ function gravarLogs(entradas) {
   log.getRange(baseId + 1, 1, rows.length, 7).setValues(rows);
 }
 
+// ── Visibilidade por perfil ───────────────────────────────────
+// Admin/Gestor veem tudo (retorna null = sem restrição).
+// Usuário Padrão vê apenas tarefas onde: é o responsável, é o criador,
+// ou está marcado como responsável em algum item de checklist.
+function idsTarefasVisiveis(email) {
+  if (!email || podeExcluir(email)) return null;
+  var alvo = String(email).trim().toLowerCase();
+
+  // Tarefas onde o usuário está marcado em item de checklist (col. 7 = Responsavel)
+  var marcado = {};
+  var shC = getSheet(ABA_CKL_STATUS);
+  if (shC) {
+    var rowsC = shC.getDataRange().getValues();
+    for (var i = 1; i < rowsC.length; i++) {
+      if (String(rowsC[i][7] || '').trim().toLowerCase() === alvo) {
+        marcado[String(rowsC[i][1])] = true;
+      }
+    }
+  }
+
+  var visiveis = {};
+  var rowsT = getSheet(ABA_TAREFAS).getDataRange().getValues();
+  for (var j = 1; j < rowsT.length; j++) {
+    var id      = String(rowsT[j][COL.ID]);
+    var resp    = String(rowsT[j][COL.RESPONSAVEL] || '').trim().toLowerCase();
+    var criador = String(rowsT[j][COL.CRIADO_POR]  || '').trim().toLowerCase();
+    if (resp === alvo || criador === alvo || marcado[id]) visiveis[id] = true;
+  }
+  return visiveis;
+}
+
 // ── listarTarefas ─────────────────────────────────────────────
 function listarTarefas() {
   var sheet  = getSheet(ABA_TAREFAS);
   var dados  = sheet.getDataRange().getValues();
   var header = dados[0];
   var lista  = [];
+  var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
 
   for (var i = 1; i < dados.length; i++) {
     var linha = dados[i];
     if (linha[COL.ATIVO] === false || linha[COL.ATIVO] === 'false') continue;
+    if (visiveis && !visiveis[String(linha[COL.ID])]) continue;
     var obj = {};
     header.forEach(function(col, idx) { obj[col] = linha[idx]; });
     lista.push(obj);
@@ -521,11 +554,13 @@ function listarChecklist_Status() {
   var dados  = sheetC.getDataRange().getValues();
   var header = dados[0];
   var lista  = [];
+  var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
 
   for (var i = 1; i < dados.length; i++) {
     var linha = dados[i];
     if (!linha[0] && !linha[1]) continue;
     if (!idsAtivos[String(linha[1])]) continue; // ignora itens de tarefas excluídas/arquivadas
+    if (visiveis && !visiveis[String(linha[1])]) continue; // restrição de visibilidade por perfil
     var obj = {};
     header.forEach(function(col, idx) { obj[col] = linha[idx]; });
     lista.push(obj);
@@ -929,6 +964,9 @@ function popularProjetos() {
 function listarInteracoes(dados) {
   var sheet = getSheet(ABA_INTERACOES);
   if (!sheet) return { interacoes: [] };
+  // Restrição de visibilidade: usuário padrão só consulta tarefas que pode ver
+  var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
+  if (visiveis && dados.idTarefa && !visiveis[String(dados.idTarefa)]) return { interacoes: [] };
   var rows   = sheet.getDataRange().getValues();
   var header = rows[0];
   var lista  = [];
@@ -937,6 +975,7 @@ function listarInteracoes(dados) {
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][0]) continue;
     if (filtroId && String(rows[i][1]) !== filtroId) continue;
+    if (visiveis && !visiveis[String(rows[i][1])]) continue;
     var obj = {};
     header.forEach(function(col, idx) { obj[col] = rows[i][idx]; });
     lista.push(obj);
