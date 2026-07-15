@@ -1644,7 +1644,7 @@ function serializarCkl() {
   return Array.from(itens).map(function(el) {
     return el.querySelector('.ckl-item-text').textContent + '|'
       + el.querySelector('input[type="checkbox"]').checked + '|'
-      + el.querySelector('.ckl-responsavel-sel').value;
+      + (el.dataset.responsavel || '');
   }).join(';;');
 }
 
@@ -1839,29 +1839,13 @@ function salvarTarefa(e) {
 }
 
 // ── Checklist ─────────────────────────────────────────────────
-function criarSelectColega(emailAtual) {
-  var sel = document.createElement('select');
-  sel.className = 'ckl-responsavel-sel';
-  var opt0 = document.createElement('option');
-  opt0.value = ''; opt0.textContent = '+ Colega';
-  sel.appendChild(opt0);
-  usuarios.slice().sort(function(a, b) {
-    return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
-  }).forEach(function(u) {
-    if (!u.email) return;
-    var opt = document.createElement('option');
-    opt.value = u.email;
-    opt.textContent = u.nome; // nome completo (evita ambiguidade entre colegas)
-    if (u.email === emailAtual) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  return sel;
-}
-
 function criarItemCkl(texto, ordem, concluido, responsavel) {
   var div = document.createElement('div');
   div.className     = 'ckl-item' + (concluido ? ' concluido' : '');
   div.dataset.ordem = ordem;
+  // Marcação de colegas desabilitada por ora: preserva o valor existente
+  // (usado pela regra de visibilidade), mas sem UI para criar/alterar.
+  div.dataset.responsavel = responsavel || '';
 
   var chk = document.createElement('input');
   chk.type    = 'checkbox';
@@ -1876,9 +1860,6 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   span.className   = 'ckl-item-text';
   span.textContent = texto;
 
-  var sel = criarSelectColega(responsavel || '');
-  sel.addEventListener('change', verificarMudancasModal);
-
   var del = document.createElement('button');
   del.type      = 'button';
   del.className = 'ckl-delete';
@@ -1891,7 +1872,13 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
 
   div.appendChild(chk);
   div.appendChild(span);
-  div.appendChild(sel);
+  if (responsavel) {
+    var chip = document.createElement('span');
+    chip.className   = 'ckl-responsavel-marcado';
+    chip.title       = responsavel;
+    chip.textContent = nomeDeUsuario(responsavel);
+    div.appendChild(chip);
+  }
   div.appendChild(del);
   return div;
 }
@@ -1932,7 +1919,7 @@ function salvarCkl(idTarefa, nomeTarefa, callback) {
       item:        el.querySelector('.ckl-item-text').textContent,
       ordem:       idx + 1,
       concluido:   el.querySelector('input[type="checkbox"]').checked,
-      responsavel: el.querySelector('.ckl-responsavel-sel').value
+      responsavel: el.dataset.responsavel || ''
     });
   });
   chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: idTarefa, nomeTarefa: nomeTarefa, itens: items } }, function(data) {

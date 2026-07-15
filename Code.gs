@@ -27,6 +27,11 @@ var HTML_FILE        = 'tarefas-shadcn';
 // Além deste flag, remova/desative o gatilho no Apps Script → Gatilhos.
 var RESUMO_DIARIO_ATIVO = false;
 
+// Marcação de colegas em itens de checklist (e o e-mail de notificação).
+// Desativado por ora — o front não oferece mais a UI; marcações antigas
+// são preservadas nos dados e seguem valendo para visibilidade.
+var CHECKLIST_MARCACAO_ATIVA = false;
+
 // Piloto: restringe o acesso aos e-mails abaixo. Desligar com PILOTO_ATIVO = false.
 var PILOTO_ATIVO  = true;
 var EMAILS_PILOTO = [
@@ -610,11 +615,13 @@ function salvarChecklist(dados) {
     sheet.getRange(1, 1, resultado.length, numCols).setValues(resultado);
   }
 
-  // Notificar colegas marcados em itens da checklist
+  // Notificar colegas marcados em itens da checklist (desativado por flag)
   var marcados = [];
-  itens.forEach(function(it) {
-    if (it.responsavel && marcados.indexOf(it.responsavel) === -1) marcados.push(it.responsavel);
-  });
+  if (CHECKLIST_MARCACAO_ATIVA) {
+    itens.forEach(function(it) {
+      if (it.responsavel && marcados.indexOf(it.responsavel) === -1) marcados.push(it.responsavel);
+    });
+  }
   if (marcados.length && dados.nomeTarefa) {
     marcados.forEach(function(email) {
       try { notificarMarcadoChecklist(email, dados.nomeTarefa, dados.idTarefa); } catch(e) { Logger.log('Email checklist erro: ' + e.message); }
