@@ -242,6 +242,7 @@
     .card-prazo { font-size: .72rem; color: var(--muted-foreground); white-space: nowrap; }
     .card-prazo.vence-hoje   { color: var(--erro-cor); font-weight: 600; }
     .card-prazo.vence-amanha { color: var(--aviso-cor); font-weight: 600; }
+    .card-prazo.atrasado     { color: var(--erro-cor); font-weight: 600; }
     .card-ultimo-contato { font-size: .7rem; color: var(--verde-claro); margin-top: 6px; display: flex; align-items: center; gap: 3px; }
     .card-ultimo-contato::before { content: '↩'; font-size: .8em; }
 
@@ -295,6 +296,7 @@
     .td-prazo { font-size: .82rem; white-space: nowrap; }
     .td-prazo.vence-hoje   { color: var(--erro-cor); font-weight: 600; }
     .td-prazo.vence-amanha { color: var(--aviso-cor); font-weight: 600; }
+    .td-prazo.atrasado     { color: var(--erro-cor); font-weight: 600; }
     .td-ckl { font-size: .8rem; color: var(--text-secondary); white-space: nowrap; }
     .td-int { font-size: .8rem; color: var(--muted-foreground); white-space: nowrap; }
     .td-acao button {
@@ -568,9 +570,9 @@
   <!-- Painel de gestão (Admin/Gestor) -->
   <div id="homePainel" style="display:none">
     <div class="home-stat-grid">
-      <div class="home-stat-card">
+      <div class="home-stat-card" title="Backlog + A fazer">
         <div class="stat-num" id="statAfazer">—</div>
-        <div class="stat-label">A fazer</div>
+        <div class="stat-label">Pendentes</div>
       </div>
       <div class="home-stat-card">
         <div class="stat-num" id="statAndamento">—</div>
@@ -789,7 +791,7 @@
               <div class="ckl-bar"><div class="ckl-bar-fill" id="cklProgFill"></div></div>
             </div>
             <div class="ckl-add-row">
-              <input type="text" id="cklNovoItem" placeholder="Adicionar item…"
+              <input type="text" id="cklNovoItem" placeholder="Adicionar item e pressionar Enter…"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarItemCkl();}">
               <button type="button" class="btn btn-ghost ckl-add-btn" onclick="adicionarItemCkl()">+</button>
             </div>
@@ -800,7 +802,7 @@
       <div class="modal-actions" id="actFormulario">
         <button type="button" id="btnExcluir" class="btn btn-ghost" style="color:var(--erro-cor);border-color:var(--erro-cor);display:none" onclick="confirmarExcluir()">Excluir</button>
         <div style="flex:1"></div>
-        <button type="button" class="btn btn-ghost" onclick="fecharModal()">Fechar</button>
+        <button type="button" id="btnFecharModal" class="btn btn-ghost" onclick="tentarFecharModal()">Fechar</button>
         <button type="button" id="btnEditar" class="btn btn-primary" style="display:none" onclick="entrarModoEdicao()">Editar</button>
         <button type="submit" id="btnSalvar" class="btn btn-primary">Salvar</button>
       </div>
@@ -931,9 +933,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('confirmOverlay').classList.contains('open')) { fecharConfirm(); return; }
     if (document.getElementById('projOverlay').classList.contains('open'))    { fecharGerenciarProjetos(); return; }
     if (document.getElementById('overlay').classList.contains('open')) {
-      if (modalTemMudancas()) { toast('Você tem alterações não salvas. Use Salvar ou Fechar.', true); return; }
-      fecharModal();
+      tentarFecharModal();
     }
+  });
+
+  // Campo de prazo: abre o calendário no primeiro clique (não só no ícone)
+  var prazoEl = document.getElementById('campoPrazo');
+  prazoEl.addEventListener('click', function() {
+    if (this.disabled || !this.showPicker) return;
+    try { this.showPicker(); } catch (e) { /* iframe cross-origin: mantém comportamento nativo */ }
   });
 
   // Fecha o dropdown de responsável ao clicar fora
@@ -1225,12 +1233,12 @@ function renderHome() {
   });
   var atrasadas = ativas.filter(function(t) {
     if (!dataValida(t.Prazo)) return false;
-    var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
+    var d = parseData(t.Prazo); d.setHours(0, 0, 0, 0);
     return d < agora;
   });
   var proximas = ativas.filter(function(t) {
     if (!dataValida(t.Prazo)) return false;
-    var d = new Date(t.Prazo); d.setHours(0, 0, 0, 0);
+    var d = parseData(t.Prazo); d.setHours(0, 0, 0, 0);
     return d >= agora && d <= em7dias;
   });
 
@@ -1290,7 +1298,7 @@ function homeCard(t, atrasado) {
     'Concluído': 'var(--col-concluido)'
   };
   var accent   = atrasado ? 'var(--erro-cor)' : (statusCores[t.Status] || 'var(--col-afazer)');
-  var prazoTxt = dataValida(t.Prazo) ? new Date(t.Prazo).toLocaleDateString('pt-BR') : '';
+  var prazoTxt = formatarData(t.Prazo);
   var prazoCls = atrasado ? 'atrasado' : prazoClass(t.Prazo);
   var resp = t['Responsável'] ? nomeDeUsuario(t['Responsável']) : '';
   var proj = t.Projeto ? ' · ' + esc(t.Projeto) : '';
@@ -1721,6 +1729,9 @@ function abrirModal(tarefa, modo) {
     itensEl.querySelectorAll('input, select, button').forEach(function(el) { el.disabled = true; });
   }
 
+  // Botão Fechar/Cancelar: em edição/criação deixa claro que descarta
+  document.getElementById('btnFecharModal').textContent = modoEdicao ? 'Cancelar' : 'Fechar';
+
   // Botão Salvar / Editar
   var btnS = document.getElementById('btnSalvar');
   var btnE = document.getElementById('btnEditar');
@@ -1763,14 +1774,27 @@ function entrarModoEdicao() {
 }
 
 function fecharModal()      { document.getElementById('overlay').classList.remove('open'); }
+
+// Fechar/Cancelar com guarda: se houver alterações não salvas, confirma o descarte.
+function tentarFecharModal() {
+  if (!modalTemMudancas()) { fecharModal(); return; }
+  var nome = document.getElementById('campoTarefa').value.trim() || 'Nova Tarefa';
+  abrirConfirm(nome, fecharModal, {
+    prefixo: 'Descartar alterações de',
+    okLabel: 'Descartar',
+    sub:     'As alterações não salvas serão perdidas.'
+  });
+}
+
 function fecharModalFora(e) {
   if (e.target !== document.getElementById('overlay')) return;
-  if (modalTemMudancas()) { toast('Você tem alterações não salvas. Use Salvar ou Fechar.', true); return; }
-  fecharModal();
+  tentarFecharModal();
 }
 
 function salvarTarefa(e) {
   e.preventDefault();
+  // Item de checklist digitado mas não adicionado: inclui antes de salvar
+  if (document.getElementById('cklNovoItem').value.trim()) adicionarItemCkl();
   var btn = document.getElementById('btnSalvar');
   btn.disabled = true;
   btn.textContent = 'Salvando…';
@@ -1990,16 +2014,28 @@ function toast(msg, erro, sucesso) {
 function esc(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+// Datas "YYYY-MM-DD" são interpretadas como LOCAIS (new Date() trataria como
+// UTC e voltaria 1 dia no fuso de Brasília). Timestamps completos passam direto.
+function parseData(val) {
+  if (val instanceof Date) return val;
+  var m = String(val || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return new Date(val);
+}
 function dataValida(val) {
   if (!val) return false;
-  var d = new Date(val);
+  var d = parseData(val);
   return !isNaN(d.getTime()) && d.getFullYear() >= 2000;
 }
 function isoDate(val) {
-  return dataValida(val) ? new Date(val).toISOString().slice(0, 10) : '';
+  if (!dataValida(val)) return '';
+  var d = parseData(val);
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
 }
 function formatarData(val) {
-  return dataValida(val) ? new Date(val).toLocaleDateString('pt-BR') : '';
+  return dataValida(val) ? parseData(val).toLocaleDateString('pt-BR') : '';
 }
 function nomeDeEmail(email) {
   return email ? email.split('@')[0] : '';
@@ -2021,9 +2057,10 @@ function uniq(arr) {
 }
 function prazoClass(val) {
   if (!dataValida(val)) return '';
-  var d = new Date(val); d.setHours(0, 0, 0, 0);
+  var d = parseData(val); d.setHours(0, 0, 0, 0);
   var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   var aman = new Date(hoje); aman.setDate(hoje.getDate() + 1);
+  if (d < hoje) return 'atrasado';
   if (d.getTime() === hoje.getTime()) return 'vence-hoje';
   if (d.getTime() === aman.getTime()) return 'vence-amanha';
   return '';
