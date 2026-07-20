@@ -3,77 +3,94 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestão de Tarefas — Unimed CNU (shadcn)</title>
+  <title>Gestão de Tarefas — Unimed CNU</title>
+  <?!= include('Estilos_Fontes') ?>
   <style>
     /* ═══════════════════════════════════════════════════════════
-       Tema shadcn/ui (recriado em CSS puro, zero dependências)
-       Cores da marca Unimed CNU mapeadas nos tokens do shadcn.
+       DESIGN SYSTEM UNIMED CNU — tokens canônicos (starter-kit).
+       NÃO alterar valores aqui: mudança de token é decisão do DS.
        ═══════════════════════════════════════════════════════════ */
     :root {
-      /* ── Tokens shadcn (light) ── */
-      --background:        #fafafa;   /* zinc-50 — fundo do app */
-      --surface:           #ffffff;   /* superfícies elevadas */
-      --foreground:        #09090b;   /* zinc-950 */
-      --card:              #ffffff;
-      --card-foreground:   #09090b;
-      --popover:           #ffffff;
-      --popover-foreground:#09090b;
-      --primary:           #004e4c;   /* Unimed verde */
-      --primary-hover:     #006d6a;
-      --primary-foreground:#ffffff;
-      --secondary:         #f4f4f5;   /* zinc-100 */
-      --secondary-foreground:#18181b;
-      --muted:             #f4f4f5;
-      --muted-foreground:  #71717a;   /* zinc-500 */
-      --accent:            #f4f4f5;
-      --accent-foreground: #18181b;
-      --destructive:       #e11d48;   /* rose-600 */
-      --destructive-foreground:#ffffff;
-      --border:            #e4e4e7;   /* zinc-200 */
-      --input:             #e4e4e7;
-      --ring:              #004e4c;    /* foco = verde */
-      --radius:            0.5rem;
+      /* ── shadcn: superfícies e texto ── */
+      --background:        #F8F7F4;   /* creme — canvas de todos os portais */
+      --surface:           #FFFFFF;
+      --card:              #FFFFFF;
+      --card-foreground:   #16302E;
+      --popover:           #FFFFFF;
+      --popover-foreground:#16302E;
+      --foreground:        #16302E;   /* ink */
+      --muted-bg:          #EFECE4;
+      --muted:             #EFECE4;
+      --muted-foreground:  #6E807D;
 
-      /* ── Acentos de marca preservados ── */
-      --verde:        #004e4c;
-      --verde-claro:  #006d6a;
-      --verde-bg:     #e6f0ef;
-      --dourado:      #c9a84c;
-      --dourado-hover:#b8963f;
-      --dourado-bg:   #faf4e6;
+      /* ── shadcn: marca e ação ── */
+      --primary:           #004E4C;
+      --primary-hover:     #03605D;
+      --primary-foreground:#FFFFFF;
+      --secondary:         #EFECE4;
+      --secondary-foreground:#16302E;
+      --accent:            #C9A84C;   /* dourado (DS) — NÃO é hover neutro */
+      --accent-bg:         #FAF4E6;
+      --accent-foreground: #2A2205;
+      --hover-bg:          #EFECE4;   /* hover neutro de itens/botões ghost */
+      --destructive:       #C4402E;
+      --destructive-foreground:#FFFFFF;
 
-      /* ── Compat. com nomes legados usados no markup ── */
+      /* ── shadcn: bordas, foco, raio ── */
+      --border:            #E7E3DB;
+      --border-hover:      #D9D3C7;
+      --input:             #E7E3DB;
+      --ring:              #004E4C;
+      --radius:            10px;
+
+      /* ── acentos de marca ── */
+      --verde:        #00995D;        /* verde Unimed oficial (positivo) */
+      --verde-claro:  #0A6B45;
+      --verde-bg:     #E4F3EC;
+      --dourado:      #C9A84C;
+      --dourado-hover:#B8963F;
+      --dourado-bg:   #FAF4E6;
+
+      /* ── semânticos de estado (prazo/status) ── */
+      --ok:   #00995D; --ok-bg:   #E4F3EC; --ok-ink:   #0A6B45;
+      --warn: #E4761B; --warn-bg: #FBEEDF; --warn-ink: #8A4406;
+      --late: #C4402E; --late-bg: #F8E4E0; --late-ink: #8F2417;
+
+      /* ── compat. com nomes legados usados no markup ── */
       --bg-app:       var(--background);
       --bg-card:      var(--card);
       --bg-toolbar:   var(--surface);
-      --border-hover: #d4d4d8;
       --text-primary:   var(--foreground);
-      --text-secondary: #52525b;   /* zinc-600 */
+      --text-secondary: #4A5F5C;
       --text-muted:     var(--muted-foreground);
-      --cinza-50:  #f4f4f5; --cinza-100: #e4e4e7; --cinza-200: #d4d4d8;
-      --cinza-400: #a1a1aa; --cinza-700: #52525b; --cinza-900: #18181b;
-      --erro-bg:  #fef2f2; --erro-cor: #e11d48;
-      --aviso-bg: #fffbeb; --aviso-cor: #b45309;
-      --info-bg:  #eff6ff; --info-cor: #2563eb;
+      --cinza-50:  #EFECE4; --cinza-100: #E7E3DB; --cinza-200: #D9D3C7;
+      --cinza-400: #9AA8A5; --cinza-700: #4A5F5C; --cinza-900: #16302E;
+      --erro-bg:  var(--late-bg);  --erro-cor: var(--late);
+      --aviso-bg: var(--warn-bg);  --aviso-cor: var(--warn-ink);
+      --info-bg:  var(--dourado-bg); --info-cor: #8A6D1F;
 
-      /* ── Status universais (Kanban) ── */
-      --col-backlog:   #71717a;
-      --col-afazer:    #64748b;
-      --col-andamento: #2563eb;
-      --col-bloqueado: #e11d48;
-      --col-concluido: #16a34a;
+      /* ── Status (Kanban) — paleta da marca, sem azuis ── */
+      --col-backlog:   #6E807D;
+      --col-afazer:    #4A5F5C;
+      --col-andamento: #C9A84C;
+      --col-bloqueado: #C4402E;
+      --col-concluido: #00995D;
 
-      /* ── Sombras shadcn ── */
+      /* ── sombras ── */
       --shadow-sm:  0 1px 2px 0 rgba(0,0,0,.05);
-      --shadow:     0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
-      --shadow-hover: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
-      --shadow-modal: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
+      --shadow:     0 1px 3px 0 rgba(0,30,28,.08);
+      --shadow-hover: 0 6px 18px rgba(0,40,38,.07);
+      --shadow-modal: 0 24px 70px rgba(0,30,28,.35);
       --shadow-lg:  var(--shadow-modal);
+
+      /* ── tipografia ── Inter = UI; Slab SÓ na assinatura */
+      --font:  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --serif: 'Unimed Slab', Georgia, 'Times New Roman', serif;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: var(--font);
       background: var(--background); color: var(--foreground);
       min-height: 100vh; font-size: 14px; line-height: 1.5;
       -webkit-font-smoothing: antialiased;
@@ -81,12 +98,19 @@
 
     /* ── Header ── */
     header {
-      background: var(--verde); color: #fff;
+      background: var(--primary); color: #fff;
       padding: 0 20px; height: 56px;
       display: flex; align-items: center; gap: 14px;
       position: sticky; top: 0; z-index: 50;
     }
     header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
+    /* Marca DS: mark (pinheiro) + assinatura Slab com ponto dourado */
+    header .mark { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
+      display: grid; place-items: center; flex: 0 0 34px; }
+    header .mark svg { width: 22px; height: 22px; }
+    header .wm b { font-family: var(--serif); font-size: 21px; font-style: italic; font-weight: 600; line-height: 1; color: #fff; }
+    header .wm b i { color: var(--dourado); font-style: normal; }
+    header .wm span { display: block; font-size: 9px; letter-spacing: 3px; color: var(--dourado); margin-top: 3px; text-transform: uppercase; }
 
     /* ── Top bar ── */
     .top-bar {
@@ -133,7 +157,7 @@
       border-radius: var(--radius);
     }
     .sidebar-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sidebar-item:hover { background: var(--accent); color: var(--accent-foreground); }
+    .sidebar-item:hover { background: var(--hover-bg); color: var(--foreground); }
     .sidebar-item.active { background: var(--verde-bg); color: var(--primary); font-weight: 500; }
     .sidebar-count {
       font-size: .7rem; font-weight: 500; background: var(--muted); color: var(--muted-foreground);
@@ -162,7 +186,7 @@
     .btn-dourado { background: var(--dourado); color: #2a2205; font-weight: 600; }
     .btn-dourado:hover { background: var(--dourado-hover); }
     .btn-ghost { background: var(--surface); color: var(--foreground); border-color: var(--input); box-shadow: var(--shadow-sm); }
-    .btn-ghost:hover { background: var(--accent); color: var(--accent-foreground); }
+    .btn-ghost:hover { background: var(--hover-bg); color: var(--foreground); }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
 
     /* ── View toggle (shadcn tabs inline) ── */
@@ -218,7 +242,7 @@
       transition: box-shadow .15s, border-color .15s, transform .15s;
       user-select: none; -webkit-user-select: none;
     }
-    .card:hover { box-shadow: var(--shadow-hover); border-color: var(--border-hover); }
+    .card:hover { box-shadow: var(--shadow-hover); border-color: var(--dourado); transform: translateY(-1px); }
     .card.dragging { opacity: .5; cursor: grabbing; }
     .card-header { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
     .card-titulo { font-weight: 500; font-size: .875rem; color: var(--foreground); line-height: 1.4; flex: 1; }
@@ -239,7 +263,7 @@
     .card-projeto::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--border-hover); }
     .card-footer { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 10px; }
     .card-footer-left { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-    .card-prazo { font-size: .72rem; color: var(--muted-foreground); white-space: nowrap; }
+    .card-prazo { font-size: .72rem; color: var(--muted-foreground); white-space: nowrap; font-variant-numeric: tabular-nums; }
     .card-prazo.vence-hoje   { color: var(--erro-cor); font-weight: 600; }
     .card-prazo.vence-amanha { color: var(--aviso-cor); font-weight: 600; }
     .card-prazo.atrasado     { color: var(--erro-cor); font-weight: 600; }
@@ -264,9 +288,9 @@
       padding: 2px 9px; border-radius: 999px; border: 1px solid transparent;
       font-size: .7rem; font-weight: 600; letter-spacing: .01em; line-height: 1.35;
     }
-    .badge-critica { background: var(--erro-bg);  color: var(--erro-cor);  border-color: #fecdd3; }
-    .badge-alta    { background: var(--aviso-bg); color: var(--aviso-cor); border-color: #fde68a; }
-    .badge-media   { background: var(--info-bg);  color: var(--info-cor);  border-color: #bfdbfe; }
+    .badge-critica { background: var(--late-bg);  color: var(--late-ink);  border-color: #F0CBC3; }
+    .badge-alta    { background: var(--warn-bg);  color: var(--warn-ink);  border-color: #F5D9B8; }
+    .badge-media   { background: var(--dourado-bg); color: #8A6D1F;        border-color: #EDDDB0; }
     .badge-baixa   { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
 
     /* ── List view (shadcn table) ── */
@@ -293,7 +317,7 @@
     .td-tarefa { font-weight: 500; min-width: 200px; color: var(--foreground); }
     .td-projeto { color: var(--text-secondary); font-size: .82rem; }
     .td-resp { font-size: .82rem; color: var(--text-secondary); }
-    .td-prazo { font-size: .82rem; white-space: nowrap; }
+    .td-prazo { font-size: .82rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .td-prazo.vence-hoje   { color: var(--erro-cor); font-weight: 600; }
     .td-prazo.vence-amanha { color: var(--aviso-cor); font-weight: 600; }
     .td-prazo.atrasado     { color: var(--erro-cor); font-weight: 600; }
@@ -303,7 +327,7 @@
       background: none; border: none; cursor: pointer; color: var(--muted-foreground);
       font-size: 1rem; padding: 4px 8px; border-radius: calc(var(--radius) - 2px); transition: color .15s, background .15s;
     }
-    .td-acao button:hover { color: var(--primary); background: var(--accent); }
+    .td-acao button:hover { color: var(--primary); background: var(--hover-bg); }
     .table-empty { text-align: center; padding: 48px; color: var(--muted-foreground); font-size: .9rem; }
 
     /* ── Modal / Dialog (shadcn) ── */
@@ -342,7 +366,7 @@
     /* ── Form (shadcn) ── */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .form-grid .full { grid-column: 1 / -1; }
-    label { display: block; font-size: .82rem; font-weight: 500; color: var(--foreground); margin-bottom: 6px; }
+    label { display: block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-foreground); margin-bottom: 6px; }
     input[type="text"], input[type="date"], input[type="email"], select, textarea {
       width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: var(--radius);
       font-family: inherit; font-size: .875rem; color: var(--foreground); outline: none;
@@ -357,7 +381,7 @@
 
     .permissao-nota {
       display: none; padding: 12px 14px; margin-bottom: 16px; background: var(--aviso-bg); color: var(--aviso-cor);
-      border-radius: var(--radius); font-size: .8rem; line-height: 1.5; border: 1px solid #fde68a;
+      border-radius: var(--radius); font-size: .8rem; line-height: 1.5; border: 1px solid #F5D9B8;
     }
 
     /* ── Modal Gerenciar Projetos ── */
@@ -396,7 +420,7 @@
     /* Combobox de responsável (busca) */
     .combo-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-modal); max-height: 240px; overflow-y: auto; padding: 4px; }
     .combo-opt { padding: 8px 10px; border-radius: calc(var(--radius) - 2px); font-size: .875rem; cursor: pointer; color: var(--foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .combo-opt:hover, .combo-opt.active { background: var(--accent); }
+    .combo-opt:hover, .combo-opt.active { background: var(--hover-bg); }
     .combo-opt small { color: var(--muted-foreground); }
     .combo-empty { padding: 12px 10px; color: var(--muted-foreground); font-size: .82rem; text-align: center; }
     .ckl-responsavel-marcado { font-size: .72rem; color: var(--primary); font-weight: 600; background: var(--verde-bg); border-radius: calc(var(--radius) - 2px); padding: 2px 7px; flex-shrink: 0; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
@@ -416,11 +440,11 @@
     .hist-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
     .hist-tipo { padding: 2px 9px; border-radius: 999px; font-size: .68rem; font-weight: 600; border: 1px solid transparent; }
     .hist-comentario    { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
-    .hist-contato       { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-    .hist-tentativa     { background: var(--aviso-bg); color: var(--aviso-cor); border-color: #fde68a; }
-    .hist-liberacao     { background: var(--info-bg);  color: var(--info-cor); border-color: #bfdbfe; }
-    .hist-encaminhamento{ background: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
-    .hist-status        { background: var(--verde-bg); color: var(--primary); border-color: #bfe0dd; }
+    .hist-contato       { background: var(--ok-bg); color: var(--ok-ink); border-color: #C9E6D6; }
+    .hist-tentativa     { background: var(--warn-bg); color: var(--warn-ink); border-color: #F5D9B8; }
+    .hist-liberacao     { background: var(--dourado-bg); color: #8A6D1F; border-color: #EDDDB0; }
+    .hist-encaminhamento{ background: var(--muted-bg); color: var(--text-secondary); border-color: var(--border); }
+    .hist-status        { background: var(--verde-bg); color: var(--primary); border-color: #C9E6D6; }
     .hist-data { font-size: .72rem; color: var(--muted-foreground); }
     .hist-editor { font-size: .72rem; color: var(--muted-foreground); margin-left: auto; }
     .hist-conteudo { font-size: .875rem; line-height: 1.5; color: var(--foreground); }
@@ -429,12 +453,13 @@
 
     /* ── Toast (shadcn sonner-ish) ── */
     #toast {
-      position: fixed; bottom: 24px; right: 24px; background: var(--foreground); color: var(--background);
-      padding: 12px 18px; border-radius: var(--radius); font-size: .875rem; box-shadow: var(--shadow-modal);
-      opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .2s;
-      pointer-events: none; z-index: 200; max-width: 360px; border: 1px solid var(--border);
+      position: fixed; bottom: 26px; left: 50%; background: var(--primary); color: #fff;
+      padding: 12px 18px; border-radius: 11px; font-size: 13px; font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,30,28,.25);
+      opacity: 0; transform: translateX(-50%) translateY(20px); transition: opacity .2s, transform .2s;
+      pointer-events: none; z-index: 200; max-width: 80vw;
     }
-    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     #toast.erro { background: var(--destructive); color: #fff; border-color: var(--destructive); }
     #toast.sucesso { background: var(--col-concluido); color: #fff; border-color: var(--col-concluido); }
     #loading { text-align: center; padding: 56px; color: var(--muted-foreground); width: 100%; font-size: .9rem; }
@@ -448,8 +473,8 @@
       #listView { display: block !important; padding: 0; }
       .list-view { padding: 0; }
       .tarefas-table { border: 1px solid var(--border); }
-      .tarefas-table thead th { background: var(--verde) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      header { background: var(--verde) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .tarefas-table thead th { background: var(--primary) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      header { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .print-info { display: flex !important; }
       a { color: inherit; text-decoration: none; }
     }
@@ -461,10 +486,14 @@
     .home-greeting { font-size: 1.6rem; font-weight: 700; color: var(--foreground); letter-spacing: -.02em; }
     .home-subline { font-size: .875rem; color: var(--muted-foreground); margin-top: 4px; }
     .home-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
-    .home-stat-card { background: var(--card); border: 1px solid var(--border); border-radius: calc(var(--radius) + 2px); padding: 20px; box-shadow: var(--shadow-sm); }
-    .home-stat-card.alert { border-color: #fecdd3; background: var(--erro-bg); }
-    .home-stat-card.warn  { border-color: #fde68a; background: var(--aviso-bg); }
-    .stat-num { font-size: 2rem; font-weight: 700; color: var(--foreground); line-height: 1; letter-spacing: -.02em; }
+    .home-stat-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--border-hover); border-radius: calc(var(--radius) + 2px); padding: 20px; box-shadow: var(--shadow-sm); }
+    #homePainel .home-stat-card:nth-child(1) { border-left-color: var(--col-afazer); }
+    #homePainel .home-stat-card:nth-child(2) { border-left-color: var(--col-andamento); }
+    #homePainel .home-stat-card:nth-child(3) { border-left-color: var(--col-bloqueado); }
+    #homePainel .home-stat-card:nth-child(4) { border-left-color: var(--late); }
+    .home-stat-card.alert { border-color: #F0CBC3; background: var(--late-bg); }
+    .home-stat-card.warn  { border-color: #F5D9B8; background: var(--warn-bg); }
+    .stat-num { font-size: 1.9rem; font-weight: 750; color: var(--foreground); line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
     .home-stat-card.alert .stat-num { color: var(--erro-cor); }
     .home-stat-card.warn  .stat-num { color: var(--aviso-cor); }
     .stat-label { font-size: .74rem; color: var(--muted-foreground); margin-top: 8px; text-transform: uppercase; letter-spacing: .04em; font-weight: 500; }
@@ -501,21 +530,15 @@
 
 <!-- Header -->
 <header>
-  <!-- Logo oficial Unimed (lockup branco) — vetor exato extraído do arquivo institucional CMYK -->
-  <svg height="30" viewBox="56.5 125.5 170 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Unimed">
-    <!-- símbolo (homem-seta) -->
-    <path transform="matrix(1,0,0,-1,206.7529,130.58119)" d="M0 0H7.438L18.617-14.873H11.18L16.746-22.312H7.438L1.873-14.873H5.564L0-7.438H5.564Z" fill="#fff" fill-rule="evenodd"/>
-    <path transform="matrix(1,0,0,-1,206.7529,130.58119)" d="M0 0H-7.438L-18.617-14.873H-11.18L-16.746-22.312H-7.438L-1.871-14.873H-5.615L0-7.438H-5.564Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- U --><path transform="matrix(1,0,0,-1,65.8604,132.09969)" d="M0 0H-7.939V-12.642C-7.939-18.761-3.389-21.139 2.377-21.139 8.646-21.139 12.793-18.912 12.793-12.185V0H5.004V-12.339C5.004-14.36 4.551-15.776 2.477-15.776 .555-15.776 0-14.312 0-12.339Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- n --><path transform="matrix(1,0,0,-1,80.626,152.88199)" d="M0 0H7.486V8.949C7.486 9.809 7.486 11.021 8.85 11.021 10.164 11.021 10.164 9.809 10.164 8.949V0H17.648V10.771C17.648 13.806 16.182 15.878 12.188 15.878 10.063 15.878 8.041 15.018 7.131 12.845H7.08V15.523H0Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- i --><path transform="matrix(1,0,0,-1,0,283.464)" d="M108.339 152.883H100.856998V147.726H108.339ZM100.856 130.582H108.338008V146.105H100.856Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- m --><path transform="matrix(1,0,0,-1,110.8174,152.88199)" d="M0 0H7.484V8.949C7.484 9.809 7.484 11.021 8.85 11.021 10.113 11.021 10.113 9.809 10.113 8.949V0H17.646V8.949C17.646 9.809 17.646 11.021 18.912 11.021 20.275 11.021 20.275 9.809 20.275 8.949V0H27.762V9.304C27.762 12.339 27.762 15.878 22.301 15.878 20.43 15.878 17.85 15.018 17.346 13.197H17.295C16.686 15.07 14.512 15.878 12.439 15.878 10.063 15.878 8.039 15.018 7.129 12.845H7.078V15.523H0Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- e --><path transform="matrix(1,0,0,-1,157.7959,146.91519)" d="M0 0V.909C0 6.17-2.125 9.911-8.143 9.911-14.414 9.911-17.75 7.282-17.75 2.074-17.75-3.287-14.414-6.323-8.143-6.323-5.514-6.323-3.135-6.019-1.164-5.411V-1.417C-2.328-2.024-4.199-2.378-6.221-2.378-8.447-2.378-10.217-1.922-10.369 0ZM-10.369 3.286C-10.469 4.5-10.115 6.319-8.344 6.319-6.676 6.319-6.475 4.449-6.475 3.286Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- d --><path transform="matrix(1,0,0,-1,170.9189,145.04409)" d="M0 0C0-1.466-.254-3.185-1.82-3.185-3.49-3.185-3.742-1.466-3.742 .151-3.742 1.771-3.49 3.387-1.922 3.387-.254 3.387 0 1.771 0 0M7.281-7.838V14.463H-.203V5.663H-.254C-1.418 7.333-2.934 8.04-4.955 8.04-9.607 8.04-11.529 4.348-11.529 .151-11.529-4.3-9.709-8.194-4.703-8.194-2.275-8.194-.758-7.334 .252-5.007H.303V-7.838Z" fill="#fff" fill-rule="evenodd"/>
-    <!-- separador vertical --><path transform="matrix(1,0,0,-1,0,283.464)" d="M184.411 156.608H183.16899V126.855H184.411Z" fill="#fff" fill-rule="evenodd"/>
-  </svg>
-  <div style="width:1px;height:28px;background:rgba(255,255,255,.25);margin:0 4px"></div>
-  <h1 style="font-size:1rem;font-weight:500;letter-spacing:.02em;opacity:.9">Gestão de Tarefas</h1>
+  <!-- Marca DS: símbolo oficial Unimed (pinheiro) + assinatura "Tarefas." -->
+  <span class="mark">
+    <svg viewBox="0 0 552 552" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Unimed">
+      <g transform="translate(0,276) scale(0.1,-0.1)" fill="#FFFFFF" stroke="none">
+        <path d="m3449 1267 c24 -12 54 -50 531 -682 145 -192 359 -476 476 -631 117 -155 216 -292 219 -305 3 -14 0 -32 -9 -44 -14 -19 -29 -20 -350 -25 -295 -4 -337 -7 -352 -22 -11 -11 -14 -24 -10 -40 3 -12 119 -175 256 -361 138 -186 253 -350 256 -364 5 -18 1 -31 -15 -46 -21 -22 -26 -22 -462 -25 -383 -2 -444 -1 -472 13 -20 10 -60 54 -107 118 -41 56 -122 167 -181 247 -245 331 -298 405 -302 422 -12 42 13 48 214 48 176 0 190 1 209 20 11 11 20 29 20 40 0 16 -162 240 -450 621 -81 107 -85 115 -65 145 l15 24 205 0 c237 0 274 8 275 62 0 10 -115 171 -256 358 -234 310 -260 341 -295 352 -30 8 -48 8 -78 0 -35 -11 -61 -42 -288 -345 -137 -182 -253 -341 -256 -351 -12 -30 1 -53 35 -65 18 -7 114 -11 233 -11 189 0 203 -1 220 -20 15 -16 16 -25 8 -43 -6 -13 -126 -178 -267 -366 -141 -189 -256 -351 -256 -360 0 -10 6 -26 14 -37 13 -17 31 -19 216 -24 215 -5 228 -9 210 -56 -7 -19 -160 -230 -345 -476 -27 -37 -86 -117 -130 -177 -44 -61 -93 -117 -110 -126 -27 -14 -80 -16 -471 -13 -424 3 -443 4 -464 23 -16 14 -20 27 -16 47 3 15 58 99 123 186 429 580 410 550 380 580 -16 15 -52 18 -353 22 -318 5 -336 6 -350 24 -8 11 -14 25 -14 30 0 19 39 76 214 314 94 129 187 255 206 282 38 53 236 324 552 757 140 190 207 275 226 282 43 15 1381 14 1411 -2z"/>
+      </g>
+    </svg>
+  </span>
+  <span class="wm"><b>Tarefas<i>.</i></b><span>Unimed CNU</span></span>
   <div style="flex:1"></div>
   <span id="userBadge" style="display:none;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.9);margin-right:4px"></span>
   <button class="btn btn-dourado" onclick="abrirModal()">+ Nova Tarefa</button>
@@ -1149,7 +1172,7 @@ function atualizarBotaoLimpar() {
   if (filtroProjetoAtual || filtroResponsavelAtual || buscaAtual) {
     var b = document.createElement('button');
     b.id = 'btnLimparFiltros'; b.className = 'sidebar-item';
-    b.style.cssText = 'color:var(--accent);font-weight:600;margin-top:6px';
+    b.style.cssText = 'color:var(--primary);font-weight:600;margin-top:6px';
     b.textContent = 'Limpar filtros';
     b.onclick = limparFiltros;
     srEl.appendChild(b);
@@ -2149,7 +2172,7 @@ function arquivarProjetoById(id, nome) {
       popularFiltros();
       toast('Projeto arquivado.');
     });
-  }, { prefixo: 'Arquivar', okLabel: 'Arquivar', sub: 'As tarefas existentes não serão afetadas.', okBg: 'var(--accent)' });
+  }, { prefixo: 'Arquivar', okLabel: 'Arquivar', sub: 'As tarefas existentes não serão afetadas.', okBg: 'var(--primary)' });
 }
 </script>
 <script>

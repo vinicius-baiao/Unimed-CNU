@@ -77,7 +77,8 @@ function doGet(e) {
         + 'Fale com o Aurélio para solicitar acesso.</p></div>')
         .setTitle('Acesso restrito — Gestão de Tarefas CNU');
     }
-    return HtmlService.createHtmlOutputFromFile(HTML_FILE)
+    // Template (não arquivo estático): permite <?!= include('Estilos_Fontes') ?>
+    return HtmlService.createTemplateFromFile(HTML_FILE).evaluate()
       .setTitle('Gestão de Tarefas — Rede Ambulatorial CNU')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -126,6 +127,11 @@ function doGet(e) {
   return ContentService
     .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// include() do padrão HtmlService — usado pelo template (Estilos_Fontes)
+function include(nome) {
+  return HtmlService.createHtmlOutputFromFile(nome).getContent();
 }
 
 // ── Projetos ──────────────────────────────────────────────────
