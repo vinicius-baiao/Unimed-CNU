@@ -152,10 +152,13 @@
       border-color: var(--ring); box-shadow: 0 0 0 3px rgba(0,78,76,.15);
     }
     .top-bar-search svg { flex-shrink: 0; color: var(--muted-foreground); }
-    .top-bar-search input {
-      border: none; outline: none; background: transparent;
+    /* Especificidade > regra global de input[type=text] (senão vira campo dentro de campo) */
+    .top-bar-search input[type="text"] {
+      border: none; outline: none; background: transparent; box-shadow: none;
+      height: 100%; padding: 0; border-radius: 0;
       font-family: inherit; font-size: .875rem; color: var(--foreground); width: 100%;
     }
+    .top-bar-search input[type="text"]:focus { border: none; box-shadow: none; }
     .top-bar-search input::placeholder { color: var(--muted-foreground); }
 
     /* ── Layout ── */
@@ -930,6 +933,23 @@ var modalTarefaAtual = null;
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
+var filtroInicialAplicado  = false;
+
+// Abre o board já filtrado nas tarefas do próprio usuário (pedido do piloto).
+// Usuário Padrão já recebe só as suas do backend; o filtro extra vale para
+// Admin/Gestor. "Limpar filtros" na sidebar remove com um clique.
+function aplicarFiltroInicial() {
+  if (filtroInicialAplicado || !currentUser || !tarefas.length) return;
+  filtroInicialAplicado = true;
+  if (!currentUserPodeExcluir) return;
+  var eu = currentUser.trim().toLowerCase();
+  var tem = tarefas.some(function(t) {
+    return String(t['Responsável'] || '').trim().toLowerCase() === eu;
+  });
+  if (!tem) return; // sem tarefas próprias: não abrir um board vazio
+  filtroResponsavelAtual = currentUser;
+  if (modoAtual === 'tarefas') { popularFiltros(); renderView(); }
+}
 
 // ── JSONP ─────────────────────────────────────────────────────
 function chamarAPI(params, callback) {
@@ -980,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', function() {
       currentUserPerfil      = d.perfil      || '';
       if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
       renderUserBadge();
+      aplicarFiltroInicial();
       // Atualiza saudação e painel assim que o perfil chegar
       if (modoAtual === 'home' && tarefas.length) renderHome();
     });
@@ -1062,6 +1083,7 @@ function carregarTudo() {
     templates = p.templates;
     cklStatus = p.ckl;
     projetos  = p.projetos;
+    aplicarFiltroInicial();
     if (modoAtual === 'home') {
       renderHome();
     } else {
@@ -1165,7 +1187,7 @@ function popularFiltros() {
   var resps = uniq(tarefas.map(function(t) { return t['Responsável']; })).sort();
 
   var spEl = document.getElementById('sidebarProjetos');
-  spEl.innerHTML = '<button class="sidebar-item active" data-val="" onclick="setFiltroProjeto(\'\')">'
+  spEl.innerHTML = '<button class="sidebar-item' + (filtroProjetoAtual === '' ? ' active' : '') + '" data-val="" onclick="setFiltroProjeto(\'\')">'
     + '<span class="sidebar-item-label">Todos os projetos</span>'
     + '<span class="sidebar-count">' + tarefas.length + '</span>'
     + '</button>';
@@ -1174,7 +1196,7 @@ function popularFiltros() {
     var cnt  = tarefas.filter(function(t) { return t.Projeto === nome; }).length;
     var cor  = corDoProjeto(nome);
     var safe = esc(nome).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    spEl.innerHTML += '<button class="sidebar-item" data-val="' + esc(nome) + '" onclick="setFiltroProjeto(\'' + safe + '\')">'
+    spEl.innerHTML += '<button class="sidebar-item' + (filtroProjetoAtual === nome ? ' active' : '') + '" data-val="' + esc(nome) + '" onclick="setFiltroProjeto(\'' + safe + '\')">'
       + '<span class="sidebar-proj-dot" style="background:' + cor + '"></span>'
       + '<span class="sidebar-item-label" title="' + esc(nome) + '">' + esc(nome) + '</span>'
       + '<span class="sidebar-count">' + cnt + '</span>'
@@ -1188,7 +1210,7 @@ function popularFiltros() {
   }
 
   var srEl = document.getElementById('sidebarResponsaveis');
-  srEl.innerHTML = '<button class="sidebar-item active" data-val="" onclick="setFiltroResponsavel(\'\')">'
+  srEl.innerHTML = '<button class="sidebar-item' + (filtroResponsavelAtual === '' ? ' active' : '') + '" data-val="" onclick="setFiltroResponsavel(\'\')">'
     + '<span class="sidebar-item-label">Todos</span>'
     + '<span class="sidebar-count">' + tarefas.length + '</span>'
     + '</button>';
@@ -1196,7 +1218,7 @@ function popularFiltros() {
     var cnt  = tarefas.filter(function(t) { return t['Responsável'] === r; }).length;
     var nome = nomeDeUsuario(r);
     var safe = esc(r).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    srEl.innerHTML += '<button class="sidebar-item" data-val="' + esc(r) + '" onclick="setFiltroResponsavel(\'' + safe + '\')">'
+    srEl.innerHTML += '<button class="sidebar-item' + (filtroResponsavelAtual === r ? ' active' : '') + '" data-val="' + esc(r) + '" onclick="setFiltroResponsavel(\'' + safe + '\')">'
       + '<span class="sidebar-item-label" title="' + esc(r) + '">' + esc(nome) + '</span>'
       + '<span class="sidebar-count">' + cnt + '</span>'
       + '</button>';
