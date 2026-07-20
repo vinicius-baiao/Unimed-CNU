@@ -76,6 +76,13 @@
       --col-bloqueado: #C4402E;
       --col-concluido: #00995D;
 
+      /* ── sidebar (rail escura do Shell) ── */
+      --sidebar:            #004E4C;
+      --sidebar-foreground: #B9CAC7;
+      --sidebar-active:     #FFFFFF;
+      --sidebar-label:      #6E938F;
+      --sidebar-muted:      #7C918E;
+
       /* ── sombras ── */
       --shadow-sm:  0 1px 2px 0 rgba(0,0,0,.05);
       --shadow:     0 1px 3px 0 rgba(0,30,28,.08);
@@ -96,27 +103,44 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Header ── */
-    header {
-      background: var(--primary); color: #fff;
-      padding: 0 20px; height: 56px;
-      display: flex; align-items: center; gap: 14px;
-      position: sticky; top: 0; z-index: 50;
-    }
-    header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
-    /* Marca DS: mark (pinheiro) + assinatura Slab com ponto dourado */
-    header .mark { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
-      display: grid; place-items: center; flex: 0 0 34px; }
-    header .mark svg { width: 22px; height: 22px; }
-    header .wm b { font-family: var(--serif); font-size: 21px; font-style: italic; font-weight: 600; line-height: 1; color: #fff; }
-    header .wm b i { color: var(--dourado); font-style: normal; }
-    header .wm span { display: block; font-size: 9px; letter-spacing: 3px; color: var(--dourado); margin-top: 3px; text-transform: uppercase; }
+    /* ═══ SIDEBAR — rail escura do Shell (64px → 236px no hover) ═══ */
+    .side { width: 64px; background: var(--sidebar); color: #EAF0EE;
+      display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 60;
+      overflow: hidden; white-space: nowrap; transition: width .18s ease; }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 22px 15px 18px; }
+    .brand .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--sidebar);
+      border: 1px solid rgba(255,255,255,.18); display: grid; place-items: center; flex: 0 0 34px; }
+    .brand .mark svg { width: 22px; height: 22px; }
+    .brand .wm b { font-family: var(--serif); font-size: 21px; font-style: italic; font-weight: 600; color: #fff; }
+    .brand .wm b i { color: var(--dourado); font-style: normal; }
+    .brand .wm span { display: block; font-size: 9px; letter-spacing: 3px; color: var(--dourado); margin-top: 3px; text-transform: uppercase; }
+    .navlabel { padding: 12px 20px 6px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--sidebar-label); }
+    .side .nav { padding: 0 12px; display: flex; flex-direction: column; gap: 2px; }
+    .side .nav a { display: flex; align-items: center; gap: 11px; padding: 10px 0; justify-content: center; border-radius: 9px;
+      color: var(--sidebar-foreground); text-decoration: none; font-size: 13.5px; font-weight: 500; transition: .15s; cursor: pointer; }
+    .side .nav a svg { width: 17px; height: 17px; flex: 0 0 17px; }
+    .side .nav a:hover { background: rgba(255,255,255,.06); color: #EAF0EE; }
+    .side .nav a.on { background: var(--sidebar-active); color: var(--primary); font-weight: 600; }
+    .side .foot { margin-top: auto; padding: 16px 0; border-top: 1px solid rgba(255,255,255,.08);
+      display: flex; align-items: center; justify-content: center; gap: 10px; color: #9DB2AF; font-size: 12px; }
+    .side .foot .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--dourado);
+      display: grid; place-items: center; color: var(--primary); font-weight: 700; font-size: 11px; flex: 0 0 26px; }
+    .side .foot small { color: var(--sidebar-muted); display: block; }
+    .side:hover { width: 236px; box-shadow: 8px 0 30px rgba(0,30,28,.22); }
+    .side:hover .brand { padding: 22px 20px 18px; }
+    .side:hover .nav a { padding: 10px 12px; justify-content: flex-start; }
+    .side:hover .foot { justify-content: flex-start; padding: 16px 20px; }
+    .side .brand .wm, .side .navlabel, .side .nav a span, .side .foot #u-nome { display: none; }
+    .side:hover .brand .wm, .side:hover .navlabel, .side:hover .nav a span, .side:hover .foot #u-nome { display: block; }
+
+    /* Área do portal ao lado da rail */
+    .portal-main { margin-left: 64px; min-width: 0; }
 
     /* ── Top bar ── */
     .top-bar {
       background: var(--surface); border-bottom: 1px solid var(--border);
       padding: 10px 20px; display: flex; gap: 8px; align-items: center;
-      position: sticky; top: 56px; z-index: 40;
+      position: sticky; top: 0; z-index: 40;
     }
     .top-bar-search {
       display: flex; align-items: center; gap: 8px;
@@ -135,14 +159,14 @@
     .top-bar-search input::placeholder { color: var(--muted-foreground); }
 
     /* ── Layout ── */
-    .app-layout { display: flex; min-height: calc(100vh - 97px); }
+    .app-layout { display: flex; min-height: calc(100vh - 57px); }
 
     /* ── Sidebar ── */
     .sidebar {
       width: 240px; flex-shrink: 0;
       background: var(--surface); border-right: 1px solid var(--border);
       padding: 16px 12px 24px;
-      position: sticky; top: 97px; height: calc(100vh - 97px); overflow-y: auto;
+      position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto;
     }
     .sidebar-section { margin-bottom: 8px; }
     .sidebar-label {
@@ -202,7 +226,7 @@
 
     /* ── Main / Board ── */
     .main-content { flex: 1; min-width: 0; overflow: hidden; }
-    .board { display: flex; gap: 16px; padding: 20px; overflow-x: auto; min-height: calc(100vh - 97px); align-items: stretch; }
+    .board { display: flex; gap: 16px; padding: 20px; overflow-x: auto; min-height: calc(100vh - 57px); align-items: stretch; }
 
     .coluna {
       flex: 1; min-width: 272px; max-width: 320px;
@@ -466,15 +490,15 @@
 
     /* ── Print / PDF ── */
     @media print {
-      .top-bar, .view-toggle, .overlay, #toast, .td-acao, .sidebar, header button, .btn-dourado { display: none !important; }
+      .top-bar, .view-toggle, .overlay, #toast, .td-acao, .sidebar, .side, .btn-dourado { display: none !important; }
       body { background: #fff; }
+      .portal-main { margin-left: 0; }
       .app-layout { display: block; }
       .board { display: none !important; }
       #listView { display: block !important; padding: 0; }
       .list-view { padding: 0; }
       .tarefas-table { border: 1px solid var(--border); }
       .tarefas-table thead th { background: var(--primary) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      header { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .print-info { display: flex !important; }
       a { color: inherit; text-decoration: none; }
     }
@@ -518,6 +542,8 @@
     @media (max-width: 640px) { #homeView { padding: 20px 16px 32px; } .home-stat-grid { grid-template-columns: repeat(2, 1fr); } .home-hero { flex-direction: column; align-items: flex-start; } }
     /* Mobile: sidebar de filtros ocultada; colunas do board deslizáveis */
     @media (max-width: 860px) {
+      .side { display: none; }
+      .portal-main { margin-left: 0; }
       .sidebar { display: none; }
       .board { padding: 16px; }
       .coluna { min-width: 82vw; max-width: 90vw; }
@@ -528,21 +554,33 @@
 </head>
 <body>
 
-<!-- Header -->
-<header>
-  <!-- Marca DS: símbolo oficial Unimed (pinheiro) + assinatura "Tarefas." -->
-  <span class="mark">
-    <svg viewBox="0 0 552 552" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Unimed">
-      <g transform="translate(0,276) scale(0.1,-0.1)" fill="#FFFFFF" stroke="none">
-        <path d="m3449 1267 c24 -12 54 -50 531 -682 145 -192 359 -476 476 -631 117 -155 216 -292 219 -305 3 -14 0 -32 -9 -44 -14 -19 -29 -20 -350 -25 -295 -4 -337 -7 -352 -22 -11 -11 -14 -24 -10 -40 3 -12 119 -175 256 -361 138 -186 253 -350 256 -364 5 -18 1 -31 -15 -46 -21 -22 -26 -22 -462 -25 -383 -2 -444 -1 -472 13 -20 10 -60 54 -107 118 -41 56 -122 167 -181 247 -245 331 -298 405 -302 422 -12 42 13 48 214 48 176 0 190 1 209 20 11 11 20 29 20 40 0 16 -162 240 -450 621 -81 107 -85 115 -65 145 l15 24 205 0 c237 0 274 8 275 62 0 10 -115 171 -256 358 -234 310 -260 341 -295 352 -30 8 -48 8 -78 0 -35 -11 -61 -42 -288 -345 -137 -182 -253 -341 -256 -351 -12 -30 1 -53 35 -65 18 -7 114 -11 233 -11 189 0 203 -1 220 -20 15 -16 16 -25 8 -43 -6 -13 -126 -178 -267 -366 -141 -189 -256 -351 -256 -360 0 -10 6 -26 14 -37 13 -17 31 -19 216 -24 215 -5 228 -9 210 -56 -7 -19 -160 -230 -345 -476 -27 -37 -86 -117 -130 -177 -44 -61 -93 -117 -110 -126 -27 -14 -80 -16 -471 -13 -424 3 -443 4 -464 23 -16 14 -20 27 -16 47 3 15 58 99 123 186 429 580 410 550 380 580 -16 15 -52 18 -353 22 -318 5 -336 6 -350 24 -8 11 -14 25 -14 30 0 19 39 76 214 314 94 129 187 255 206 282 38 53 236 324 552 757 140 190 207 275 226 282 43 15 1381 14 1411 -2z"/>
-      </g>
-    </svg>
-  </span>
-  <span class="wm"><b>Tarefas<i>.</i></b><span>Unimed CNU</span></span>
-  <div style="flex:1"></div>
-  <span id="userBadge" style="display:none;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.9);margin-right:4px"></span>
-  <button class="btn btn-dourado" onclick="abrirModal()">+ Nova Tarefa</button>
-</header>
+<!-- Sidebar rail (padrão Shell dos portais) -->
+<aside class="side">
+  <div class="brand">
+    <span class="mark">
+      <!-- Símbolo oficial Unimed (pinheiro) — vetor institucional, NUNCA improvisar -->
+      <svg viewBox="0 0 552 552" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Unimed">
+        <g transform="translate(0,276) scale(0.1,-0.1)" fill="#FFFFFF" stroke="none">
+          <path d="m3449 1267 c24 -12 54 -50 531 -682 145 -192 359 -476 476 -631 117 -155 216 -292 219 -305 3 -14 0 -32 -9 -44 -14 -19 -29 -20 -350 -25 -295 -4 -337 -7 -352 -22 -11 -11 -14 -24 -10 -40 3 -12 119 -175 256 -361 138 -186 253 -350 256 -364 5 -18 1 -31 -15 -46 -21 -22 -26 -22 -462 -25 -383 -2 -444 -1 -472 13 -20 10 -60 54 -107 118 -41 56 -122 167 -181 247 -245 331 -298 405 -302 422 -12 42 13 48 214 48 176 0 190 1 209 20 11 11 20 29 20 40 0 16 -162 240 -450 621 -81 107 -85 115 -65 145 l15 24 205 0 c237 0 274 8 275 62 0 10 -115 171 -256 358 -234 310 -260 341 -295 352 -30 8 -48 8 -78 0 -35 -11 -61 -42 -288 -345 -137 -182 -253 -341 -256 -351 -12 -30 1 -53 35 -65 18 -7 114 -11 233 -11 189 0 203 -1 220 -20 15 -16 16 -25 8 -43 -6 -13 -126 -178 -267 -366 -141 -189 -256 -351 -256 -360 0 -10 6 -26 14 -37 13 -17 31 -19 216 -24 215 -5 228 -9 210 -56 -7 -19 -160 -230 -345 -476 -27 -37 -86 -117 -130 -177 -44 -61 -93 -117 -110 -126 -27 -14 -80 -16 -471 -13 -424 3 -443 4 -464 23 -16 14 -20 27 -16 47 3 15 58 99 123 186 429 580 410 550 380 580 -16 15 -52 18 -353 22 -318 5 -336 6 -350 24 -8 11 -14 25 -14 30 0 19 39 76 214 314 94 129 187 255 206 282 38 53 236 324 552 757 140 190 207 275 226 282 43 15 1381 14 1411 -2z"/>
+        </g>
+      </svg>
+    </span>
+    <!-- Assinatura institucional: "Cora." fixo (decisão do DS de 20/07); o subtítulo diz a área -->
+    <span class="wm"><b>Cora<i>.</i></b><span>Gestão de Tarefas</span></span>
+  </div>
+  <div class="navlabel">Ferramentas</div>
+  <nav class="nav">
+    <a id="nav-inicio" class="on" onclick="setModo('home')" title="Início">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      <span>Início</span></a>
+    <a id="nav-tarefas" onclick="setModo('tarefas')" title="Tarefas">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="10" y="3" width="5" height="12" rx="1.5"/><rect x="17" y="3" width="5" height="15" rx="1.5"/></svg>
+      <span>Tarefas</span></a>
+  </nav>
+  <div class="foot"><span class="dot" id="u-av">·</span><span id="u-nome"><span id="u-nome-txt">—</span><small id="u-area">Unimed CNU</small></span></div>
+</aside>
+
+<div class="portal-main">
 
 <!-- Print info bar (visível só no PDF) -->
 <div class="print-info" id="printInfo">
@@ -575,6 +613,7 @@
       Lista
     </button>
   </div>
+  <button class="btn btn-dourado" onclick="abrirModal()">+ Nova Tarefa</button>
 </div>
 
 <!-- Home / Dashboard -->
@@ -693,6 +732,8 @@
 
   </div><!-- /.main-content -->
 </div><!-- /.app-layout -->
+
+</div><!-- /.portal-main -->
 
 <!-- Modal -->
 <!-- Modal Gerenciar Projetos -->
@@ -975,14 +1016,16 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Rodapé da rail (padrão Shell): avatar dourado de iniciais + nome + perfil
 function renderUserBadge() {
-  var badge = document.getElementById('userBadge');
-  if (!badge || !currentUser) return;
+  if (!currentUser) return;
+  var av  = document.getElementById('u-av');
+  var txt = document.getElementById('u-nome-txt');
+  var ar  = document.getElementById('u-area');
   var perfil = currentUserPerfil || (currentUserIsAdmin ? 'Admin' : (currentUserPodeExcluir ? 'Gestor' : ''));
-  badge.style.display = 'flex';
-  badge.innerHTML = '<span class="avatar" style="width:24px;height:24px;font-size:.55rem;border-color:rgba(255,255,255,.35)">'
-    + esc(avatarInitials(currentUser)) + '</span>'
-    + '<span>' + esc(nomeDeUsuario(currentUser)) + (perfil ? ' · ' + esc(perfil) : '') + '</span>';
+  if (av)  av.textContent  = avatarInitials(currentUser);
+  if (txt) txt.textContent = nomeDeUsuario(currentUser);
+  if (ar)  ar.textContent  = perfil ? perfil + ' · Unimed CNU' : 'Unimed CNU';
 }
 
 // Regra de edição: criador da tarefa OU Admin/Gestor. (Mesma lógica do modal.)
@@ -1212,6 +1255,11 @@ function setModo(m) {
   document.getElementById('btnInicio').style.display  = isHome ? 'none'  : '';
   var vt = document.querySelector('.view-toggle');
   if (vt) vt.style.display = isHome ? 'none' : '';
+  // Item ativo na rail (padrão Shell)
+  var ni = document.getElementById('nav-inicio');
+  var nt = document.getElementById('nav-tarefas');
+  if (ni) ni.classList.toggle('on', isHome);
+  if (nt) nt.classList.toggle('on', !isHome);
   if (isHome) {
     renderHome();
   } else {
