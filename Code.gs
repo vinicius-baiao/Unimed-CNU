@@ -66,7 +66,6 @@ var COL = {
 function doGet(e) {
   var acao     = e.parameter.acao     || '';
   var callback = /^[a-zA-Z_]\w{0,80}$/.test(e.parameter.callback || '') ? e.parameter.callback : '';
-  var dados    = e.parameter.dados    ? JSON.parse(e.parameter.dados) : {};
 
   // Sem ação → serve o frontend HTML (permite embed no Google Sites)
   if (!acao) {
@@ -85,6 +84,7 @@ function doGet(e) {
 
   var resultado;
   try {
+    var dados = e.parameter.dados ? JSON.parse(e.parameter.dados) : {};
     if (!acessoPermitido(Session.getActiveUser().getEmail())) {
       resultado = { erro: 'Acesso restrito ao piloto.' };
     } else {
@@ -169,17 +169,23 @@ function listarProjetos() {
   return { projetos: lista };
 }
 
+// Cor vai direto para atributos style no frontend — restringe a hex.
+function corSegura(cor) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(cor || '')) ? cor : '#64748b';
+}
+
 function criarProjeto(dados) {
   var editor = Session.getActiveUser().getEmail();
   if (!podeExcluir(editor)) return { erro: 'Apenas Admin ou Gestor pode criar projetos.' };
   if (!dados.nome || !String(dados.nome).trim()) return { erro: 'Nome do projeto é obrigatório.' };
+  if (String(dados.nome).length > 120) return { erro: 'Nome do projeto excede 120 caracteres.' };
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
 
   var sheet = getOrCreateProjetosSheet();
   var id    = proximoIdProjeto();
-  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', dados.cor || '#64748b', true]);
+  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', corSegura(dados.cor), true]);
   gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome);
   lock.releaseLock();
   return { sucesso: true, id: id };
@@ -197,7 +203,7 @@ function atualizarProjeto(dados) {
     var row = rows[i].slice();
     if (dados.nome      !== undefined) row[COL_PROJ.NOME]     = dados.nome;
     if (dados.descricao !== undefined) row[COL_PROJ.DESCRICAO] = dados.descricao;
-    if (dados.cor       !== undefined) row[COL_PROJ.COR]      = dados.cor;
+    if (dados.cor       !== undefined) row[COL_PROJ.COR]      = corSegura(dados.cor);
     sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
     gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, dados.nome || '');
     return { sucesso: true };
@@ -222,16 +228,35 @@ function arquivarProjeto(dados) {
 }
 
 // ── Usuários / Admin ──────────────────────────────────────────
-function getPerfil(email) {
+// Mapa email→perfil com cache de 5 min (CacheService). Evita varrer a aba
+// Usuários a cada requisição — com todos os acessos executando como o
+// deployer, a quota de execução é COMPARTILHADA entre os usuários.
+// Efeito colateral aceito: mudança de perfil demora até 5 min para valer.
+var CACHE_PERFIS_KEY = 'perfis_v1';
+var CACHE_PERFIS_SEG = 300;
+
+function mapaPerfis() {
+  var cache = CacheService.getScriptCache();
+  try {
+    var raw = cache.get(CACHE_PERFIS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* cache indisponível: cai para a planilha */ }
+
+  var mapa = {};
   var sheet = getSheet(ABA_USUARIOS);
-  if (!sheet) return '';
-  var rows = sheet.getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]).toLowerCase() === String(email).toLowerCase()) {
-      return String(rows[i][2]);
+  if (sheet) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][1]) mapa[String(rows[i][1]).trim().toLowerCase()] = String(rows[i][2] || '');
     }
   }
-  return '';
+  try { cache.put(CACHE_PERFIS_KEY, JSON.stringify(mapa), CACHE_PERFIS_SEG); } catch (e) {}
+  return mapa;
+}
+
+function getPerfil(email) {
+  if (!email) return '';
+  return mapaPerfis()[String(email).trim().toLowerCase()] || '';
 }
 
 function isAdmin(email) {
@@ -282,20 +307,21 @@ function gravarLog(acao, campo, anterior, novo) {
 function gravarLogs(entradas) {
   if (!entradas || !entradas.length) return;
   var log    = getSheet(ABA_LOG);
-  var baseId = log.getLastRow();
   var editor = Session.getActiveUser().getEmail();
   var agora  = new Date();
-  var rows   = entradas.map(function(e, i) {
-    return [baseId + i + 1, agora, editor, e[0], e[1], e[2], e[3]];
+  // appendRow é atômico: execuções simultâneas não sobrescrevem linhas
+  // umas das outras (o setValues em posição calculada sobrescrevia).
+  // O ID pode duplicar sob concorrência — cosmético, sem perda de dados.
+  entradas.forEach(function(e) {
+    log.appendRow([log.getLastRow(), agora, editor, e[0], e[1], e[2], e[3]]);
   });
-  log.getRange(baseId + 1, 1, rows.length, 7).setValues(rows);
 }
 
 // ── Visibilidade por perfil ───────────────────────────────────
 // Admin/Gestor veem tudo (retorna null = sem restrição).
 // Usuário Padrão vê apenas tarefas onde: é o responsável, é o criador,
 // ou está marcado como responsável em algum item de checklist.
-function idsTarefasVisiveis(email) {
+function idsTarefasVisiveis(email, rowsTarefas) {
   if (!email || podeExcluir(email)) return null;
   var alvo = String(email).trim().toLowerCase();
 
@@ -312,7 +338,7 @@ function idsTarefasVisiveis(email) {
   }
 
   var visiveis = {};
-  var rowsT = getSheet(ABA_TAREFAS).getDataRange().getValues();
+  var rowsT = rowsTarefas || getSheet(ABA_TAREFAS).getDataRange().getValues();
   for (var j = 1; j < rowsT.length; j++) {
     var id      = String(rowsT[j][COL.ID]);
     var resp    = String(rowsT[j][COL.RESPONSAVEL] || '').trim().toLowerCase();
@@ -322,13 +348,22 @@ function idsTarefasVisiveis(email) {
   return visiveis;
 }
 
+// Datas "YYYY-MM-DD" vindas do <input type=date> devem ser interpretadas no
+// fuso do script (America/Sao_Paulo). new Date('YYYY-MM-DD') trata como UTC
+// e grava 21:00 do dia anterior — quebrando exibição, lembrete D-1 e Calendar.
+function parsePrazoLocal(val) {
+  var m = String(val || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return new Date(val);
+}
+
 // ── listarTarefas ─────────────────────────────────────────────
 function listarTarefas() {
   var sheet  = getSheet(ABA_TAREFAS);
   var dados  = sheet.getDataRange().getValues();
   var header = dados[0];
   var lista  = [];
-  var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
+  var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail(), dados);
 
   for (var i = 1; i < dados.length; i++) {
     var linha = dados[i];
@@ -352,8 +387,9 @@ function validarTarefa(dados, criando) {
   if (dados.status !== undefined && STATUS_VALIDOS.indexOf(dados.status) === -1) return 'Status inválido: ' + dados.status;
   if (dados.prioridade !== undefined && PRIORIDADE_VALIDA.indexOf(dados.prioridade) === -1) return 'Prioridade inválida: ' + dados.prioridade;
   if (dados.responsavel) {
-    var email = String(dados.responsavel);
-    var dominioOk = DOMINIOS_PERMITIDOS.some(function(d) { return email.indexOf(d) !== -1; });
+    var email = String(dados.responsavel).trim().toLowerCase();
+    // sufixo real, não indexOf — "x@gmail.com?y=@unimedcnu.coop.br" não passa
+    var dominioOk = DOMINIOS_PERMITIDOS.some(function(d) { return email.slice(-d.length) === d; });
     if (!dominioOk) return 'Responsável deve ter e-mail @unimedcnu.coop.br ou @unimednacional.coop.br';
   }
   if (dados.observacoes && String(dados.observacoes).length > 2000) return 'Campo "observações" excede 2000 caracteres.';
@@ -374,7 +410,7 @@ function criarTarefa(dados) {
   var agora = new Date();
   var criador = dados.criado_por || Session.getActiveUser().getEmail();
 
-  var prazo = dados.prazo ? new Date(dados.prazo) : '';
+  var prazo = dados.prazo ? parsePrazoLocal(dados.prazo) : '';
 
   var eventId = '';
   if (dados.responsavel) {
@@ -412,14 +448,22 @@ function atualizarTarefa(dados) {
   var sheet  = getSheet(ABA_TAREFAS);
   var linhas = sheet.getDataRange().getValues();
 
+  // Usuário Padrão só pode alterar tarefas que enxerga (IDs são sequenciais
+  // e adivinháveis; sem esta checagem a visibilidade seria contornável).
+  var editorEmail = Session.getActiveUser().getEmail();
+  var visiveis = idsTarefasVisiveis(editorEmail, linhas);
+  if (visiveis && !visiveis[String(dados.id)]) {
+    return { erro: 'Tarefa não encontrada: ' + dados.id };
+  }
+
   for (var i = 1; i < linhas.length; i++) {
     if (String(linhas[i][COL.ID]) !== String(dados.id)) continue;
 
     // ── Verificação de permissão ──────────────────────────────
-    var editor  = Session.getActiveUser().getEmail().trim().toLowerCase();
+    var editor  = String(editorEmail).trim().toLowerCase();
     var criador = String(linhas[i][COL.CRIADO_POR] || '').trim().toLowerCase();
     var eCriador = editor === criador;
-    var admin    = isAdmin(editor) || podeExcluir(editor); // Admin + Gestor
+    var admin    = podeExcluir(editorEmail); // Admin + Gestor
     // Todos podem editar; apenas o prazo é restrito ao criador ou Admin/Gestor.
     var prazoAtualStr = linhas[i][COL.PRAZO] ? new Date(linhas[i][COL.PRAZO]).toISOString().slice(0,10) : '';
     if (!admin && !eCriador && dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr) {
@@ -440,24 +484,27 @@ function atualizarTarefa(dados) {
 
     var responsavelAnterior = linhas[i][COL.RESPONSAVEL];
 
-    // Aplicar alterações na linha em memória e coletar logs
-    var rowAtualizada = linhas[i].slice();
-    var logEntradas   = [];
-
+    // Escreve APENAS as células dos campos enviados. Regravar a linha inteira
+    // clobberia edições simultâneas de outros usuários com valores velhos
+    // lidos no início desta execução (last-write-wins na linha toda).
+    var logEntradas = [];
     camposEditaveis.forEach(function(campo) {
       if (dados[campo] === undefined) return;
       var anterior = linhas[i][colMap[campo]];
-      var novo     = campo === 'prazo' ? new Date(dados[campo]) : dados[campo];
-      rowAtualizada[colMap[campo]] = novo;
+      var novo     = campo === 'prazo' ? (dados[campo] ? parsePrazoLocal(dados[campo]) : '') : dados[campo];
+      // Grava só o que de fato mudou: menos writes, menos linhas de Log
+      // (o front envia os 7 campos mesmo quando 1 mudou).
+      var aCmp = anterior instanceof Date ? anterior.getTime() : String(anterior == null ? '' : anterior);
+      var nCmp = novo     instanceof Date ? novo.getTime()     : String(novo     == null ? '' : novo);
+      if (aCmp === nCmp) return;
+      sheet.getRange(i + 1, colMap[campo] + 1).setValue(novo);
       logEntradas.push(['ATUALIZAR', campo, anterior, novo]);
     });
-
-    // 1 write para todos os campos alterados; 1 write para todos os logs
-    sheet.getRange(i + 1, 1, 1, rowAtualizada.length).setValues([rowAtualizada]);
     gravarLogs(logEntradas);
 
     if (dados.responsavel && dados.responsavel !== responsavelAnterior) {
-      notificarResponsavel(dados, 'reatribuicao');
+      // Falha de e-mail não pode derrubar a resposta (a atualização já foi gravada)
+      try { notificarResponsavel(dados, 'reatribuicao'); } catch (e) { Logger.log('Email erro: ' + e.message); }
     }
 
     // Registrar mudança de status como interação automática
@@ -488,8 +535,8 @@ function excluirTarefa(dados) {
     if (String(linhas[i][COL.ID]) !== String(dados.id)) continue;
     if (linhas[i][COL.ATIVO] === false) continue; // já inativo, pula
 
-    var criador = String(linhas[i][COL.CRIADO_POR] || '');
-    if (editor !== criador && !podeExcluir(editor)) {
+    var criador = String(linhas[i][COL.CRIADO_POR] || '').trim().toLowerCase();
+    if (String(editor).trim().toLowerCase() !== criador && !podeExcluir(editor)) {
       return { erro: 'Sem permissão para excluir esta tarefa.' };
     }
 
@@ -578,6 +625,26 @@ function listarChecklist_Status() {
 function salvarChecklist(dados) {
   var sheet    = getSheet(ABA_CKL_STATUS);
   var idTarefa = String(dados.idTarefa);
+
+  // Visibilidade: usuário padrão só altera checklist de tarefa que enxerga
+  var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
+  if (visiveis && !visiveis[idTarefa]) {
+    return { erro: 'Sem permissão para alterar esta checklist.' };
+  }
+
+  // Limites defensivos (a aba inteira é reescrita — entrada gigante = DoS)
+  var itensIn = dados.itens || [];
+  if (itensIn.length > 100) return { erro: 'Checklist excede 100 itens.' };
+  for (var v = 0; v < itensIn.length; v++) {
+    if (String(itensIn[v].item || '').length > 300) return { erro: 'Item de checklist excede 300 caracteres.' };
+  }
+
+  // Lock: a gravação reescreve a aba inteira — dois salvamentos simultâneos
+  // sem lock perdem os dados de um deles (read-clear-write concorrente).
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+
   var todas    = sheet.getDataRange().getValues();
   var header   = todas[0];
 
@@ -613,6 +680,10 @@ function salvarChecklist(dados) {
   sheet.clearContents();
   if (resultado.length > 0) {
     sheet.getRange(1, 1, resultado.length, numCols).setValues(resultado);
+  }
+
+  } finally {
+    lock.releaseLock(); // solta antes das notificações (e-mail é lento)
   }
 
   // Notificar colegas marcados em itens da checklist (desativado por flag)
@@ -993,8 +1064,15 @@ function listarInteracoes(dados) {
 
 // ── adicionarInteracao ────────────────────────────────────────
 function adicionarInteracao(dados) {
+  if (!dados.idTarefa) return { erro: 'ID da tarefa é obrigatório.' };
+  if (String(dados.conteudo || '').length > 2000) return { erro: 'Conteúdo excede 2000 caracteres.' };
   var sheet  = getSheet(ABA_INTERACOES);
   var editor = Session.getActiveUser().getEmail();
+  // Usuário padrão só registra interação em tarefa que enxerga
+  var visiveis = idsTarefasVisiveis(editor);
+  if (visiveis && !visiveis[String(dados.idTarefa)]) {
+    return { erro: 'Sem permissão para esta tarefa.' };
+  }
   var idMax  = sheet.getLastRow(); // O(1) — IDs são sequenciais e só appendamos
   sheet.appendRow([
     idMax + 1,
@@ -1032,9 +1110,9 @@ function relatorioDiario() {
 
   var dtStr = hoje.toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
   var linhaT = function(t) {
-    return '<li style="font-size:13px;margin-bottom:5px"><b>' + t.Tarefa + '</b>'
-      + (t.Projeto ? ' · <span style="color:#6c757d">' + t.Projeto + '</span>' : '')
-      + (t['Responsável'] ? ' <span style="color:#adb5bd">(' + t['Responsável'].split('@')[0] + ')</span>' : '')
+    return '<li style="font-size:13px;margin-bottom:5px"><b>' + escHtml(t.Tarefa) + '</b>'
+      + (t.Projeto ? ' · <span style="color:#6c757d">' + escHtml(t.Projeto) + '</span>' : '')
+      + (t['Responsável'] ? ' <span style="color:#adb5bd">(' + escHtml(t['Responsável'].split('@')[0]) + ')</span>' : '')
       + '</li>';
   };
   var secao = function(titulo, cor, items) {
@@ -1096,9 +1174,9 @@ function lembretesDiarios() {
       + '<p style="font-size:14px;margin:0 0 12px">A tarefa abaixo vence <strong>amanhã</strong>:</p>'
       + '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">'
       + '<tr><td style="padding:7px 0;color:#6c757d;width:80px">Tarefa</td>'
-      +     '<td style="padding:7px 0;font-weight:600">' + linha[COL.TAREFA] + '</td></tr>'
+      +     '<td style="padding:7px 0;font-weight:600">' + escHtml(linha[COL.TAREFA]) + '</td></tr>'
       + '<tr><td style="padding:7px 0;color:#6c757d;border-top:1px solid #f1f1f1">Projeto</td>'
-      +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + (linha[COL.PROJETO] || '—') + '</td></tr>'
+      +     '<td style="padding:7px 0;border-top:1px solid #f1f1f1">' + escHtml(linha[COL.PROJETO] || '—') + '</td></tr>'
       + '</table>'
       + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
       +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'
@@ -1165,7 +1243,19 @@ function arquivarTarefasAntigas() {
 // ── doPost — endpoint para integrações externas (Gem Gemini) ──
 // Aceita POST com JSON: { token, acao, dados }
 // Requer token secreto; não depende de sessão autenticada.
-var TOKEN_GEMINI = 'CNU_TAREFAS_SECRET_2026';
+// ⚠️ SEGURANÇA: o token deve viver em Script Properties (Configurações do
+// projeto → Propriedades do script → TOKEN_GEMINI). O valor hardcoded abaixo
+// é só fallback legado e DEVE ser rotacionado: este repositório é público no
+// GitHub, então o valor antigo está exposto.
+var TOKEN_GEMINI_FALLBACK = 'CNU_TAREFAS_SECRET_2026';
+
+function tokenGemini() {
+  try {
+    var p = PropertiesService.getScriptProperties().getProperty('TOKEN_GEMINI');
+    if (p) return p;
+  } catch (e) {}
+  return TOKEN_GEMINI_FALLBACK;
+}
 
 function doPost(e) {
   var json;
@@ -1175,7 +1265,7 @@ function doPost(e) {
     return jsonResponse({ erro: 'Payload inválido: ' + err.message });
   }
 
-  if (json.token !== TOKEN_GEMINI) {
+  if (!json.token || json.token !== tokenGemini()) {
     return jsonResponse({ erro: 'Token inválido.' });
   }
 
@@ -1184,6 +1274,9 @@ function doPost(e) {
   if (acao === 'criarTarefa') {
     var dados = json.dados;
     if (Array.isArray(dados)) {
+      if (dados.length > 30) {
+        return jsonResponse({ erro: 'Lote excede 30 tarefas.' });
+      }
       // Criação em lote (ex: extraídas de uma ata pelo Gem)
       var resultados = [];
       var erros = 0;
