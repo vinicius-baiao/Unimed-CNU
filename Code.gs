@@ -38,7 +38,8 @@ var EMAILS_PILOTO = [
   'aurelio.pereira.ext@unimedcnu.coop.br',
   'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',
   'guilherme.silva.ext@unimedcnu.coop.br',
-  'thiago.viana.ext@unimedcnu.coop.br'
+  'thiago.viana.ext@unimedcnu.coop.br',
+  'glaucia.ruggeri@unimedcnu.coop.br'
 ];
 function acessoPermitido(email) {
   if (!PILOTO_ATIVO) return true;
@@ -987,7 +988,8 @@ function popularUsuarios() {
     ['Vinicius Silva De Oliveira',  'viniciuss.oliveira@unimedcnu.coop.br',         'Usuário Padrão', '',                                         ''],
     ['Jacqueline Wahrhaftig',       'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',   'Usuário Padrão', '',                                         ''],
     ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',     'Usuário Padrão', '',                                         ''],
-    ['Thiago Viana Santos',         'thiago.viana.ext@unimedcnu.coop.br',            'Usuário Padrão', '',                                         '']
+    ['Thiago Viana Santos',         'thiago.viana.ext@unimedcnu.coop.br',            'Usuário Padrão', '',                                         ''],
+    ['Dra. Glaucia Ruggeri',        'glaucia.ruggeri@unimedcnu.coop.br',             'Gestor',         '',                                         'Médica']
   ];
 
   usu.getRange(2, 1, usuarios.length, 5).setValues(usuarios);
@@ -1004,7 +1006,8 @@ function adicionarUsuariosPiloto() {
   var pilotos = [
     ['Jacqueline Wahrhaftig',           'jacqueline.wahrhaftig.ext@unimedcnu.coop.br', 'Usuário Padrão', '', ''],
     ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',       'Usuário Padrão', '', ''],
-    ['Thiago Viana Santos',             'thiago.viana.ext@unimedcnu.coop.br',          'Usuário Padrão', '', '']
+    ['Thiago Viana Santos',             'thiago.viana.ext@unimedcnu.coop.br',          'Usuário Padrão', '', ''],
+    ['Dra. Glaucia Ruggeri',            'glaucia.ruggeri@unimedcnu.coop.br',           'Gestor',         '', 'Médica']
   ];
 
   var rows = sheet.getDataRange().getValues();
