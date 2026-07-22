@@ -266,6 +266,13 @@ function getPerfil(email) {
   return mapaPerfis()[String(email).trim().toLowerCase()] || '';
 }
 
+// Invalida o cache de perfis — chamar após qualquer escrita na aba Usuários.
+// Também pode ser executada manualmente no editor se um perfil recém-alterado
+// na planilha não estiver valendo na hora.
+function limparCachePerfis() {
+  try { CacheService.getScriptCache().remove(CACHE_PERFIS_KEY); } catch (e) {}
+}
+
 function isAdmin(email) {
   return getPerfil(email) === 'Admin';
 }
@@ -994,6 +1001,7 @@ function popularUsuarios() {
 
   usu.getRange(2, 1, usuarios.length, 5).setValues(usuarios);
   SpreadsheetApp.flush();
+  limparCachePerfis();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }
 
@@ -1021,6 +1029,7 @@ function adicionarUsuariosPiloto() {
 
   sheet.getRange(sheet.getLastRow() + 1, 1, novos.length, 5).setValues(novos);
   SpreadsheetApp.flush();
+  limparCachePerfis(); // sem isso, o perfil só vale após o TTL de 5 min
   Logger.log('adicionarUsuariosPiloto: ' + novos.length + ' usuário(s) adicionado(s).');
 }
 
