@@ -43,7 +43,7 @@ var EMAILS_PILOTO = [
 ];
 function acessoPermitido(email) {
   if (!PILOTO_ATIVO) return true;
-  if (!email) return true; // fail-open se o e-mail não resolver (evita lockout acidental)
+  if (!email) return false; // sem e-mail = sem identidade; doGet mostra tela de troca de conta
   return EMAILS_PILOTO.indexOf(String(email).toLowerCase()) !== -1;
 }
 
@@ -70,7 +70,23 @@ function doGet(e) {
 
   // Sem ação → serve o frontend HTML (permite embed no Google Sites)
   if (!acao) {
-    if (!acessoPermitido(Session.getActiveUser().getEmail())) {
+    var emailAcesso = Session.getActiveUser().getEmail();
+    // E-mail vazio = navegador com múltiplas contas Google (ou conta pessoal
+    // como padrão). Sem isto o app abria "anônimo": "Olá, …", sem perfil.
+    if (!emailAcesso) {
+      var urlApp = ScriptApp.getService().getUrl();
+      return HtmlService.createHtmlOutput(
+        '<div style="font-family:system-ui,Arial,sans-serif;max-width:480px;margin:64px auto;text-align:center;color:#16302E">'
+        + '<h2 style="color:#004E4C;margin:0 0 8px">Não conseguimos identificar sua conta</h2>'
+        + '<p style="color:#4A5F5C;line-height:1.5">Você provavelmente está com mais de uma conta Google aberta neste navegador. '
+        + 'Abra o portal com a sua conta <b>@unimedcnu.coop.br</b>.</p>'
+        + '<a target="_top" href="https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(urlApp) + '" '
+        + 'style="display:inline-block;margin-top:12px;background:#004E4C;color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600">Escolher conta</a>'
+        + '<p style="color:#6E807D;font-size:12px;margin-top:16px">Alternativa: janela anônima, entrando apenas com a conta corporativa.</p></div>')
+        .setTitle('Identifique sua conta — Gestão de Tarefas CNU')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+    if (!acessoPermitido(emailAcesso)) {
       return HtmlService.createHtmlOutput(
         '<div style="font-family:system-ui,Arial,sans-serif;max-width:460px;margin:64px auto;text-align:center;color:#15211f">'
         + '<h2 style="color:#004e4c;margin:0 0 8px">Acesso restrito</h2>'
@@ -87,7 +103,10 @@ function doGet(e) {
   var resultado;
   try {
     var dados = e.parameter.dados ? JSON.parse(e.parameter.dados) : {};
-    if (!acessoPermitido(Session.getActiveUser().getEmail())) {
+    var emailReq = Session.getActiveUser().getEmail();
+    if (!emailReq) {
+      resultado = { erro: 'Conta Google não identificada. Feche outras contas ou use janela anônima com a conta @unimedcnu.coop.br.' };
+    } else if (!acessoPermitido(emailReq)) {
       resultado = { erro: 'Acesso restrito ao piloto.' };
     } else {
     switch (acao) {
