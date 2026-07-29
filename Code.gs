@@ -498,7 +498,11 @@ function atualizarTarefa(dados) {
     var eCriador = editor === criador;
     var admin    = podeExcluir(editorEmail); // Admin + Gestor
     // Todos podem editar; apenas o prazo é restrito ao criador ou Admin/Gestor.
-    var prazoAtualStr = linhas[i][COL.PRAZO] ? new Date(linhas[i][COL.PRAZO]).toISOString().slice(0,10) : '';
+    // Comparar no fuso do script — toISOString (UTC) desloca prazos legados
+    // gravados às 21:00 e bloqueava o save de quem nem tocou no prazo.
+    var prazoAtualStr = linhas[i][COL.PRAZO]
+      ? Utilities.formatDate(new Date(linhas[i][COL.PRAZO]), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+      : '';
     if (!admin && !eCriador && dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr) {
       return { erro: 'Apenas o criador ou um Admin/Gestor pode alterar o prazo.' };
     }

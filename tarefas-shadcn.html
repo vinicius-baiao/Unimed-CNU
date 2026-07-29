@@ -868,6 +868,7 @@
 
       <div class="modal-actions" id="actFormulario">
         <button type="button" id="btnExcluir" class="btn btn-ghost" style="color:var(--erro-cor);border-color:var(--erro-cor);display:none" onclick="confirmarExcluir()">Excluir</button>
+        <button type="button" id="btnDuplicar" class="btn btn-ghost" style="display:none" onclick="duplicarTarefa()">Duplicar</button>
         <div style="flex:1"></div>
         <button type="button" id="btnFecharModal" class="btn btn-ghost" onclick="tentarFecharModal()">Fechar</button>
         <button type="button" id="btnEditar" class="btn btn-primary" style="display:none" onclick="entrarModoEdicao()">Editar</button>
@@ -1799,6 +1800,8 @@ function abrirModal(tarefa, modo) {
 
   // Botão excluir: visível só em modo edição, para criador/Admin/Gestor
   document.getElementById('btnExcluir').style.display = (modoEdicao && tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';
+  // Duplicar: qualquer usuário, em tarefa existente (copia dados + checklist zerada)
+  document.getElementById('btnDuplicar').style.display = (modoEdicao && tarefa) ? '' : 'none';
 
   // Checklist
   var itensEl = document.getElementById('cklItems');
@@ -1866,6 +1869,34 @@ function entrarModoEdicao() {
   abrirModal(modalTarefaAtual, 'edit');
 }
 
+// Duplica a tarefa aberta: mesmos dados, checklist copiada desmarcada,
+// prazo vazio e status "A fazer". Atende à esteira de criação de materiais
+// (reuso do checklist sem redigitar).
+function duplicarTarefa() {
+  var btn = document.getElementById('btnDuplicar');
+  btn.disabled = true; btn.textContent = 'Duplicando…';
+  var dados = {
+    tarefa:      'Cópia de ' + document.getElementById('campoTarefa').value,
+    projeto:     document.getElementById('campoProjeto').value,
+    responsavel: document.getElementById('campoResponsavel').value,
+    prazo:       '',
+    status:      'A fazer',
+    prioridade:  document.getElementById('campoPrioridade').value,
+    observacoes: document.getElementById('campoObservacoes').value
+  };
+  var itens = [];
+  document.querySelectorAll('#cklItems .ckl-item').forEach(function(el, idx) {
+    itens.push({ item: el.querySelector('.ckl-item-text').textContent, ordem: idx + 1, concluido: false, responsavel: '' });
+  });
+  chamarAPI({ acao: 'criarTarefa', dados: dados }, function(r) {
+    btn.disabled = false; btn.textContent = 'Duplicar';
+    if (r.erro) { toast('Erro: ' + r.erro, true); return; }
+    function fim() { fecharModal(); toast('✓ Tarefa duplicada.', false, true); carregarTudo(); }
+    if (!itens.length) { fim(); return; }
+    chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: String(r.id), itens: itens } }, fim);
+  });
+}
+
 function fecharModal()      { document.getElementById('overlay').classList.remove('open'); }
 
 // Fechar/Cancelar com guarda: se houver alterações não salvas, confirma o descarte.
@@ -1902,6 +1933,10 @@ function salvarTarefa(e) {
     prioridade:  document.getElementById('campoPrioridade').value,
     observacoes: document.getElementById('campoObservacoes').value
   };
+
+  // Campo de prazo travado (sem permissão): não enviar — o valor exibido pode
+  // divergir do armazenado (prazos legados) e o backend bloquearia o save todo.
+  if (document.getElementById('campoPrazo').disabled) delete dados.prazo;
 
   var acao = id ? 'atualizarTarefa' : 'criarTarefa';
   if (id) dados.id = id;
