@@ -1,6 +1,7 @@
 # HANDOFF — Cora. Gestão de Tarefas
 
-> Estado do projeto ao final da sessão de **03/08/2026**.
+> Estado do projeto ao final da sessão de **03/08/2026** (atualizado no bloco do
+> feedback do Guilherme sobre o checklist).
 > Ponto de partida para a próxima sessão: ler este arquivo + `CLAUDE.md` + `README.md`.
 > Manter atualizado ao fim de cada bloco de trabalho.
 
@@ -16,6 +17,33 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
+### Último bloco — checklist marcável em visualização
+
+Feedback do Guilherme: não conseguia dar check nos itens do checklist. Causa-raiz: o modal
+abre em modo **visualização** quando se clica na linha da Lista ou no card da Home, e o
+modo view desabilitava *todos* os controles do checklist. A saída (botão **Editar**) só
+aparece para criador/Admin/Gestor — logo, Usuário Padrão em tarefa de terceiro ficava sem
+saída, com o checkbox travado e sem indicação visual disso.
+
+Correção em `tarefas-shadcn.html`:
+
+- Em view o **checkbox segue ativo** e o clique **salva na hora** (`salvarCklImediato`),
+  sem passar por Editar/Salvar — marcar item é execução, não edição de cadastro.
+  Um envio por vez (`cklSalvando`/`cklPendente`): cliques em rajada viram um reenvio com o
+  estado final, porque o backend reescreve a aba inteira.
+- Erro na gravação reverte o checkbox ao estado do servidor (`salvarCkl` agora passa o
+  `data` ao callback) e mantém o aviso em toast.
+- `sincronizarCklLocal()` atualiza `cklStatus` e re-renderiza Home/Board, então a barra de
+  progresso do card reflete na hora, sem novo `carregarTudo()`.
+- Excluir item (`×`) e selects continuam travados em view, agora **com** estilo de
+  desabilitado (opacidade + `not-allowed`) — a ausência disso é o que fez o bug parecer
+  "o clique não funciona".
+
+Verificado no preview com mocks simulando o perfil do Guilherme (Usuário Padrão, tarefa
+criada por outra pessoa): checkbox ativo, envio com o item marcado, reversão em erro,
+concorrência (3 cliques → 2 envios, o segundo com o estado final), modos edit/create
+inalterados, console sem erros.
+
 ## Pendências do usuário (fora do código)
 
 | # | Pendência | Detalhe |
@@ -26,7 +54,8 @@
 | 4 | **Repo da organização** | Criar repo **privado e vazio** `Unimed-CNU/cora-gestao-de-tarefas`. O remote `cnu` já está configurado localmente; depois é só `git push cnu main mvp-shadcn-piloto`. |
 | 5 | **Segurança** | Tornar **privado** o repo `vinicius-baiao/Unimed-CNU` (hoje público com token queimado + lista de e-mails) e definir a Script Property `TOKEN_GEMINI` com um valor novo (o fallback hardcoded no `Code.gs` deve ser considerado comprometido). |
 | 6 | **Remetente `taskcenter@`** | Falta o *"Enviar e-mail como"* (Send-As) na conta que executa o script. A TI só fez **delegação** da caixa, o que não habilita Send-As. Validar com `verificarAliases()` — hoje retorna `false` / lista vazia, e o envio cai no remetente padrão mantendo só o nome "Tarefas CNU". |
-| 7 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
+| 7 | **Gui retestar checklist** | Depois de publicar a Nova versão: abrir uma tarefa pelo clique na linha da Lista (modo visualização) e marcar itens do checklist — deve salvar sozinho, com toast "Checklist atualizada." e a barra do card atualizando. |
+| 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
 
 ## Backlog técnico (fase 2)
 
@@ -35,6 +64,12 @@
 - **Registro `MODULOS`/`PERFIS` do Shell**: a nav da rail é estática (Início/Tarefas) — divergência do DS registrada de propósito, migrar se o app ganhar módulos.
 - **Rotina de correção dos prazos legados**: registros antigos foram gravados como 21:00 do dia anterior (bug de timezone já corrigido no código novo, mas os dados antigos seguem deslocados). Correção pontual em lote está oferecida e não foi executada.
 - **Micro-otimização opcional**: `.ckl-bar-fill` anima `width`; poderia usar `transform: scaleX()`.
+- **Botão "Editar" incoerente com a regra de permissão** (achado do bloco do checklist, não
+  corrigido): `podeEditarTarefa()` retorna `true` para todos, mas o botão **Editar** do modal
+  exige criador/Admin/Gestor (`tarefas-shadcn.html:1837`, resíduo do modelo antigo). Efeito:
+  Usuário Padrão em tarefa de terceiro edita pelo lápis do Kanban, mas não pela linha da
+  Lista / card da Home — mesmo campo, dois resultados. Decidir se libera o botão para todos
+  (coerente com a regra atual) ou se o modo view volta a ser realmente somente-leitura.
 
 ## Achados de design classificados (não mexer)
 

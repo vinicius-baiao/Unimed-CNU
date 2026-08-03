@@ -439,7 +439,9 @@
     .ckl-items { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
     .ckl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); transition: border-color .15s; }
     .ckl-item:hover { border-color: var(--border-hover); }
-    .ckl-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+    .ckl-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; cursor: pointer; }
+    /* Controle travado precisa parecer travado — sem isso o clique só "não funciona" */
+    .ckl-item input[type="checkbox"]:disabled, .ckl-delete:disabled { opacity: .4; cursor: not-allowed; }
     .ckl-item-text { font-size: .875rem; flex: 1; }
     .ckl-item.concluido .ckl-item-text { text-decoration: line-through; color: var(--muted-foreground); }
     .ckl-responsavel-sel { font-size: .75rem; height: 28px; width: auto; max-width: 190px; padding: 0 8px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--text-secondary); cursor: pointer; flex-shrink: 0; }
@@ -931,6 +933,9 @@ var modalTabAtual = 'dados';
 var modalSnapshot    = null;
 var modalIsNova      = false;
 var modalTarefaAtual = null;
+var modalModo        = 'view';   // 'view' | 'edit' | 'create' — em view o checklist salva na hora
+var cklSalvando      = false;    // envio em curso (a aba inteira é reescrita no backend)
+var cklPendente      = false;    // clique durante o envio: reenvia ao terminar
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
@@ -1766,6 +1771,7 @@ function verificarMudancasModal() {
 function abrirModal(tarefa, modo) {
   if (modo === undefined) modo = tarefa ? 'view' : 'create';
   var modoEdicao = (modo !== 'view');
+  modalModo = modo;
   modalTarefaAtual = tarefa || null;
   modalTabAtual = 'dados';
   setModalTab('dados');
@@ -1820,9 +1826,11 @@ function abrirModal(tarefa, modo) {
   var addRow = document.querySelector('.ckl-add-row');
   if (addRow) addRow.style.display = modoEdicao ? '' : 'none';
 
-  // Em visualização: desabilita todos os controles dos itens de checklist
+  // Em visualização o checkbox continua ativo: marcar item é execução da tarefa,
+  // não edição de cadastro — salva na hora (ver salvarCklImediato). Os demais
+  // controles (excluir item, selects) seguem travados.
   if (!modoEdicao) {
-    itensEl.querySelectorAll('input, select, button').forEach(function(el) { el.disabled = true; });
+    itensEl.querySelectorAll('select, button').forEach(function(el) { el.disabled = true; });
   }
 
   // Botão Fechar/Cancelar: em edição/criação deixa claro que descarta
@@ -1981,7 +1989,8 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   chk.addEventListener('change', function() {
     div.classList.toggle('concluido', chk.checked);
     atualizarProgressoCkl();
-    verificarMudancasModal();
+    if (modalModo === 'view') salvarCklImediato();
+    else verificarMudancasModal();
   });
 
   var span = document.createElement('span');
@@ -2038,6 +2047,48 @@ function atualizarProgressoCkl() {
   fill.className   = 'ckl-bar-fill' + (done === itens.length ? ' completo' : '');
 }
 
+// Espelha no estado local o que está no DOM, para os cards e a Lista
+// refletirem o novo progresso sem recarregar tudo do backend.
+function sincronizarCklLocal(idTarefa) {
+  var arr = [];
+  document.querySelectorAll('#cklItems .ckl-item').forEach(function(el, idx) {
+    arr.push({
+      ID_Tarefa:    idTarefa,
+      Item:         el.querySelector('.ckl-item-text').textContent,
+      Ordem:        idx + 1,
+      'Concluído':  el.querySelector('input[type="checkbox"]').checked,
+      Responsavel:  el.dataset.responsavel || ''
+    });
+  });
+  cklStatus[String(idTarefa)] = arr;
+}
+
+// Marcar item em modo visualização salva na hora, sem passar por Editar/Salvar.
+// O backend reescreve a aba inteira, então um envio por vez: cliques durante o
+// envio ficam pendentes e disparam um reenvio com o estado final do DOM.
+function salvarCklImediato() {
+  var t = modalTarefaAtual;
+  if (!t) return;
+  if (cklSalvando) { cklPendente = true; return; }
+  cklSalvando = true;
+
+  var idTarefa = String(t.ID);
+  salvarCkl(idTarefa, t.Tarefa, function(data) {
+    cklSalvando = false;
+    if (cklPendente) { cklPendente = false; salvarCklImediato(); return; }
+    if (data && data.erro) {
+      // Gravação recusada (ex.: sem visibilidade): volta o checkbox ao estado
+      // do servidor. O aviso do erro já foi exibido por salvarCkl.
+      if (document.getElementById('overlay').classList.contains('open')) abrirModal(t, 'view');
+      return;
+    }
+    sincronizarCklLocal(idTarefa);
+    renderHome();
+    renderView();
+    toast('Checklist atualizada.');
+  });
+}
+
 function salvarCkl(idTarefa, nomeTarefa, callback) {
   var itens = document.querySelectorAll('#cklItems .ckl-item');
   if (!itens.length) { callback(); return; }
@@ -2052,7 +2103,7 @@ function salvarCkl(idTarefa, nomeTarefa, callback) {
   });
   chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: idTarefa, nomeTarefa: nomeTarefa, itens: items } }, function(data) {
     if (data.erro) toast('Aviso checklist: ' + data.erro, true);
-    callback();
+    callback(data);
   });
 }
 
