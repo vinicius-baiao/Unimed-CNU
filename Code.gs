@@ -180,6 +180,10 @@ function proximoIdProjeto() {
 }
 
 function listarProjetos() {
+  return comCache(CACHE_PROJETOS_KEY, CACHE_LISTAS_SEG, listarProjetosDaPlanilha);
+}
+
+function listarProjetosDaPlanilha() {
   getOrCreateProjetosSheet();          // garante a aba antes de ler
   var rows  = lerAba(ABA_PROJETOS) || [];
   var lista = [];
@@ -215,6 +219,8 @@ function criarProjeto(dados) {
   sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', corSegura(dados.cor), true]);
   gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome);
   lock.releaseLock();
+  invalidarAba(ABA_PROJETOS);
+  limparCacheListas();
   return { sucesso: true, id: id };
 }
 
@@ -233,6 +239,8 @@ function atualizarProjeto(dados) {
     if (dados.cor       !== undefined) row[COL_PROJ.COR]      = corSegura(dados.cor);
     sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
     gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, dados.nome || '');
+    invalidarAba(ABA_PROJETOS);
+    limparCacheListas();
     return { sucesso: true };
   }
   return { erro: 'Projeto não encontrado.' };
@@ -249,6 +257,8 @@ function arquivarProjeto(dados) {
     if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
     sheet.getRange(i + 1, COL_PROJ.ATIVO + 1).setValue(false);
     gravarLog('ARQUIVAR_PROJETO', 'ID', dados.id, 'inativo');
+    invalidarAba(ABA_PROJETOS);
+    limparCacheListas();
     return { sucesso: true };
   }
   return { erro: 'Projeto não encontrado.' };
@@ -261,6 +271,36 @@ function arquivarProjeto(dados) {
 // Efeito colateral aceito: mudança de perfil demora até 5 min para valer.
 var CACHE_PERFIS_KEY = 'perfis_v1';
 var CACHE_PERFIS_SEG = 300;
+
+// Usuários e projetos mudam raramente e pesam na carga inicial: o bootstrap
+// serializa as leituras numa execução só, e a medição de 03/08/2026 mostrou que
+// é aí que o tempo vai. Ficam em cache do script (compartilhado — não são dados
+// por usuário) e as escritas nessas abas invalidam.
+var CACHE_USUARIOS_KEY  = 'usuarios_v1';
+var CACHE_PROJETOS_KEY  = 'projetos_v1';
+var CACHE_LISTAS_SEG    = 600;
+
+// Helper: lê do cache, ou monta com fn() e grava. Falha de cache nunca impede
+// a resposta — cai para a leitura da planilha.
+function comCache(chave, segundos, fn) {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) {
+    try {
+      var raw = cache.get(chave);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+  }
+  var valor = fn();
+  if (cache) {
+    try { cache.put(chave, JSON.stringify(valor), segundos); } catch (e) {}
+  }
+  return valor;
+}
+
+function limparCacheListas() {
+  try { CacheService.getScriptCache().removeAll([CACHE_USUARIOS_KEY, CACHE_PROJETOS_KEY]); } catch (e) {}
+}
 
 // Memo por execução, por cima do CacheService: podeExcluir()/getPerfil() são
 // chamados várias vezes na mesma request e cada chamada refazia cache.get +
@@ -309,14 +349,16 @@ function podeExcluir(email) {
 }
 
 function listarUsuarios() {
-  var rows = lerAba(ABA_USUARIOS);
-  if (!rows) return { usuarios: [] };
-  var lista = [];
-  for (var i = 1; i < rows.length; i++) {
-    if (!rows[i][0] && !rows[i][1]) continue;
-    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]), unidade: String(rows[i][3] || ''), cargo: String(rows[i][4] || '') });
-  }
-  return { usuarios: lista };
+  return comCache(CACHE_USUARIOS_KEY, CACHE_LISTAS_SEG, function() {
+    var rows = lerAba(ABA_USUARIOS);
+    if (!rows) return { usuarios: [] };
+    var lista = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (!rows[i][0] && !rows[i][1]) continue;
+      lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]), unidade: String(rows[i][3] || ''), cargo: String(rows[i][4] || '') });
+    }
+    return { usuarios: lista };
+  });
 }
 
 // ── Helpers de planilha ───────────────────────────────────────
@@ -1083,6 +1125,7 @@ function popularUsuarios() {
   usu.getRange(2, 1, usuarios.length, 5).setValues(usuarios);
   SpreadsheetApp.flush();
   limparCachePerfis();
+  limparCacheListas();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }
 
@@ -1111,6 +1154,7 @@ function adicionarUsuariosPiloto() {
   sheet.getRange(sheet.getLastRow() + 1, 1, novos.length, 5).setValues(novos);
   SpreadsheetApp.flush();
   limparCachePerfis(); // sem isso, o perfil só vale após o TTL de 5 min
+  limparCacheListas();
   Logger.log('adicionarUsuariosPiloto: ' + novos.length + ' usuário(s) adicionado(s).');
 }
 
@@ -1134,6 +1178,7 @@ function popularProjetos() {
 
   sheet.getRange(2, 1, lista.length, 5).setValues(lista);
   SpreadsheetApp.flush();
+  limparCacheListas();
   Logger.log('popularProjetos: ' + lista.length + ' projetos inseridos.');
 }
 
