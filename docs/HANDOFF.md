@@ -59,6 +59,11 @@ inalterados, console sem erros.
 
 ## Backlog técnico (fase 2)
 
+> 📋 Sweep completo de performance e débito técnico em
+> [`docs/DEBITO_TECNICO.md`](DEBITO_TECNICO.md) (03/08/2026): 12 itens priorizados por
+> `(Impacto + Risco) × (6 − Esforço)` e plano em 4 fases. Os itens soltos abaixo estão
+> cobertos lá com mais contexto.
+
 - **JSONP → `google.script.run`**: transporte atual é GET com callback; migração remove a limitação de CSRF conhecida.
 - **Endpoint `bootstrap` consolidado**: hoje a carga inicial dispara várias chamadas (`listarTarefas`, `listarTemplates`, `listarChecklist_Status`, `getUsuario`, projetos, usuários). Juntar numa só reduz latência e consumo de cota compartilhada.
 - **Registro `MODULOS`/`PERFIS` do Shell**: a nav da rail é estática (Início/Tarefas) — divergência do DS registrada de propósito, migrar se o app ganhar módulos.
