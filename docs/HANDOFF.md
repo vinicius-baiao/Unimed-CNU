@@ -93,7 +93,7 @@ inalterados, console sem erros.
 
 | # | Pendência | Detalhe |
 |---|---|---|
-| 1 | **Publicar Nova versão** | Apps Script → Implantar → Gerenciar implantações → ✏️ → Nova versão. `clasp push` já feito em 03/08 12:51 — cobre o fix do checklist (`2630914`) e a fase 1 de performance (`84ec1e8`). Depois hard reload (Ctrl+Shift+R). Regra de ouro: **nunca** criar implantação nova. |
+| 1 | **Publicar Nova versão** | Apps Script → Implantar → Gerenciar implantações → ✏️ → Nova versão. Depois hard reload (Ctrl+Shift+R). Regra de ouro: **nunca** criar implantação nova. Último `clasp push`: 03/08 13:40, cobrindo tudo até `bcbe051` — fix do checklist, as duas rotas paralelas reequilibradas e a remoção do Gem. |
 | 2 | **Jac retestar** | Confirmar que salvar edição em tarefa atribuída a ela não bloqueia mais no prazo, e testar o botão **Duplicar**. |
 | 3 | **Glaucia** | Testar em janela anônima (o "Olá, …" vazio vem de `Session.getActiveUser()` sem e-mail quando há várias contas Google logadas). Se o perfil não aparecer, rodar `adicionarUsuariosPiloto()` no Apps Script. |
 | 4 | **Repo da organização** | Criar repo **privado e vazio** `Unimed-CNU/cora-gestao-de-tarefas`. O remote `cnu` já está configurado localmente; depois é só `git push cnu main mvp-shadcn-piloto`. |
