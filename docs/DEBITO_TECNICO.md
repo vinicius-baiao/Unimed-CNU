@@ -4,22 +4,57 @@
 > publicação do piloto. Priorização pelo framework `(Impacto + Risco) × (6 − Esforço)`,
 > notas de 1 a 5. Nada aqui foi implementado — é o mapa para decidir o que atacar.
 
-## Método e limites
+## Medição real — 03/08/2026, app publicado
 
-Medido de fato: contagem de execuções na carga inicial, número de leituras de aba por
-requisição, tamanho dos payloads de fonte, pontos de reescrita de aba inteira, chamadas de
-API dentro de laços.
+Colhida no Chrome autenticado do Aurélio (extensão Claude para Chrome), chamando as rotas
+direto na mesma origem do wrapper. Uma amostra, cache de perfis quente, rede corporativa.
 
-**Não medido:** latência real do backend em produção — não tenho como executar o Web App
-autenticado. Os ganhos abaixo são estimativas fundamentadas na contagem de chamadas, não
-em cronometragem. Antes de investir na fase 1, vale colher o número real (ver
-"Instrumentação" no fim).
+**Peso da primeira tela**
+
+| Métrica | Valor |
+|---|---|
+| HTML descomprimido (app + fontes base64 + wrapper) | **403 KB** |
+| Transferido (gzip) | **181 KB** |
+| Tempo de carga do iframe do app | **4.354 ms** |
+
+Os 403 KB confirmam a decomposição estimada: ~122 KB do app, ~254 KB de fontes, ~27 KB de
+wrapper. Depois do gzip, as fontes seguem dominando — o base64 de woff2 é praticamente
+incompressível, então a maior parte dos 181 KB transferidos é fonte, não aplicação.
+
+**Custo por rota**
+
+| Rota | Isolada | Em paralelo (as 6 juntas) | Payload |
+|---|---|---|---|
+| `getUsuario` | 1.215 ms | 1.606 ms | 0,1 KB |
+| `listarUsuarios` | 2.637 ms | 3.443 ms | 5,9 KB |
+| `listarTarefas` | 1.886 ms | **4.353 ms** | 17 KB |
+| `listarTemplates` | 1.934 ms | 1.778 ms | **0 KB** |
+| `listarChecklist_Status` | 1.927 ms | 3.443 ms | 5,3 KB |
+| `listarProjetos` | 2.024 ms | 3.244 ms | 0,3 KB |
+| **Total** | soma 11.623 ms | **4.353 ms** (a mais lenta manda) | |
+
+**O que os números dizem**
+
+1. **O custo é overhead de execução, não volume de dados.** `getUsuario` devolve 0,1 KB e
+   custa 1,2 s; `listarTarefas` devolve 17 KB e custa 1,9 s. O piso por execução do Apps
+   Script é ~1,2-1,9 s. Transferir dados é barato; **abrir uma execução é caro**. Isso
+   confirma P1 como o item de maior retorno: 6 execuções → 1 elimina 5 pisos.
+2. **Há contenção real entre as execuções.** `listarTarefas` sozinha faz 1,9 s; disputando
+   com as outras cinco, 4,35 s — mais que o dobro. As 6 chamadas concorrentes se atrapalham.
+3. **A carga inicial é as 6 chamadas.** O iframe fecha em 4.354 ms e o paralelo em 4.353 ms:
+   o tempo de abrir o app é, essencialmente, esperar as rotas.
+4. **`listarTemplates` é 1,9 s para receber lista vazia** (item P0 abaixo).
+
+**Ressalva:** medições isoladas rodaram com o cache de perfis (`CacheService`, TTL 5 min) já
+quente. No primeiro acesso do dia, `mapaPerfis()` varre a aba `Usuários` e cada rota fica mais
+lenta que o registrado aqui.
 
 ## Prioridades
 
 | # | Item | Tipo | I | R | E | Score |
 |---|---|---|---|---|---|---|
 | P1 | Carga inicial faz 6 execuções separadas do Apps Script | Arquitetura | 5 | 4 | 2 | **36** |
+| P0 | `listarTemplates` custa 1,9 s na carga e o dado nunca é usado | Código morto | 4 | 1 | 1 | **25** |
 | D2 | `tarefas.html` duplicado (97 KB) como rollback, já defasado | Código | 3 | 3 | 1 | **30** |
 | D6 | `TOKEN_GEMINI_FALLBACK` hardcoded (`Code.gs:1291`) | Segurança | 1 | 5 | 1 | **30** |
 | D3 | Índices de coluna fixos, inclusive um `[7]` literal | Arquitetura | 3 | 4 | 2 | **28** |
@@ -34,7 +69,23 @@ em cronometragem. Antes de investir na fase 1, vale colher o número real (ver
 
 ## Detalhamento dos itens de topo
 
+### P0 — `listarTemplates`: 1,9 s por um dado que ninguém lê (score 25)
+
+`carregarTudo()` chama `listarTemplates` e guarda o resultado em `templates`
+(`tarefas-shadcn.html:918, 1089, 1111-1119`). Essa variável **não é lida em nenhum outro
+ponto do arquivo** — a UI de templates de checklist não existe no MVP. A aba `Checklists`
+está vazia, então a rota devolve `{"templates":[]}`: 0 KB, em 1,9 s de execução.
+
+É uma das 6 execuções concorrentes que degradam as outras, gasta quota compartilhada e não
+entrega nada. Remover a chamada (e a variável) é o melhor retorno por esforço de todo o
+sweep. Manter `listarTemplates` no backend é inofensivo — fica disponível para quando a
+feature existir.
+
 ### P1 — Carga inicial: 6 execuções do Apps Script (score 36)
+
+**Confirmado pela medição:** 4.353 ms de espera, com cada execução custando 1,2-1,9 s de
+overhead fixo independente do volume de dados, e as chamadas concorrentes dobrando o tempo
+individual da mais pesada.
 
 `DOMContentLoaded` dispara `getUsuario` e `listarUsuarios`; `carregarTudo()` dispara
 `listarTarefas`, `listarTemplates`, `listarChecklist_Status` e `listarProjetos`
@@ -50,8 +101,13 @@ Só nessas duas rotas, `Tarefas` é lida 3× e `Checklist_Status` 3× para dados
 ser lidos uma vez.
 
 **Correção:** endpoint `bootstrap` único que lê cada aba uma vez e devolve tudo
-(tarefas, checklists, templates, projetos, usuários, perfil) num só JSON. 6 execuções → 1.
+(tarefas, checklists, projetos, usuários, perfil) num só JSON. 6 execuções → 1.
 Já estava anotado no backlog do handoff; é o item de maior retorno do sweep.
+
+**Ganho estimado com base na medição:** uma execução única pagando um piso de ~1,5 s mais as
+leituras das abas deve fechar em ~2-2,5 s, contra 4,35 s hoje — algo entre 45% e 55% do tempo
+de abertura. Somado a P0 (uma execução a menos concorrendo), a expectativa é abrir o app em
+menos da metade do tempo atual.
 
 ### D2 — `tarefas.html` duplicado (score 30)
 
@@ -169,10 +225,15 @@ Como ler o resultado:
 
 ## Plano em fases
 
+**Fase 0 — 5 minutos, sem risco** (P0)
+Remover a chamada `listarTemplates` e a variável `templates` do front. Uma execução a menos
+na carga, sem mudança de comportamento.
+
 **Fase 1 — backend, baixo risco, um único deploy** (P1, P4, P5 + higiene D6/D1)
 Endpoint `bootstrap`, memoização das leituras por requisição, `gravarLogs` em bloco, token
 fora do código e remoção do mock do arquivo servido. O front passa a fazer 1 chamada na
-carga; o resto é invisível para o usuário.
+carga; o resto é invisível para o usuário. Medir de novo depois, com o mesmo snippet, para
+confirmar o ganho em vez de presumir.
 
 **Fase 2 — escrita, exige teste cuidadoso** (P3, D3)
 Gravação incremental do checklist e mapa de colunas por header. Mexe em permissão e em
