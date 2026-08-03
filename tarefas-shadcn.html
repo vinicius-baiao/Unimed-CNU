@@ -915,7 +915,8 @@ var COLUNAS     = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluíd
 var UNIDADES    = ['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Negociação de Rede - NNE','Operações de Rede','Qualificação','Regulamentação','NSP'];
 
 var tarefas     = [];
-var templates   = [];
+// (a variável `templates` foi removida: nada no front lia esse dado e a rota
+//  listarTemplates custava 1,9 s na carga. O endpoint segue no backend.)
 var projetos    = [];         // [{id, nome, descricao, cor}]
 var usuarios    = [];         // [{nome, email, admin}]
 var cklStatus   = {};         // {id_tarefa: [{item, ordem, concluido}]}
@@ -994,29 +995,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('printDate').textContent =
     'Gerado em ' + new Date().toLocaleString('pt-BR');
 
-  // Inicia no Home; app-layout fica oculto até o usuário navegar
+  // Inicia no Home; app-layout fica oculto até o usuário navegar.
+  // carregarTudo() traz perfil, usuários, tarefas, checklists e projetos numa
+  // única chamada — não há mais getUsuario/listarUsuarios avulsos aqui, e com
+  // isso a saudação e os nomes já vêm prontos no primeiro render.
   setModo('home');
   carregarTudo();
-
-  if (WEBAPP_URL) {
-    chamarAPI({ acao: 'getUsuario' }, function(d) {
-      currentUser            = d.email       || '';
-      currentUserIsAdmin     = d.admin       || false;
-      currentUserPodeExcluir = d.podeExcluir || false;
-      currentUserPerfil      = d.perfil      || '';
-      if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
-      renderUserBadge();
-      aplicarFiltroInicial();
-      // Atualiza saudação e painel assim que o perfil chegar
-      if (modoAtual === 'home' && tarefas.length) renderHome();
-    });
-    chamarAPI({ acao: 'listarUsuarios' }, function(d) {
-      usuarios = d.usuarios || [];
-      renderUserBadge();
-      // Re-renderiza para trocar logins de e-mail pelos nomes reais
-      if (tarefas.length) { if (modoAtual === 'home') renderHome(); else { popularFiltros(); renderView(); } }
-    });
-  }
 
   // Fechar modais com a tecla Esc
   document.addEventListener('keydown', function(e) {
@@ -1075,20 +1059,39 @@ function modalTemMudancas() {
   return !!btn && btn.style.display !== 'none' && !btn.disabled;
 }
 
+// Carga inicial numa chamada só. Antes eram 6 execuções do Apps Script
+// (perfil, usuários, tarefas, templates, checklists, projetos) somando 4,35 s
+// medidos, com o overhead fixo de cada execução (~1,2-1,9 s) pesando mais que
+// os dados. Agora o backend devolve tudo junto em 'bootstrap'.
 function carregarTudo() {
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
 
-  // Dispara as 4 chamadas em paralelo; renderiza quando todas retornarem
-  var pendente = 4;
-  var p = { tarefas: null, templates: null, ckl: null, projetos: null };
+  chamarAPI({ acao: 'bootstrap' }, function(d) {
+    if (d.erro) {
+      document.getElementById('board').innerHTML =
+        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(d.erro) + '</div>';
+      return;
+    }
 
-  function tentar() {
-    pendente--;
-    if (pendente > 0) return;
-    tarefas   = p.tarefas;
-    templates = p.templates;
-    cklStatus = p.ckl;
-    projetos  = p.projetos;
+    tarefas  = d.tarefas  || [];
+    projetos = d.projetos || [];
+    usuarios = d.usuarios || [];
+
+    cklStatus = {};
+    (d.checklist || []).forEach(function(l) {
+      var tid = String(l.ID_Tarefa);
+      if (!cklStatus[tid]) cklStatus[tid] = [];
+      cklStatus[tid].push(l);
+    });
+
+    var u = d.usuario || {};
+    currentUser            = u.email       || '';
+    currentUserIsAdmin     = u.admin       || false;
+    currentUserPodeExcluir = u.podeExcluir || false;
+    currentUserPerfil      = u.perfil      || '';
+    if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
+    renderUserBadge();
+
     aplicarFiltroInicial();
     if (modoAtual === 'home') {
       renderHome();
@@ -1096,42 +1099,6 @@ function carregarTudo() {
       popularFiltros();
       renderView();
     }
-  }
-
-  chamarAPI({ acao: 'listarTarefas' }, function(data) {
-    if (data.erro) {
-      document.getElementById('board').innerHTML =
-        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(data.erro) + '</div>';
-      return;
-    }
-    p.tarefas = data.tarefas || [];
-    tentar();
-  });
-
-  if (templates.length) {
-    p.templates = templates;
-    tentar();
-  } else {
-    chamarAPI({ acao: 'listarTemplates' }, function(d2) {
-      p.templates = d2.templates || [];
-      tentar();
-    });
-  }
-
-  chamarAPI({ acao: 'listarChecklist_Status' }, function(d3) {
-    var linhas = d3.itens || [];
-    p.ckl = {};
-    linhas.forEach(function(l) {
-      var tid = String(l.ID_Tarefa);
-      if (!p.ckl[tid]) p.ckl[tid] = [];
-      p.ckl[tid].push(l);
-    });
-    tentar();
-  });
-
-  chamarAPI({ acao: 'listarProjetos' }, function(d4) {
-    p.projetos = d4.projetos || [];
-    tentar();
   });
 }
 
@@ -2334,17 +2301,22 @@ function arquivarProjetoById(id, nome) {
 <script>
 /* ─── MOCK de dados — ativo apenas em localhost (preview). ───
    Intercepta chamarAPI() e devolve dados de exemplo, para avaliar o
-   tema shadcn com a tela populada, sem depender do backend. */
+   tema shadcn com a tela populada, sem depender do backend.
+   Os nomes e e-mails são FICTÍCIOS de propósito: este bloco viaja no HTML
+   servido em produção (não executa fora de localhost, mas é legível no
+   código-fonte da página), então não carrega dado de colega real.
+   Para simular outro perfil, ajuste currentUser / currentUserPodeExcluir no
+   console antes de abrir o modal. */
 (function () {
   if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
 
-  var EU = 'aurelio.pereira.ext@unimedcnu.coop.br';
+  var EU = 'ana.souza@exemplo.test';
   var MOCK_USUARIOS = [
-    { nome: 'Aurélio Corujeira', email: EU, perfil: 'Admin', unidade: 'Rede Ambulatorial, Atenção à Saúde', cargo: 'Designer' },
-    { nome: 'Vinicius Baião', email: 'vinicius.baiao@unimedcnu.coop.br', perfil: 'Admin', unidade: 'Rede Ambulatorial', cargo: 'Especialista' },
-    { nome: 'Carolina Hashimoto', email: 'carolina.lopes@unimedcnu.coop.br', perfil: 'Gestor', unidade: 'Negociação de Rede - SSA', cargo: 'Coordenadora de Rede' },
-    { nome: 'Eduardo Caporicci', email: 'eduardo.caporicci@unimedcnu.coop.br', perfil: 'Gestor', unidade: 'Operações de Rede', cargo: 'Gerente' },
-    { nome: 'Flavia Coelho', email: 'flavia.coelho@unimedcnu.coop.br', perfil: 'Usuário Padrão', unidade: 'Negociação de Rede - SSA', cargo: 'Executivo de Relacionamento PL' }
+    { nome: 'Ana Souza',      email: EU,                       perfil: 'Admin',          unidade: 'Rede Ambulatorial', cargo: 'Designer' },
+    { nome: 'Bruno Martins',  email: 'bruno.martins@exemplo.test', perfil: 'Admin',          unidade: 'Rede Ambulatorial', cargo: 'Especialista' },
+    { nome: 'Clara Ribeiro',  email: 'clara.ribeiro@exemplo.test', perfil: 'Gestor',         unidade: 'Negociação de Rede', cargo: 'Coordenadora de Rede' },
+    { nome: 'Diego Almeida',  email: 'diego.almeida@exemplo.test', perfil: 'Gestor',         unidade: 'Operações de Rede',  cargo: 'Gerente' },
+    { nome: 'Elisa Nogueira', email: 'elisa.nogueira@exemplo.test', perfil: 'Usuário Padrão', unidade: 'Negociação de Rede', cargo: 'Executiva de Relacionamento' }
   ];
   var MOCK_PROJETOS = [
     { id: 1, nome: 'Gestão de Demandas', descricao: '', cor: '#004e4c' },
@@ -2362,13 +2334,13 @@ function arquivarProjetoById(id, nome) {
   }
   var MOCK_TAREFAS = [
     T(1, 'Banco de dados x P. Status', 'Gestão de Demandas', EU, '', 'Backlog', 'Média', 'De/Para de atualização semanal.'),
-    T(2, 'Envio de senhas / Acompanhamento de P.S e Internação', 'Gestão de Demandas', 'vinicius.baiao@unimedcnu.coop.br', '2026-07-01', 'A fazer', 'Alta', ''),
+    T(2, 'Envio de senhas / Acompanhamento de P.S e Internação', 'Gestão de Demandas', 'bruno.martins@exemplo.test', '2026-07-01', 'A fazer', 'Alta', ''),
     T(3, 'Reclamações da Dr. Online', 'Alto Custo', EU, '2026-07-06', 'A fazer', 'Crítica', 'Reclamações de 4 canais.'),
-    T(4, 'Atualização de Status do Plano', 'Cuidado Transicional', 'carolina.lopes@unimedcnu.coop.br', '2026-07-09', 'Em andamento', 'Alta', ''),
+    T(4, 'Atualização de Status do Plano', 'Cuidado Transicional', 'clara.ribeiro@exemplo.test', '2026-07-09', 'Em andamento', 'Alta', ''),
     T(5, 'Operação e Input de Informações', 'Rede Higiene', EU, '2026-07-20', 'Em andamento', 'Média', ''),
-    T(6, 'Busca de Telefones/E-mail Manuais', 'Atenção à Saúde', 'eduardo.caporicci@unimedcnu.coop.br', '2026-07-08', 'Bloqueado', 'Alta', 'Aguardando acesso ao Databricks.'),
+    T(6, 'Busca de Telefones/E-mail Manuais', 'Atenção à Saúde', 'diego.almeida@exemplo.test', '2026-07-08', 'Bloqueado', 'Alta', 'Aguardando acesso ao Databricks.'),
     T(7, 'ATA x Planilha Operação e Clínica', 'Gestão de Demandas', EU, '2026-06-30', 'Concluído', 'Baixa', ''),
-    T(8, 'Envio de vidas para captação', 'Negociação de Rede - SSA', 'flavia.coelho@unimedcnu.coop.br', '', 'A fazer', 'Baixa', ''),
+    T(8, 'Envio de vidas para captação', 'Negociação de Rede - SSA', 'elisa.nogueira@exemplo.test', '', 'A fazer', 'Baixa', ''),
     T(9, 'Identificar Padrão de Hiperutilização de PA Virtual', 'Gestão de Demandas', EU, '2026-07-11', 'A fazer', 'Média', '')
   ];
   function CKL(id, idt, item, ordem, ok, resp) {
@@ -2377,14 +2349,14 @@ function arquivarProjetoById(id, nome) {
   var MOCK_CKL = [
     CKL(1, 3, 'Levantar canais de origem', 1, true, EU),
     CKL(2, 3, 'Consolidar planilha única', 2, false, ''),
-    CKL(3, 3, 'Definir plano de ação', 3, false, 'vinicius.baiao@unimedcnu.coop.br'),
+    CKL(3, 3, 'Definir plano de ação', 3, false, 'bruno.martins@exemplo.test'),
     CKL(4, 4, 'Mapear fonte TOP Saúde', 1, true, ''),
     CKL(5, 4, 'Testar envio automático', 2, true, '')
   ];
   var MOCK_INT = {
     '2': [
       { ID: 2, ID_Tarefa: 2, 'Data/Hora': '2026-07-03T14:20:00', Editor: EU, Tipo: 'Tentativa de contato', 'Conteúdo': 'Liguei para o prestador, sem retorno.' },
-      { ID: 1, ID_Tarefa: 2, 'Data/Hora': '2026-07-01T09:10:00', Editor: 'vinicius.baiao@unimedcnu.coop.br', Tipo: 'Comentário', 'Conteúdo': 'Priorizar antes do fechamento do mês.' }
+      { ID: 1, ID_Tarefa: 2, 'Data/Hora': '2026-07-01T09:10:00', Editor: 'bruno.martins@exemplo.test', Tipo: 'Comentário', 'Conteúdo': 'Priorizar antes do fechamento do mês.' }
     ]
   };
 
@@ -2392,6 +2364,13 @@ function arquivarProjetoById(id, nome) {
     var acao = params.acao, dados = params.dados || {};
     var resp;
     switch (acao) {
+      case 'bootstrap': resp = {
+        usuario:   { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
+        tarefas:   MOCK_TAREFAS,
+        checklist: MOCK_CKL,
+        projetos:  MOCK_PROJETOS,
+        usuarios:  MOCK_USUARIOS
+      }; break;
       case 'getUsuario': resp = { email: EU, perfil: 'Admin', admin: true, podeExcluir: true }; break;
       case 'listarUsuarios': resp = { usuarios: MOCK_USUARIOS }; break;
       case 'listarProjetos': resp = { projetos: MOCK_PROJETOS }; break;

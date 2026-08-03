@@ -40,11 +40,12 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 
 | Ação | Função | Papel |
 |---|---|---|
+| `bootstrap` | `bootstrap()` | **Carga inicial**: perfil + tarefas + checklists + projetos + usuários numa execução só (o front usa apenas esta rota ao abrir) |
 | `listarTarefas` | `listarTarefas()` | Lista tarefas ativas (ignora `Ativo = false`) |
 | `criarTarefa` | `criarTarefa(dados)` | Cria + notifica responsável + cria evento no Calendar |
 | `atualizarTarefa` | `atualizarTarefa(dados)` | Edita campos; regras de permissão (ver abaixo) |
 | `excluirTarefa` | `excluirTarefa(dados)` | **Soft delete** (seta `Ativo = false`) |
-| `listarTemplates` | `listarTemplates()` | Templates de checklist agrupados por `ID_Template` |
+| `listarTemplates` | `listarTemplates()` | Templates de checklist agrupados por `ID_Template` (⚠️ fora da carga inicial: o front não consome) |
 | `listarChecklist_Status` | `listarChecklist_Status()` | Estado dos itens de checklist por tarefa |
 | `salvarChecklist` | `salvarChecklist(dados)` | Substitui (remove + regrava) os itens de uma tarefa |
 | `listarInteracoes` | `listarInteracoes(dados)` | Histórico de interações de uma tarefa |

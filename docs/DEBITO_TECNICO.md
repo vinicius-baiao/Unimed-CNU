@@ -1,8 +1,8 @@
 # Débito técnico e performance — sweep de 03/08/2026
 
-> Varredura de `Code.gs` (1.347 linhas) e `tarefas-shadcn.html` (2.412 linhas) após a
-> publicação do piloto. Priorização pelo framework `(Impacto + Risco) × (6 − Esforço)`,
-> notas de 1 a 5. Nada aqui foi implementado — é o mapa para decidir o que atacar.
+> Varredura de `Code.gs` e `tarefas-shadcn.html` após a publicação do piloto. Priorização
+> pelo framework `(Impacto + Risco) × (6 − Esforço)`, notas de 1 a 5.
+> As fases 0 e 1 já foram implementadas no mesmo dia — ver "O que foi feito" no fim.
 
 ## Medição real — 03/08/2026, app publicado
 
@@ -51,20 +51,23 @@ lenta que o registrado aqui.
 
 ## Prioridades
 
+> **Status 03/08/2026:** fases 0 e 1 implementadas (P0, P1, P4, P5, D6, D1) — ver
+> "O que foi feito" no fim do documento. Medição pós-deploy pendente.
+
 | # | Item | Tipo | I | R | E | Score |
 |---|---|---|---|---|---|---|
-| P1 | Carga inicial faz 6 execuções separadas do Apps Script | Arquitetura | 5 | 4 | 2 | **36** |
-| P0 | `listarTemplates` custa 1,9 s na carga e o dado nunca é usado | Código morto | 4 | 1 | 1 | **25** |
+| ~~P1~~ ✅ | Carga inicial faz 6 execuções separadas do Apps Script | Arquitetura | 5 | 4 | 2 | **36** |
+| ~~P0~~ ✅ | `listarTemplates` custa 1,9 s na carga e o dado nunca é usado | Código morto | 4 | 1 | 1 | **25** |
 | D2 | `tarefas.html` duplicado (97 KB) como rollback, já defasado | Código | 3 | 3 | 1 | **30** |
-| D6 | `TOKEN_GEMINI_FALLBACK` hardcoded (`Code.gs:1291`) | Segurança | 1 | 5 | 1 | **30** |
+| ~~D6~~ ✅ | `TOKEN_GEMINI_FALLBACK` hardcoded (`Code.gs:1291`) | Segurança | 1 | 5 | 1 | **30** |
 | D3 | Índices de coluna fixos, inclusive um `[7]` literal | Arquitetura | 3 | 4 | 2 | **28** |
 | P2 | 254 KB de fontes base64 inline em cada abertura | Performance | 4 | 2 | 2 | **24** |
 | P3 | `salvarChecklist` reescreve a aba inteira a cada gravação | Performance | 4 | 4 | 3 | **24** |
 | D4 | Nenhum teste automatizado | Teste | 4 | 4 | 3 | **24** |
-| P4 | Leituras redundantes de aba dentro da mesma requisição | Performance | 3 | 2 | 2 | **20** |
-| P5 | `gravarLogs` chama a API 2× por entrada, dentro do laço | Performance | 2 | 2 | 1 | **20** |
-| D1 | Mock com nomes/e-mails reais viaja no HTML de produção | Privacidade | 1 | 2 | 1 | **15** |
-| P6 | `carregarTudo()` recarrega tudo depois de cada save | Performance | 3 | 2 | 3 | **15** |
+| ~~P4~~ ✅ | Leituras redundantes de aba dentro da mesma requisição | Performance | 3 | 2 | 2 | **20** |
+| ~~P5~~ ✅ | `gravarLogs` chama a API 2× por entrada, dentro do laço | Performance | 2 | 2 | 1 | **20** |
+| ~~D1~~ ✅ | Mock com nomes/e-mails reais viaja no HTML de produção | Privacidade | 1 | 2 | 1 | **15** |
+| P6 ↓ | `carregarTudo()` recarrega tudo depois de cada save | Performance | 3 | 2 | 3 | **15** |
 | D5 | JSONP em vez de `google.script.run` | Arquitetura | 3 | 3 | 4 | **12** |
 
 ## Detalhamento dos itens de topo
@@ -245,3 +248,54 @@ Decidir o destino do `tarefas.html`, criar o harness de testes, regerar as fonte
 **Fase 4 — só quando o piloto virar produção** (D5, P6)
 JSONP → `google.script.run` e fim do `carregarTudo()` pós-save. São mudanças grandes, de
 benefício estrutural, sem urgência enquanto o piloto tem 5 usuários.
+
+## O que foi feito — 03/08/2026 (fases 0 e 1)
+
+**Front (`tarefas-shadcn.html`)**
+
+- `carregarTudo()` faz **uma** chamada (`bootstrap`) em vez de quatro, e traz também perfil e
+  usuários — as chamadas avulsas de `getUsuario` e `listarUsuarios` saíram do
+  `DOMContentLoaded`. Total na abertura: 6 → 1.
+- `listarTemplates` e a variável `templates` removidas (P0).
+- Efeito colateral bem-vindo: `renderUserBadge()` e `aplicarFiltroInicial()` rodam já com o
+  perfil em mãos, então a saudação, o nome e o filtro inicial aparecem no primeiro render.
+  Antes a tela pintava com e-mails crus e sem filtro, e se corrigia quando as chamadas
+  avulsas voltavam.
+- `carregarTudo()` é o recarregador pós-save, então **todo save também caiu de 4 chamadas
+  para 1** — P6 melhorou de graça (o que resta dele é evitar o recarregamento por completo).
+- Mock local: dados agora fictícios (`@exemplo.test`) e com suporte a `bootstrap` (D1).
+
+**Backend (`Code.gs`)**
+
+- `bootstrap()` novo, com rota no `doGet`.
+- `lerAba()` / `invalidarAba()`: cache de leitura **por execução**. `Tarefas` e
+  `Checklist_Status` eram lidas 3× cada numa carga; agora 1× (P4). Rotas de escrita
+  invalidam o cache depois de gravar.
+- `mapaPerfis()` memoizado por execução, por cima do `CacheService` (P4).
+- `gravarLogs()`: `getLastRow()` uma vez, fora do laço — um save de 5 campos fazia 10
+  chamadas de API, agora faz 6 (P5). **Mantido `appendRow`** de propósito: trocar por um
+  `setValues` em bloco seria mais rápido e reintroduziria a perda de linhas sob concorrência
+  que o comentário no código registra.
+- `TOKEN_GEMINI_FALLBACK` removido. Sem a Script Property `TOKEN_GEMINI` definida, o
+  `doPost` rejeita com "Integração não configurada no servidor" e loga o motivo — falha
+  fechada, de propósito (D6). **Isso bloqueia a integração do Gem até a propriedade existir.**
+
+**Deliberadamente não alterado**
+
+- A leitura dentro do lock em `salvarChecklist` continua indo direto à planilha, com
+  comentário explicando: usar o cache ali abriria uma janela para sobrescrever o que outra
+  execução gravou entre a leitura e o lock.
+- As leituras diretas nas funções de trigger (`relatorioDiario`, `lembretesDiarios`,
+  `arquivarTarefasAntigas`) — rodam isoladas, sem concorrer com requisições de usuário.
+
+**Verificação (preview local com mock)**
+
+Carga faz exatamente `["bootstrap"]`; 9 tarefas, 5 usuários, 7 projetos e 2 checklists
+populados; badge com nome e perfil no primeiro render; filtro inicial aplicado uma única vez
+(5 de 9 tarefas) e "limpar filtros" devolvendo as 9; Kanban, Lista, progresso de checklist na
+Lista, modal em edição e o fix de hoje (checkbox marcável em visualização, salvando na hora)
+todos funcionando; save disparando `atualizarTarefa` + `salvarChecklist` + **um** `bootstrap`;
+console sem erros. Sintaxe do `Code.gs` validada com `node --check`.
+
+**Pendente:** repetir a medição no app publicado e comparar com os 4.353 ms / 403 KB da
+linha de base.

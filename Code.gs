@@ -110,6 +110,7 @@ function doGet(e) {
       resultado = { erro: 'Acesso restrito ao piloto.' };
     } else {
     switch (acao) {
+      case 'bootstrap':              resultado = bootstrap();                   break;
       case 'listarTarefas':          resultado = listarTarefas();               break;
       case 'criarTarefa':            resultado = criarTarefa(dados);            break;
       case 'atualizarTarefa':        resultado = atualizarTarefa(dados);        break;
@@ -179,8 +180,8 @@ function proximoIdProjeto() {
 }
 
 function listarProjetos() {
-  var sheet = getOrCreateProjetosSheet();
-  var rows  = sheet.getDataRange().getValues();
+  getOrCreateProjetosSheet();          // garante a aba antes de ler
+  var rows  = lerAba(ABA_PROJETOS) || [];
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][COL_PROJ.NOME]) continue;
@@ -261,23 +262,29 @@ function arquivarProjeto(dados) {
 var CACHE_PERFIS_KEY = 'perfis_v1';
 var CACHE_PERFIS_SEG = 300;
 
+// Memo por execução, por cima do CacheService: podeExcluir()/getPerfil() são
+// chamados várias vezes na mesma request e cada chamada refazia cache.get +
+// JSON.parse.
+var _perfis = null;
+
 function mapaPerfis() {
+  if (_perfis) return _perfis;
+
   var cache = CacheService.getScriptCache();
   try {
     var raw = cache.get(CACHE_PERFIS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return (_perfis = JSON.parse(raw));
   } catch (e) { /* cache indisponível: cai para a planilha */ }
 
   var mapa = {};
-  var sheet = getSheet(ABA_USUARIOS);
-  if (sheet) {
-    var rows = sheet.getDataRange().getValues();
+  var rows = lerAba(ABA_USUARIOS);
+  if (rows) {
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][1]) mapa[String(rows[i][1]).trim().toLowerCase()] = String(rows[i][2] || '');
     }
   }
   try { cache.put(CACHE_PERFIS_KEY, JSON.stringify(mapa), CACHE_PERFIS_SEG); } catch (e) {}
-  return mapa;
+  return (_perfis = mapa);
 }
 
 function getPerfil(email) {
@@ -302,9 +309,8 @@ function podeExcluir(email) {
 }
 
 function listarUsuarios() {
-  var sheet = getSheet(ABA_USUARIOS);
-  if (!sheet) return { usuarios: [] };
-  var rows = sheet.getDataRange().getValues();
+  var rows = lerAba(ABA_USUARIOS);
+  if (!rows) return { usuarios: [] };
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][0] && !rows[i][1]) continue;
@@ -325,6 +331,23 @@ function getSheet(nome) {
   return _ss.getSheetByName(nome);
 }
 
+// Cache de leitura por EXECUÇÃO (não entre execuções — cada request começa
+// com o cache vazio). Antes, uma única chamada de bootstrap/listagem lia a aba
+// Tarefas 3x e Checklist_Status 3x, porque idsTarefasVisiveis relia tudo.
+// Só usar em leitura: quem escreve deve chamar invalidarAba() depois.
+var _abas = {};
+
+function lerAba(nome) {
+  if (_abas.hasOwnProperty(nome)) return _abas[nome];
+  var sh = getSheet(nome);
+  _abas[nome] = sh ? sh.getDataRange().getValues() : null;
+  return _abas[nome];
+}
+
+function invalidarAba(nome) {
+  delete _abas[nome];
+}
+
 function proximoId() {
   var sheet  = getSheet(ABA_TAREFAS);
   var ultima = sheet.getLastRow();
@@ -340,13 +363,18 @@ function gravarLog(acao, campo, anterior, novo) {
 function gravarLogs(entradas) {
   if (!entradas || !entradas.length) return;
   var log    = getSheet(ABA_LOG);
+  if (!log) return;
   var editor = Session.getActiveUser().getEmail();
   var agora  = new Date();
   // appendRow é atômico: execuções simultâneas não sobrescrevem linhas
   // umas das outras (o setValues em posição calculada sobrescrevia).
   // O ID pode duplicar sob concorrência — cosmético, sem perda de dados.
-  entradas.forEach(function(e) {
-    log.appendRow([log.getLastRow(), agora, editor, e[0], e[1], e[2], e[3]]);
+  // Por isso NÃO trocar por um setValues em bloco, mesmo sendo mais rápido.
+  // O que dá para economizar é o getLastRow() por entrada: um save de 5 campos
+  // fazia 10 chamadas de API onde 6 bastam.
+  var base = log.getLastRow();
+  entradas.forEach(function(e, i) {
+    log.appendRow([base + i, agora, editor, e[0], e[1], e[2], e[3]]);
   });
 }
 
@@ -360,9 +388,8 @@ function idsTarefasVisiveis(email, rowsTarefas) {
 
   // Tarefas onde o usuário está marcado em item de checklist (col. 7 = Responsavel)
   var marcado = {};
-  var shC = getSheet(ABA_CKL_STATUS);
-  if (shC) {
-    var rowsC = shC.getDataRange().getValues();
+  var rowsC = lerAba(ABA_CKL_STATUS);
+  if (rowsC) {
     for (var i = 1; i < rowsC.length; i++) {
       if (String(rowsC[i][7] || '').trim().toLowerCase() === alvo) {
         marcado[String(rowsC[i][1])] = true;
@@ -371,7 +398,7 @@ function idsTarefasVisiveis(email, rowsTarefas) {
   }
 
   var visiveis = {};
-  var rowsT = rowsTarefas || getSheet(ABA_TAREFAS).getDataRange().getValues();
+  var rowsT = rowsTarefas || lerAba(ABA_TAREFAS);
   for (var j = 1; j < rowsT.length; j++) {
     var id      = String(rowsT[j][COL.ID]);
     var resp    = String(rowsT[j][COL.RESPONSAVEL] || '').trim().toLowerCase();
@@ -390,10 +417,32 @@ function parsePrazoLocal(val) {
   return new Date(val);
 }
 
+// ── bootstrap ─────────────────────────────────────────────────
+// Carga inicial numa única execução. Medição de 03/08/2026: as 6 rotas
+// separadas custavam 4,35 s, sendo ~1,2-1,9 s de overhead fixo POR execução
+// (getUsuario devolve 0,1 KB e levava 1,2 s) mais contenção entre as chamadas
+// concorrentes. Aqui cada aba é lida uma vez (via lerAba) e tudo volta junto.
+function bootstrap() {
+  var email  = Session.getActiveUser().getEmail();
+  var perfil = getPerfil(email);
+  return {
+    usuario: {
+      email:       email,
+      perfil:      perfil,
+      admin:       perfil === 'Admin',
+      podeExcluir: perfil === 'Admin' || perfil === 'Gestor'
+    },
+    tarefas:   listarTarefas().tarefas,
+    checklist: listarChecklist_Status().itens,
+    projetos:  listarProjetos().projetos,
+    usuarios:  listarUsuarios().usuarios
+  };
+}
+
 // ── listarTarefas ─────────────────────────────────────────────
 function listarTarefas() {
-  var sheet  = getSheet(ABA_TAREFAS);
-  var dados  = sheet.getDataRange().getValues();
+  var dados  = lerAba(ABA_TAREFAS);
+  if (!dados) return { tarefas: [] };
   var header = dados[0];
   var lista  = [];
   var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail(), dados);
@@ -479,7 +528,8 @@ function atualizarTarefa(dados) {
   if (erroValidacao) return { erro: erroValidacao };
 
   var sheet  = getSheet(ABA_TAREFAS);
-  var linhas = sheet.getDataRange().getValues();
+  var linhas = lerAba(ABA_TAREFAS);
+  if (!linhas) return { erro: 'Aba Tarefas não encontrada.' };
 
   // Usuário Padrão só pode alterar tarefas que enxerga (IDs são sequenciais
   // e adivinháveis; sem esta checagem a visibilidade seria contornável).
@@ -538,6 +588,7 @@ function atualizarTarefa(dados) {
       logEntradas.push(['ATUALIZAR', campo, anterior, novo]);
     });
     gravarLogs(logEntradas);
+    if (logEntradas.length) invalidarAba(ABA_TAREFAS); // cache desta execução ficou velho
 
     if (dados.responsavel && dados.responsavel !== responsavelAnterior) {
       // Falha de e-mail não pode derrubar a resposta (a atualização já foi gravada)
@@ -563,7 +614,8 @@ function atualizarTarefa(dados) {
 // ── excluirTarefa (soft delete) ───────────────────────────────
 function excluirTarefa(dados) {
   var sheet    = getSheet(ABA_TAREFAS);
-  var linhas   = sheet.getDataRange().getValues();
+  var linhas   = lerAba(ABA_TAREFAS);
+  if (!linhas) return { erro: 'Aba Tarefas não encontrada.' };
   var editor   = Session.getActiveUser().getEmail();
   var encontrou = false;
   var calendarFeito = false;
@@ -594,15 +646,18 @@ function excluirTarefa(dados) {
   }
 
   if (!encontrou) return { erro: 'Tarefa não encontrada: ' + dados.id };
+  invalidarAba(ABA_TAREFAS);
   gravarLog('EXCLUIR', 'ID', dados.id, 'inativo');
   return { sucesso: true };
 }
 
 // ── listarTemplates ───────────────────────────────────────────
+// Fora da carga inicial desde 03/08/2026: o front não consome templates (a UI
+// não existe no MVP) e a rota custava 1,9 s para devolver lista vazia.
+// Mantida disponível para quando a feature de templates existir.
 function listarTemplates() {
-  var sheet = getSheet(ABA_CHECKLISTS);
-  if (!sheet) return { templates: [] };
-  var dados = sheet.getDataRange().getValues();
+  var dados = lerAba(ABA_CHECKLISTS);
+  if (!dados) return { templates: [] };
   var mapa  = {};
 
   for (var i = 1; i < dados.length; i++) {
@@ -625,14 +680,13 @@ function listarTemplates() {
 
 // ── listarChecklist_Status ────────────────────────────────────
 function listarChecklist_Status() {
-  var sheetC = getSheet(ABA_CKL_STATUS);
-  if (!sheetC) return { itens: [] };
+  var dados = lerAba(ABA_CKL_STATUS);
+  if (!dados) return { itens: [] };
 
   // Montar conjunto de IDs de tarefas ativas para filtrar órfãos
-  var sheetT = getSheet(ABA_TAREFAS);
   var idsAtivos = {};
-  if (sheetT) {
-    var rowsT = sheetT.getDataRange().getValues();
+  var rowsT = lerAba(ABA_TAREFAS);
+  if (rowsT) {
     for (var t = 1; t < rowsT.length; t++) {
       if (rowsT[t][COL.ATIVO] !== false && rowsT[t][COL.ATIVO] !== 'false') {
         idsAtivos[String(rowsT[t][COL.ID])] = true;
@@ -640,7 +694,6 @@ function listarChecklist_Status() {
     }
   }
 
-  var dados  = sheetC.getDataRange().getValues();
   var header = dados[0];
   var lista  = [];
   var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
@@ -682,6 +735,10 @@ function salvarChecklist(dados) {
   lock.waitLock(10000);
   try {
 
+  // Leitura FRESCA de propósito, dentro do lock — NÃO trocar por lerAba().
+  // O cache da execução pode ter sido populado antes do lock (idsTarefasVisiveis
+  // lê esta aba); reescrever a aba a partir dele apagaria o que outra execução
+  // gravou nesse intervalo.
   var todas    = sheet.getDataRange().getValues();
   var header   = todas[0];
 
@@ -718,6 +775,7 @@ function salvarChecklist(dados) {
   if (resultado.length > 0) {
     sheet.getRange(1, 1, resultado.length, numCols).setValues(resultado);
   }
+  invalidarAba(ABA_CKL_STATUS);
 
   } finally {
     lock.releaseLock(); // solta antes das notificações (e-mail é lento)
@@ -1284,18 +1342,17 @@ function arquivarTarefasAntigas() {
 // ── doPost — endpoint para integrações externas (Gem Gemini) ──
 // Aceita POST com JSON: { token, acao, dados }
 // Requer token secreto; não depende de sessão autenticada.
-// ⚠️ SEGURANÇA: o token deve viver em Script Properties (Configurações do
-// projeto → Propriedades do script → TOKEN_GEMINI). O valor hardcoded abaixo
-// é só fallback legado e DEVE ser rotacionado: este repositório é público no
-// GitHub, então o valor antigo está exposto.
-var TOKEN_GEMINI_FALLBACK = 'CNU_TAREFAS_SECRET_2026';
-
+// SEGURANÇA: o token vive em Script Properties (Configurações do projeto →
+// Propriedades do script → TOKEN_GEMINI). O fallback hardcoded que existia aqui
+// foi removido em 03/08/2026: o valor estava exposto num repositório público,
+// então aceitá-lo era o mesmo que não ter token.
+// Sem a propriedade definida, o doPost rejeita tudo (falha fechada, de propósito).
 function tokenGemini() {
   try {
-    var p = PropertiesService.getScriptProperties().getProperty('TOKEN_GEMINI');
-    if (p) return p;
-  } catch (e) {}
-  return TOKEN_GEMINI_FALLBACK;
+    return PropertiesService.getScriptProperties().getProperty('TOKEN_GEMINI') || '';
+  } catch (e) {
+    return '';
+  }
 }
 
 function doPost(e) {
@@ -1306,7 +1363,12 @@ function doPost(e) {
     return jsonResponse({ erro: 'Payload inválido: ' + err.message });
   }
 
-  if (!json.token || json.token !== tokenGemini()) {
+  var esperado = tokenGemini();
+  if (!esperado) {
+    Logger.log('doPost bloqueado: Script Property TOKEN_GEMINI não está definida.');
+    return jsonResponse({ erro: 'Integração não configurada no servidor (TOKEN_GEMINI ausente).' });
+  }
+  if (!json.token || json.token !== esperado) {
     return jsonResponse({ erro: 'Token inválido.' });
   }
 
