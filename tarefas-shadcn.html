@@ -452,7 +452,6 @@
     .combo-opt:hover, .combo-opt.active { background: var(--hover-bg); }
     .combo-opt small { color: var(--muted-foreground); }
     .combo-empty { padding: 12px 10px; color: var(--muted-foreground); font-size: .82rem; text-align: center; }
-    .ckl-responsavel-marcado { font-size: .72rem; color: var(--primary); font-weight: 600; background: var(--verde-bg); border-radius: calc(var(--radius) - 2px); padding: 2px 7px; flex-shrink: 0; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
     .ckl-delete { background: none; border: none; cursor: pointer; color: var(--muted-foreground); font-size: 1.1rem; padding: 0 2px; line-height: 1; flex-shrink: 0; }
     .ckl-delete:hover { color: var(--destructive); }
     .ckl-add-row { display: flex; gap: 6px; margin-top: 8px; }
@@ -1812,11 +1811,11 @@ function abrirModal(tarefa, modo) {
   var addRow = document.querySelector('.ckl-add-row');
   if (addRow) addRow.style.display = modoEdicao ? '' : 'none';
 
-  // Em visualização o checkbox continua ativo: marcar item é execução da tarefa,
-  // não edição de cadastro — salva na hora (ver salvarCklImediato). Os demais
-  // controles (excluir item, selects) seguem travados.
+  // Em visualização, checkbox e select de colega continuam ativos: marcar item
+  // e atribuir são execução da tarefa, não edição de cadastro, e salvam na hora
+  // (ver salvarCklImediato). Só excluir item fica travado.
   if (!modoEdicao) {
-    itensEl.querySelectorAll('select, button').forEach(function(el) { el.disabled = true; });
+    itensEl.querySelectorAll('button').forEach(function(el) { el.disabled = true; });
   }
 
   // Botão Fechar/Cancelar: em edição/criação deixa claro que descarta
@@ -1965,8 +1964,7 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   var div = document.createElement('div');
   div.className     = 'ckl-item' + (concluido ? ' concluido' : '');
   div.dataset.ordem = ordem;
-  // Marcação de colegas desabilitada por ora: preserva o valor existente
-  // (usado pela regra de visibilidade), mas sem UI para criar/alterar.
+  // Fonte de verdade da marcação: o select escreve aqui e serializarCkl lê daqui.
   div.dataset.responsavel = responsavel || '';
 
   var chk = document.createElement('input');
@@ -1993,15 +1991,41 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
     verificarMudancasModal();
   });
 
+  // Select de colega: atribui o item a alguém. Ativo também em visualização —
+  // atribuir é execução, como marcar o checkbox.
+  var sel = document.createElement('select');
+  sel.className = 'ckl-responsavel-sel';
+  var optVazia = document.createElement('option');
+  optVazia.value = '';
+  optVazia.textContent = '— colega —';
+  sel.appendChild(optVazia);
+  usuarios.forEach(function(u) {
+    var o = document.createElement('option');
+    o.value = u.email;
+    o.textContent = u.nome || u.email;
+    sel.appendChild(o);
+  });
+  // Marcação de alguém que não está mais na aba Usuários: cria a opção mesmo
+  // assim, senão o select viria vazio e o próximo save apagaria a marcação.
+  if (responsavel && !usuarios.some(function(u) { return u.email === responsavel; })) {
+    var oExtra = document.createElement('option');
+    oExtra.value = responsavel;
+    oExtra.textContent = responsavel;
+    sel.appendChild(oExtra);
+  }
+  sel.value = responsavel || '';
+  sel.title = responsavel ? nomeDeUsuario(responsavel) : 'Atribuir este item a um colega';
+  sel.addEventListener('change', function() {
+    div.dataset.responsavel = sel.value;
+    sel.title = sel.value ? nomeDeUsuario(sel.value) : 'Atribuir este item a um colega';
+    if (typeof renderAvisosCkl === 'function') renderAvisosCkl();
+    if (modalModo === 'view') salvarCklImediato();
+    else verificarMudancasModal();
+  });
+
   div.appendChild(chk);
   div.appendChild(span);
-  if (responsavel) {
-    var chip = document.createElement('span');
-    chip.className   = 'ckl-responsavel-marcado';
-    chip.title       = responsavel;
-    chip.textContent = nomeDeUsuario(responsavel);
-    div.appendChild(chip);
-  }
+  div.appendChild(sel);
   div.appendChild(del);
   return div;
 }
