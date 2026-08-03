@@ -84,8 +84,10 @@ Funções **sem rota** (rodam por trigger/manual): `setup()` (cria abas e valida
 npx serve -p 3000 .     # preview local da UI (config em .claude/launch.json)
 ```
 
-⚠️ O preview local mostra **só a interface**: `tarefas.html` chama um `WEBAPP_URL` real (linha
-~524, atualmente **vazio**), então os dados não carregam sem backend publicado ou mock.
+ℹ️ No preview local o frontend cai num **mock embutido** (bloco no fim de `tarefas-shadcn.html`,
+que sobrescreve `chamarAPI`): tarefas, usuários, projetos e checklists de exemplo, sem backend.
+Serve para reproduzir bugs de UI simulando outro perfil — basta ajustar `currentUser` /
+`currentUserPodeExcluir` no console antes de abrir o modal.
 
 **Deploy do backend (clasp):**
 ```bash
@@ -99,13 +101,14 @@ clasp push
 no Apps Script. Sempre editar a existente (lápis ✏️ → Nova versão). Após publicar, fazer
 **hard reload** (Ctrl+Shift+R) ou aba anônima pra furar o cache do browser.
 
-## Config que precisa ser preenchida
+## Config (já preenchida — conferir antes de mexer)
 
 | Onde | Variável | Estado | Para quê |
 |---|---|---|---|
-| `Code.gs:5` | `SHEET_ID` | vazio | Necessário se o script for standalone (vazio = container-bound) |
-| `Code.gs:11` | `EMAIL_REPORTE` | vazio | Destinatário(s) do relatório diário |
-| `tarefas.html:524` | `WEBAPP_URL` | vazio | URL do Web App que o frontend consome |
+| `Code.gs:5` | `SHEET_ID` | preenchida | ID da planilha (script é standalone, não container-bound) |
+| `Code.gs:14` | `EMAIL_REPORTE` | preenchida | Destinatário(s) do relatório diário |
+| `Code.gs:19` | `EMAIL_REMETENTE` | `taskcenter@unimedcnu.coop.br` | Send-As confirmado em 03/08/2026; `enviarEmail()` só usa se o alias existir em `GmailApp.getAliases()` |
+| `tarefas-shadcn.html:913` | `WEBAPP_URL` | preenchida | URL do Web App que o frontend consome |
 
 ## Mapa de arquivos
 
