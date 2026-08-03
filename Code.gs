@@ -27,11 +27,6 @@ var HTML_FILE        = 'tarefas-shadcn';
 // Além deste flag, remova/desative o gatilho no Apps Script → Gatilhos.
 var RESUMO_DIARIO_ATIVO = false;
 
-// Marcação de colegas em itens de checklist (e o e-mail de notificação).
-// Desativado por ora — o front não oferece mais a UI; marcações antigas
-// são preservadas nos dados e seguem valendo para visibilidade.
-var CHECKLIST_MARCACAO_ATIVA = false;
-
 // Piloto: restringe o acesso aos e-mails abaixo. Desligar com PILOTO_ATIVO = false.
 var PILOTO_ATIVO  = true;
 var EMAILS_PILOTO = [
@@ -119,6 +114,7 @@ function doGet(e) {
       case 'listarTemplates':        resultado = listarTemplates();             break;
       case 'listarChecklist_Status': resultado = listarChecklist_Status();      break;
       case 'salvarChecklist':        resultado = salvarChecklist(dados);        break;
+      case 'avisarMarcadoChecklist': resultado = avisarMarcadoChecklist(dados); break;
       case 'listarInteracoes':      resultado = listarInteracoes(dados);       break;
       case 'adicionarInteracao':    resultado = adicionarInteracao(dados);     break;
       case 'listarUsuarios':        resultado = listarUsuarios();              break;
@@ -790,6 +786,13 @@ function salvarChecklist(dados) {
   if (itensIn.length > 100) return { erro: 'Checklist excede 100 itens.' };
   for (var v = 0; v < itensIn.length; v++) {
     if (String(itensIn[v].item || '').length > 300) return { erro: 'Item de checklist excede 300 caracteres.' };
+    // O campo Responsavel concede visibilidade da tarefa (idsTarefasVisiveis),
+    // então não pode aceitar string arbitrária.
+    var rspItem = String(itensIn[v].responsavel || '').trim().toLowerCase();
+    if (rspItem) {
+      var domItemOk = DOMINIOS_PERMITIDOS.some(function(d) { return rspItem.slice(-d.length) === d; });
+      if (!domItemOk) return { erro: 'Colega marcado precisa ter e-mail @unimedcnu.coop.br ou @unimednacional.coop.br' };
+    }
   }
 
   // Lock: a gravação reescreve a aba inteira — dois salvamentos simultâneos
@@ -844,40 +847,106 @@ function salvarChecklist(dados) {
     lock.releaseLock(); // solta antes das notificações (e-mail é lento)
   }
 
-  // Notificar colegas marcados em itens da checklist (desativado por flag)
-  var marcados = [];
-  if (CHECKLIST_MARCACAO_ATIVA) {
-    itens.forEach(function(it) {
-      if (it.responsavel && marcados.indexOf(it.responsavel) === -1) marcados.push(it.responsavel);
-    });
-  }
-  if (marcados.length && dados.nomeTarefa) {
-    marcados.forEach(function(email) {
-      try { notificarMarcadoChecklist(email, dados.nomeTarefa, dados.idTarefa); } catch(e) { Logger.log('Email checklist erro: ' + e.message); }
-    });
-  }
-
+  // Sem notificação automática aqui, de propósito. Até 15/07/2026 este ponto
+  // notificava todos os marcados a cada salvamento, e como o save reescreve a
+  // aba inteira, quem já estava marcado era renotificado sempre. Hoje seria
+  // pior: em modo visualização o save acontece a cada clique de checkbox.
+  // O aviso é manual, por avisarMarcadoChecklist().
   gravarLog('CHECKLIST', 'ID_Tarefa', '', idTarefa);
   return { sucesso: true };
 }
 
-function notificarMarcadoChecklist(email, nomeTarefa, idTarefa) {
+// ── avisarMarcadoChecklist ────────────────────────────────────
+// Aviso manual: o front chama quando o usuário clica em "Avisar <Nome>".
+// Nada aqui confia no que vem do front — nem o nome da tarefa, que é lido da
+// planilha para o texto do e-mail não ser controlado por quem chama.
+function avisarMarcadoChecklist(dados) {
+  var idTarefa = String((dados && dados.idTarefa) || '');
+  var email    = String((dados && dados.email) || '').trim().toLowerCase();
+  if (!idTarefa || !email) return { erro: 'Tarefa e colega são obrigatórios.' };
+
+  // 1. Visibilidade: quem não enxerga a tarefa não dispara e-mail sobre ela.
+  var solicitante = Session.getActiveUser().getEmail();
+  var visiveis = idsTarefasVisiveis(solicitante);
+  if (visiveis && !visiveis[idTarefa]) {
+    return { erro: 'Sem permissão para avisar nesta tarefa.' };
+  }
+
+  // 2. Domínio permitido.
+  var dominioOk = DOMINIOS_PERMITIDOS.some(function(d) { return email.slice(-d.length) === d; });
+  if (!dominioOk) return { erro: 'E-mail fora dos domínios permitidos.' };
+
+  // 3. O colega precisa estar marcado nesta tarefa. Sem isto, a rota seria um
+  // formulário aberto para mandar e-mail em nome do sistema; só validar o
+  // domínio não basta, porque qualquer @unimedcnu passaria.
+  var rows  = lerAba(ABA_CKL_STATUS) || [];
+  var itens = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]) !== idTarefa) continue;
+    if (String(rows[i][7] || '').trim().toLowerCase() !== email) continue;
+    itens.push(String(rows[i][3]));
+  }
+  if (!itens.length) {
+    return { erro: 'Este colega não está marcado em nenhum item desta tarefa.' };
+  }
+
+  // Anti-repetição: cobre duplo-clique e reabertura do modal.
+  var chaveCache = 'aviso_' + idTarefa + '_' + email;
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) {
+    try {
+      if (cache.get(chaveCache)) {
+        return { erro: 'Aviso já enviado agora há pouco para este colega.' };
+      }
+      cache.put(chaveCache, '1', 60);
+    } catch (e) {}
+  }
+
+  // Nome da tarefa vem da planilha, não do front.
+  var nomeTarefa = '';
+  var rowsT = lerAba(ABA_TAREFAS) || [];
+  for (var j = 1; j < rowsT.length; j++) {
+    if (String(rowsT[j][COL.ID]) === idTarefa) { nomeTarefa = String(rowsT[j][COL.TAREFA]); break; }
+  }
+
+  try {
+    notificarMarcadoChecklist(email, nomeTarefa, itens, solicitante);
+  } catch (e) {
+    Logger.log('avisarMarcadoChecklist erro: ' + e.message);
+    return { erro: 'Falha ao enviar o e-mail: ' + e.message };
+  }
+
+  gravarLog('AVISO_CHECKLIST', 'ID_Tarefa', idTarefa, email);
+  return { sucesso: true, itens: itens.length };
+}
+
+// Aviso manual (disparado por avisarMarcadoChecklist). `itens` é um array com
+// os textos dos itens atribuídos a este colega nesta tarefa.
+function notificarMarcadoChecklist(email, nomeTarefa, itens, quemAvisou) {
   var url  = ScriptApp.getService().getUrl();
+  var li   = '';
+  for (var i = 0; i < itens.length; i++) {
+    li += '<li style="margin-bottom:4px">' + escHtml(itens[i]) + '</li>';
+  }
+  var plural = itens.length > 1 ? 'itens' : 'item';
   var html = '<div style="font-family:Arial,sans-serif;max-width:600px;color:#212529">'
     + '<div style="background:#004e4c;padding:16px 24px;border-radius:8px 8px 0 0">'
-    + '<h2 style="color:#fff;margin:0;font-size:16px">[Tarefas CNU] Você foi marcado em uma checklist</h2>'
+    + '<h2 style="color:#fff;margin:0;font-size:16px">[Tarefas CNU] Itens de checklist atribuídos a você</h2>'
     + '<p style="color:#a8d5d4;margin:4px 0 0;font-size:12px">Unimed CNU · Rede Ambulatorial</p>'
     + '</div>'
     + '<div style="background:#fff;padding:20px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
-    + '<p style="font-size:14px;margin-top:0">Você foi designado como responsável por um item de checklist na tarefa:</p>'
+    + '<p style="font-size:14px;margin-top:0">Você ficou com ' + itens.length + ' ' + plural + ' de checklist na tarefa:</p>'
     + '<p style="font-size:15px;font-weight:600;color:#004e4c">' + escHtml(nomeTarefa) + '</p>'
+    + '<ul style="font-size:14px;padding-left:20px">' + li + '</ul>'
+    + (quemAvisou ? '<p style="font-size:12px;color:#6c757d">Atribuído por ' + escHtml(quemAvisou) + '</p>' : '')
     + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
     +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'
     + 'Abrir Gestão de Tarefas →</a>'
     + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
     + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
     + '</div></div>';
-  enviarEmail(email, '[Tarefas CNU] Você foi marcado em uma checklist', html);
+  enviarEmail(email, '[Tarefas CNU] Itens de checklist atribuídos a você', html);
 }
 
 // ── Helpers de segurança ──────────────────────────────────────
