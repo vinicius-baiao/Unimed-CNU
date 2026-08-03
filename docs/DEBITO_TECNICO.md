@@ -59,7 +59,7 @@ lenta que o registrado aqui.
 | ~~P1~~ ✅ | Carga inicial faz 6 execuções separadas do Apps Script | Arquitetura | 5 | 4 | 2 | **36** |
 | ~~P0~~ ✅ | `listarTemplates` custa 1,9 s na carga e o dado nunca é usado | Código morto | 4 | 1 | 1 | **25** |
 | D2 | `tarefas.html` duplicado (97 KB) como rollback, já defasado | Código | 3 | 3 | 1 | **30** |
-| ~~D6~~ ✅ | `TOKEN_GEMINI_FALLBACK` hardcoded (`Code.gs:1291`) | Segurança | 1 | 5 | 1 | **30** |
+| ~~D6~~ ✅ | `TOKEN_GEMINI_FALLBACK` hardcoded — endpoint `doPost` removido de vez | Segurança | 1 | 5 | 1 | **30** |
 | D3 | Índices de coluna fixos, inclusive um `[7]` literal | Arquitetura | 3 | 4 | 2 | **28** |
 | P2 | 254 KB de fontes base64 inline em cada abertura | Performance | 4 | 2 | 2 | **24** |
 | P3 | `salvarChecklist` reescreve a aba inteira a cada gravação | Performance | 4 | 4 | 3 | **24** |
@@ -276,9 +276,10 @@ benefício estrutural, sem urgência enquanto o piloto tem 5 usuários.
   chamadas de API, agora faz 6 (P5). **Mantido `appendRow`** de propósito: trocar por um
   `setValues` em bloco seria mais rápido e reintroduziria a perda de linhas sob concorrência
   que o comentário no código registra.
-- `TOKEN_GEMINI_FALLBACK` removido. Sem a Script Property `TOKEN_GEMINI` definida, o
-  `doPost` rejeita com "Integração não configurada no servidor" e loga o motivo — falha
-  fechada, de propósito (D6). **Isso bloqueia a integração do Gem até a propriedade existir.**
+- `TOKEN_GEMINI_FALLBACK` removido (D6). **Encerrado em definitivo no mesmo dia:** a
+  integração do Gem foi descontinuada por decisão do Aurélio, e o `doPost`, o
+  `tokenGemini()` e o `jsonResponse()` saíram do `Code.gs` — sem endpoint, não há token a
+  proteger nem superfície de ataque a manter.
 
 **Deliberadamente não alterado**
 

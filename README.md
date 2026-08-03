@@ -32,8 +32,7 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 ```
 
 - **Backend** — `Code.gs`: roteador `doGet(e)` despacha por `e.parameter.acao`
-  (JSONP) e serve o frontend via `createTemplateFromFile().evaluate()`;
-  `doPost` recebe integrações externas autenticadas por token.
+  (JSONP) e serve o frontend via `createTemplateFromFile().evaluate()`.
 - **Transporte** — JSONP (script tag dinâmica): POST cross-origin não funciona em
   Web App embutido. O frontend monta as chamadas em `chamarAPI()`.
 - **Persistência** — abas do Sheets: `Tarefas`, `Log`, `Checklists`,
@@ -80,18 +79,15 @@ O board de Admin/Gestor abre pré-filtrado nas próprias tarefas ("Limpar filtro
 1. **Planilha**: crie o Google Sheets e ajuste `SHEET_ID` no `Code.gs`.
 2. **Abas**: execute `setup()` uma vez (cria abas, cabeçalhos e validações).
 3. **Dados iniciais**: `popularUsuarios()` e `popularProjetos()` (editar listas antes).
-4. **Script Properties** (⚙ Configurações do projeto → Propriedades do script):
-   - `TOKEN_GEMINI` — token do endpoint `doPost` (o fallback hardcoded é legado e
-     deve ser considerado queimado; **defina um valor novo aqui**).
-5. **Remetente das notificações**: configure `taskcenter@unimedcnu.coop.br` como
+4. **Remetente das notificações**: configure `taskcenter@unimedcnu.coop.br` como
    *"Enviar e-mail como"* (Send As) na conta que executa o script e rode
    `verificarAliases()` para conferir (`true` = ativo; sem isso o envio cai no
    remetente padrão, mantendo o nome "Tarefas CNU").
-6. **Triggers** (Apps Script → Gatilhos):
+5. **Triggers** (Apps Script → Gatilhos):
    - `lembretesDiarios` — diário (lembrete D-1 ao responsável);
    - `arquivarTarefasAntigas` — mensal (move concluídas há 30+ dias para `Arquivo`);
    - `relatorioDiario` — opcional; controlado pelo flag `RESUMO_DIario_ATIVO`.
-7. **Acesso restrito (beta)**: `PILOTO_ATIVO = true` limita o acesso aos e-mails de
+6. **Acesso restrito (beta)**: `PILOTO_ATIVO = true` limita o acesso aos e-mails de
    `EMAILS_PILOTO`. Desative quando abrir para o domínio inteiro.
 
 ## Desenvolvimento e deploy
@@ -125,12 +121,6 @@ Segue o **Design System Unimed CNU** (starter-kit de 17/07/2026):
   embutidas em `Estilos_Fontes.html`;
 - Divergência registrada: nav estática (Início/Tarefas) em vez do registro
   `MODULOS`/`PERFIS` do Shell — app de view única; migrar se ganhar módulos.
-
-## Integração externa (`doPost`)
-
-`POST` na URL `/exec` com JSON `{ token, acao: "criarTarefa", dados }` —
-`dados` pode ser objeto ou lote (máx. 30). Usado pelo Gem (Gemini) para criar
-tarefas a partir de atas. Token via Script Property `TOKEN_GEMINI`.
 
 ## Segurança
 
