@@ -1088,16 +1088,17 @@ function carregarTudo() {
     currentUserPerfil      = u.perfil      || '';
     if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
 
-    // Dados de apoio: se falharem, a tela ainda abre — sem nomes resolvidos e
-    // sem lista de projetos, mas com as tarefas, que é o que importa.
-    projetos = (d2 && d2.projetos) || [];
-    usuarios = (d2 && d2.usuarios) || [];
     cklStatus = {};
-    ((d2 && d2.checklist) || []).forEach(function(l) {
+    ((d1 && d1.checklist) || []).forEach(function(l) {
       var tid = String(l.ID_Tarefa);
       if (!cklStatus[tid]) cklStatus[tid] = [];
       cklStatus[tid].push(l);
     });
+
+    // Dados de apoio: se falharem, a tela ainda abre — sem nomes resolvidos e
+    // sem lista de projetos, mas com tarefas e checklists, que é o que importa.
+    projetos = (d2 && d2.projetos) || [];
+    usuarios = (d2 && d2.usuarios) || [];
     if (erroApoio) toast('Alguns dados não carregaram: ' + erroApoio, true);
 
     renderUserBadge();
@@ -2383,13 +2384,13 @@ function arquivarProjetoById(id, nome) {
     var resp;
     switch (acao) {
       case 'bootstrap': resp = {
-        usuario: { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
-        tarefas: MOCK_TAREFAS
+        usuario:   { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
+        tarefas:   MOCK_TAREFAS,
+        checklist: MOCK_CKL
       }; break;
       case 'bootstrapApoio': resp = {
-        checklist: MOCK_CKL,
-        usuarios:  MOCK_USUARIOS,
-        projetos:  MOCK_PROJETOS
+        usuarios: MOCK_USUARIOS,
+        projetos: MOCK_PROJETOS
       }; break;
       case 'getUsuario': resp = { email: EU, perfil: 'Admin', admin: true, podeExcluir: true }; break;
       case 'listarUsuarios': resp = { usuarios: MOCK_USUARIOS }; break;

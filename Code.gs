@@ -471,9 +471,15 @@ function parsePrazoLocal(val) {
 // Estas duas rotas são o meio: o front dispara as duas juntas (~2,4 s, o tempo
 // da mais lenta) e paga 2 execuções.
 //
-// A divisão segue o custo, não o assunto: `Tarefas` e `Checklist_Status` são as
-// leituras pesadas, então ficam uma em cada rota. Usuários e projetos vêm do
-// CacheService, quase de graça.
+// A divisão junta quem compartilha leitura, em vez de espalhar as abas.
+// Primeira tentativa foi separar `Tarefas` e `Checklist_Status` por serem as
+// leituras pesadas, mas isso desequilibrou: `listarChecklist_Status()` lê
+// `Tarefas` TAMBÉM (para descartar itens órfãos), então a rota de apoio fazia
+// duas leituras contra uma da crítica — medido em 2,4-3,9 s contra 1,7-1,9 s.
+// De quebra, `Tarefas` era lida nas duas rotas, desperdiçando o cache de
+// execução. Aqui as duas leituras pesadas ficam na mesma execução, onde
+// lerAba() serve `Tarefas` uma vez para as duas, e a rota de apoio fica só com
+// o que vem do CacheService.
 function bootstrap() {
   var email  = Session.getActiveUser().getEmail();
   var perfil = getPerfil(email);
@@ -484,15 +490,15 @@ function bootstrap() {
       admin:       perfil === 'Admin',
       podeExcluir: perfil === 'Admin' || perfil === 'Gestor'
     },
-    tarefas: listarTarefas().tarefas
+    tarefas:   listarTarefas().tarefas,
+    checklist: listarChecklist_Status().itens
   };
 }
 
 function bootstrapApoio() {
   return {
-    checklist: listarChecklist_Status().itens,
-    usuarios:  listarUsuarios().usuarios,
-    projetos:  listarProjetos().projetos
+    usuarios: listarUsuarios().usuarios,
+    projetos: listarProjetos().projetos
   };
 }
 
