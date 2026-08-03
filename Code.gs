@@ -890,7 +890,11 @@ function avisarMarcadoChecklist(dados) {
     return { erro: 'Este colega não está marcado em nenhum item desta tarefa.' };
   }
 
-  // Anti-repetição: cobre duplo-clique e reabertura do modal.
+  // Anti-repetição: cobre duplo-clique e reabertura do modal. A chave é
+  // reservada antes do envio (protege clique duplo e execuções concorrentes),
+  // mas passa a significar "envio em andamento ou concluído com sucesso": se
+  // o envio falhar, a chave é removida antes de retornar o erro, para que o
+  // usuário não fique 60 s travado em "já enviado" quando nada foi enviado.
   var chaveCache = 'aviso_' + idTarefa + '_' + email;
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
@@ -914,6 +918,9 @@ function avisarMarcadoChecklist(dados) {
     notificarMarcadoChecklist(email, nomeTarefa, itens, solicitante);
   } catch (e) {
     Logger.log('avisarMarcadoChecklist erro: ' + e.message);
+    if (cache) {
+      try { cache.remove(chaveCache); } catch (eCache) {}
+    }
     return { erro: 'Falha ao enviar o e-mail: ' + e.message };
   }
 
