@@ -2,6 +2,11 @@
 
 > Carregado automaticamente pelo Claude Code no início de cada sessão neste diretório.
 > Ponto de partida para entender o projeto e continuar de onde paramos.
+>
+> 👉 **Estado atual, pendências e backlog: [`docs/HANDOFF.md`](docs/HANDOFF.md)** — ler
+> sempre no início da sessão e atualizar ao fim de cada bloco de trabalho.
+> ⚠️ Este CLAUDE.md descreve o layout clássico (`tarefas.html`); o frontend em produção
+> hoje é **`tarefas-shadcn.html`** (ver `README.md`).
 
 ## O que é este projeto
 
