@@ -17,7 +17,23 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
-### Último bloco — checklist marcável em visualização
+### Último bloco — fase 1 de performance (carga inicial)
+
+Sweep de débito técnico virou implementação no mesmo dia. Medição no app publicado mostrou
+que abrir o app custava **4.353 ms**, quase tudo esperando **6 execuções** do Apps Script, e
+que o gargalo é o overhead por execução (~1,2-1,9 s cada, independente do payload), não o
+volume de dados. Detalhes e números em [`docs/DEBITO_TECNICO.md`](DEBITO_TECNICO.md).
+
+Feito: endpoint `bootstrap` (6 chamadas → 1, e o save pós-edição de 4 → 1), remoção do
+`listarTemplates` (1,9 s para devolver lista vazia, dado que ninguém lia), cache de leitura
+por execução no backend (`Tarefas` e `Checklist_Status` eram lidas 3× por carga),
+`mapaPerfis()` memoizado, `gravarLogs()` sem `getLastRow()` no laço, token do Gem sem
+fallback hardcoded e mock local anonimizado.
+
+**Medir de novo depois de publicar** (snippet no doc, rodável pela extensão Claude para
+Chrome) e comparar com a linha de base de 4.353 ms / 403 KB.
+
+### Bloco anterior — checklist marcável em visualização
 
 Feedback do Guilherme: não conseguia dar check nos itens do checklist. Causa-raiz: o modal
 abre em modo **visualização** quando se clica na linha da Lista ou no card da Home, e o
@@ -48,7 +64,8 @@ inalterados, console sem erros.
 
 | # | Pendência | Detalhe |
 |---|---|---|
-| 1 | **Publicar Nova versão** | Apps Script → Implantar → Gerenciar implantações → ✏️ → Nova versão. Cobre os commits `1299593`, `d79df61` e `8213b38`. Depois hard reload (Ctrl+Shift+R). Regra de ouro: **nunca** criar implantação nova. |
+| 1 | **Publicar Nova versão** | Apps Script → Implantar → Gerenciar implantações → ✏️ → Nova versão. `clasp push` já feito em 03/08 12:51 — cobre o fix do checklist (`2630914`) e a fase 1 de performance (`84ec1e8`). Depois hard reload (Ctrl+Shift+R). Regra de ouro: **nunca** criar implantação nova. |
+| 1b | ⚠️ **Definir `TOKEN_GEMINI`** | **Obrigatório agora**: o fallback hardcoded foi removido (o valor estava exposto em repo público). Sem a Script Property `TOKEN_GEMINI` definida, o `doPost` rejeita tudo com "Integração não configurada no servidor" — se o Gem do Gemini estiver em uso, ele para até você criar a propriedade com um valor novo. Apps Script → Configurações do projeto → Propriedades do script. |
 | 2 | **Jac retestar** | Confirmar que salvar edição em tarefa atribuída a ela não bloqueia mais no prazo, e testar o botão **Duplicar**. |
 | 3 | **Glaucia** | Testar em janela anônima (o "Olá, …" vazio vem de `Session.getActiveUser()` sem e-mail quando há várias contas Google logadas). Se o perfil não aparecer, rodar `adicionarUsuariosPiloto()` no Apps Script. |
 | 4 | **Repo da organização** | Criar repo **privado e vazio** `Unimed-CNU/cora-gestao-de-tarefas`. O remote `cnu` já está configurado localmente; depois é só `git push cnu main mvp-shadcn-piloto`. |
