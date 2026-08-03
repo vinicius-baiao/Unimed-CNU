@@ -1,15 +1,16 @@
 # HANDOFF — Cora. Gestão de Tarefas
 
-> Estado do projeto ao final da sessão de **03/08/2026** (atualizado no bloco do
-> feedback do Guilherme sobre o checklist).
+> Estado do projeto ao final da sessão de **03/08/2026** (feedback do Guilherme, Send-As do
+> taskcenter, sweep de débito técnico com a fase 1 de performance e remoção do Gem).
 > Ponto de partida para a próxima sessão: ler este arquivo + `CLAUDE.md` + `README.md`.
 > Manter atualizado ao fim de cada bloco de trabalho.
 
 ## Onde estamos
 
 - Branch de trabalho: **`mvp-shadcn-piloto`** (PR #3 aberto contra `main`, ainda não mergeado).
-- Último commit: `8213b38` — *fix: save bloqueado por prazo legado + feat: duplicar tarefa*.
-- Código já enviado ao Apps Script via `npx clasp push -f`.
+- Último commit: `5c95c24`. Publicado no Apps Script até `bcbe051` (push de 03/08 13:40).
+- Endpoints da carga inicial: `bootstrap` + `bootstrapApoio`, chamados em paralelo pelo front.
+- O Web App atende **somente GET** — o `doPost` saiu com a integração do Gem.
 - Frontend servido: **`tarefas-shadcn.html`** (constante `HTML_FILE` no `Code.gs`).
   `tarefas.html` continua no repo apenas como rollback.
 - Beta ativo com allowlist (`PILOTO_ATIVO = true`): Aurélio, Jacqueline, Guilherme,
