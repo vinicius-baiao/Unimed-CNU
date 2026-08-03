@@ -30,8 +30,19 @@ por execução no backend (`Tarefas` e `Checklist_Status` eram lidas 3× por car
 `mapaPerfis()` memoizado, `gravarLogs()` sem `getLastRow()` no laço, token do Gem sem
 fallback hardcoded e mock local anonimizado.
 
-**Medir de novo depois de publicar** (snippet no doc, rodável pela extensão Claude para
-Chrome) e comparar com a linha de base de 4.353 ms / 403 KB.
+**Medido depois de publicar — e a premissa estava errada.** O `bootstrap` **não** ficou mais
+rápido: mediana ~4,4 s contra ~3,1 s do modelo de 6 rotas, medidos lado a lado. Motivo: o
+Apps Script atende as requisições em paralelo de verdade, então o tempo de parede antigo era
+o da rota mais lenta, não a soma dos overheads; o `bootstrap` paga o overhead uma vez mas
+serializa as 4 leituras de aba.
+
+O que a mudança entregou de fato: tempo de servidor por carga de ~11,6 s → ~3,5 s (a quota é
+por tempo de execução e é compartilhada), contenção de ~30 → 5 execuções simultâneas com o
+piloto todo abrindo junto, primeiro render já completo e dados consistentes numa leitura só.
+
+Números e ressalvas em [`docs/DEBITO_TECNICO.md`](DEBITO_TECNICO.md). Atenção: as medições
+saturaram o script momentaneamente ("Failed to fetch" por alguns instantes) — evitar rajadas
+de teste com o piloto em uso.
 
 ### Bloco anterior — checklist marcável em visualização
 

@@ -297,5 +297,46 @@ Lista, modal em edição e o fix de hoje (checkbox marcável em visualização, 
 todos funcionando; save disparando `atualizarTarefa` + `salvarChecklist` + **um** `bootstrap`;
 console sem erros. Sintaxe do `Code.gs` validada com `node --check`.
 
-**Pendente:** repetir a medição no app publicado e comparar com os 4.353 ms / 403 KB da
-linha de base.
+## Medição pós-deploy — e a premissa que estava errada
+
+Medido no app publicado, mesma sessão e mesmo dia da linha de base. Dados de produção:
+38 tarefas, 34 itens de checklist, 41 usuários, 4 projetos. `bootstrap` devolve 28,7 KB.
+
+| Modelo | Amostras (ms) |
+|---|---|
+| Antigo (6 rotas em paralelo) | 2.812 · 3.084 · 3.197 |
+| Novo (`bootstrap`, 1 rota) | 4.718 · 3.220 · 4.363 |
+| `bootstrap` repetido, isolado | 8.167 (primeira pós-deploy) · 2.518 · 3.828 · 3.034 · 3.107 |
+
+**O bootstrap não ficou mais rápido. Na mediana, ficou pior.**
+
+A premissa da análise original estava errada. Eu tratei "6 execuções" como "6 pisos de
+overhead somados", mas o Apps Script atende as requisições **em paralelo de verdade** — o
+tempo de parede do modelo antigo era ≈ o da rota mais lenta (~3 s), com os outros cinco
+pisos pagos simultaneamente. O `bootstrap` paga o piso uma vez só, mas **serializa** as
+quatro leituras de aba dentro de uma execução. Resultado: latência equivalente ou pior.
+
+O que a mudança de fato entregou:
+
+- **Tempo de servidor consumido**: a soma das 6 rotas era ~11,6 s de execução por carga;
+  agora é ~3,5 s. A quota do Apps Script é por tempo total de execução e é **compartilhada**
+  entre os usuários do piloto, então isso é ganho real — só não é ganho de latência.
+- **Contenção com uso simultâneo**: 5 pessoas abrindo o app disparavam ~30 execuções
+  concorrentes; agora disparam 5.
+- **Primeiro render completo**: nome, perfil e filtro inicial chegam com os dados, sem a
+  tela pintar com e-mail cru e se corrigir depois.
+- **Consistência**: todos os dados vêm da mesma leitura, não de 6 fotos em momentos
+  diferentes.
+
+**Ressalvas honestas sobre esta medição:** variância enorme (2,5 s a 8,2 s para a mesma
+chamada), amostra pequena, e as próprias medições saturaram o script — as rodadas mais
+longas passaram a enfileirar, o que contamina comparações. Uma resposta de `bootstrap` veio
+com 3,1 KB em vez de 28,7 KB numa das tentativas e **não se reproduziu em 5 repetições**;
+provavelmente resposta de erro transitória sob saturação. O front trata isso (`d.erro` e
+`onerror` do JSONP), mas fica registrado.
+
+**Próximo passo proposto (não implementado):** modelo híbrido de 2 chamadas paralelas —
+`bootstrap` enxuto com o que a primeira tela precisa (perfil + tarefas + checklist) e uma
+segunda com o secundário (usuários + projetos). Aproveita o paralelismo que o Apps Script
+oferece de graça, sem voltar às 6 execuções. Tem chance de ficar abaixo dos dois modelos
+atuais, mas **só vale se medido** — foi exatamente o tipo de suposição que errei aqui.
