@@ -335,8 +335,50 @@ com 3,1 KB em vez de 28,7 KB numa das tentativas e **não se reproduziu em 5 rep
 provavelmente resposta de erro transitória sob saturação. O front trata isso (`d.erro` e
 `onerror` do JSONP), mas fica registrado.
 
-**Próximo passo proposto (não implementado):** modelo híbrido de 2 chamadas paralelas —
-`bootstrap` enxuto com o que a primeira tela precisa (perfil + tarefas + checklist) e uma
-segunda com o secundário (usuários + projetos). Aproveita o paralelismo que o Apps Script
-oferece de graça, sem voltar às 6 execuções. Tem chance de ficar abaixo dos dois modelos
-atuais, mas **só vale se medido** — foi exatamente o tipo de suposição que errei aqui.
+## Terceira medição — com usuários e projetos em cache
+
+Cache de `listarUsuarios`/`listarProjetos` publicado. Medido com uma chamada em voo por vez
+(ver "armadilha de medição" abaixo).
+
+| Modelo | Execuções | Amostras (ms) | Mediana |
+|---|---|---|---|
+| `bootstrap` com cache | 1 | 2.296 · 4.634 · 3.002 · 3.757 | ~3.400 |
+| Paralelo enxuto (5 rotas, com cache) | 5 | 2.388 · 2.209 | ~2.300 |
+| Paralelo original (6 rotas, sem cache) | 6 | 2.812 · 3.084 · 3.197 | ~3.100 |
+
+Detalhe das 5 rotas em paralelo, na melhor amostra: `getUsuario` 1.079, `listarProjetos`
+1.289 (cache), `listarUsuarios` 1.371 (cache), `listarTarefas` 2.147,
+`listarChecklist_Status` 2.208 — total 2.209 ms, ou seja, o tempo da mais lenta.
+
+**O cache ajudou** (bootstrap de ~4,4 s para ~3,4 s; rotas de lista para ~1,3 s, que é
+essencialmente só o piso de execução). **Mas o paralelo continua ~1 s à frente**, e o sinal se
+repetiu em duas sessões de medição independentes. Em latência, o paralelismo que o Apps Script
+dá de graça vence a consolidação numa execução.
+
+O balanço real, com números:
+
+| Critério | `bootstrap` (1 exec.) | Paralelo enxuto (5 exec.) |
+|---|---|---|
+| Espera do usuário | ~3,4 s | **~2,3 s** |
+| Tempo de servidor por carga | **~3,4 s** | ~8,5 s |
+| Execuções simultâneas por usuário | **1** | 5 |
+| Primeiro render completo | **sim** | não (nomes chegam depois) |
+
+Sobre a quota: ~8,5 s por carga, com 5 pessoas e ~20 cargas/dia cada, dá ~14 min/dia contra
+um limite de 90 min. **A quota não é gargalo no piloto** — o que muda a conclusão: neste
+tamanho, latência pesa mais que economia de execução.
+
+**Recomendação:** duas rotas em paralelo — `bootstrap` (perfil + tarefas) e uma segunda com
+checklist + usuários + projetos. Pelas medições das partes, cada uma fica em ~2,3-2,4 s e as
+duas em paralelo fecham em ~2,4 s, com 2 execuções em vez de 5 e mantendo o render único
+(o front espera as duas antes de pintar). Junta a latência do paralelo com a economia do
+consolidado.
+
+## Armadilha de medição (registrar para não repetir)
+
+1. **Rajadas saturam o script.** Sequências longas de chamadas levaram a `Failed to fetch` e
+   a uma resposta truncada (3,1 KB em vez de 28,7 KB). Medir com uma chamada em voo por vez.
+2. **Chamada pendurada envenena as seguintes.** Com um `fetch` zumbi de `bootstrap` em voo, a
+   chamada seguinte levou **24,6 s**; com o estado limpo, a mesma chamada levou 2,8 s. Se um
+   número vier absurdo, recarregar a página e repetir antes de acreditar nele.
+3. **Primeira execução após publicar é sempre pior** (recompilação + caches frios). Descartar.
