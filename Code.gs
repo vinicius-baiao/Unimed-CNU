@@ -111,6 +111,7 @@ function doGet(e) {
     } else {
     switch (acao) {
       case 'bootstrap':              resultado = bootstrap();                   break;
+      case 'bootstrapApoio':         resultado = bootstrapApoio();              break;
       case 'listarTarefas':          resultado = listarTarefas();               break;
       case 'criarTarefa':            resultado = criarTarefa(dados);            break;
       case 'atualizarTarefa':        resultado = atualizarTarefa(dados);        break;
@@ -459,11 +460,20 @@ function parsePrazoLocal(val) {
   return new Date(val);
 }
 
-// ── bootstrap ─────────────────────────────────────────────────
-// Carga inicial numa única execução. Medição de 03/08/2026: as 6 rotas
-// separadas custavam 4,35 s, sendo ~1,2-1,9 s de overhead fixo POR execução
-// (getUsuario devolve 0,1 KB e levava 1,2 s) mais contenção entre as chamadas
-// concorrentes. Aqui cada aba é lida uma vez (via lerAba) e tudo volta junto.
+// ── Carga inicial: duas rotas, chamadas em paralelo pelo front ────
+// Histórico das medições (03/08/2026), porque a intuição erra aqui:
+//   6 rotas separadas .......... ~3,1 s   (6 execuções)
+//   1 rota consolidada ......... ~3,4 s   (1 execução)  ← consolidar não acelerou
+//   5 rotas em paralelo ........ ~2,3 s   (5 execuções)
+// O Apps Script atende requisições em paralelo, então o tempo de parede é o da
+// rota mais lenta — juntar tudo numa execução só serializa as leituras. Por
+// outro lado, 5 execuções gastam ~8,5 s de tempo de servidor por carga.
+// Estas duas rotas são o meio: o front dispara as duas juntas (~2,4 s, o tempo
+// da mais lenta) e paga 2 execuções.
+//
+// A divisão segue o custo, não o assunto: `Tarefas` e `Checklist_Status` são as
+// leituras pesadas, então ficam uma em cada rota. Usuários e projetos vêm do
+// CacheService, quase de graça.
 function bootstrap() {
   var email  = Session.getActiveUser().getEmail();
   var perfil = getPerfil(email);
@@ -474,10 +484,15 @@ function bootstrap() {
       admin:       perfil === 'Admin',
       podeExcluir: perfil === 'Admin' || perfil === 'Gestor'
     },
-    tarefas:   listarTarefas().tarefas,
+    tarefas: listarTarefas().tarefas
+  };
+}
+
+function bootstrapApoio() {
+  return {
     checklist: listarChecklist_Status().itens,
-    projetos:  listarProjetos().projetos,
-    usuarios:  listarUsuarios().usuarios
+    usuarios:  listarUsuarios().usuarios,
+    projetos:  listarProjetos().projetos
   };
 }
 

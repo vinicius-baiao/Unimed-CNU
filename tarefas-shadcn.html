@@ -1059,39 +1059,48 @@ function modalTemMudancas() {
   return !!btn && btn.style.display !== 'none' && !btn.disabled;
 }
 
-// Carga inicial numa chamada só. Antes eram 6 execuções do Apps Script
-// (perfil, usuários, tarefas, templates, checklists, projetos) somando 4,35 s
-// medidos, com o overhead fixo de cada execução (~1,2-1,9 s) pesando mais que
-// os dados. Agora o backend devolve tudo junto em 'bootstrap'.
+// Carga inicial: duas chamadas em paralelo, render só quando as duas voltam.
+// Medido em 03/08/2026: 6 rotas separadas ~3,1 s; tudo numa rota só ~3,4 s
+// (consolidar serializa as leituras e não acelerou); 5 rotas em paralelo ~2,3 s.
+// O Apps Script atende em paralelo, então o custo é o da rota mais lenta —
+// duas rotas equilibradas dão a latência do paralelo com 2 execuções em vez
+// de 5. Esperar as duas mantém o render único, com nome e perfil já prontos.
 function carregarTudo() {
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
 
-  chamarAPI({ acao: 'bootstrap' }, function(d) {
-    if (d.erro) {
+  var pendentes = 2;
+  var d1 = null, d2 = null, erroCritico = null, erroApoio = null;
+
+  function aplicar() {
+    if (--pendentes > 0) return;
+
+    if (erroCritico) {
       document.getElementById('board').innerHTML =
-        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(d.erro) + '</div>';
+        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(erroCritico) + '</div>';
       return;
     }
 
-    tarefas  = d.tarefas  || [];
-    projetos = d.projetos || [];
-    usuarios = d.usuarios || [];
-
-    cklStatus = {};
-    (d.checklist || []).forEach(function(l) {
-      var tid = String(l.ID_Tarefa);
-      if (!cklStatus[tid]) cklStatus[tid] = [];
-      cklStatus[tid].push(l);
-    });
-
-    var u = d.usuario || {};
+    tarefas = (d1 && d1.tarefas) || [];
+    var u = (d1 && d1.usuario) || {};
     currentUser            = u.email       || '';
     currentUserIsAdmin     = u.admin       || false;
     currentUserPodeExcluir = u.podeExcluir || false;
     currentUserPerfil      = u.perfil      || '';
     if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
-    renderUserBadge();
 
+    // Dados de apoio: se falharem, a tela ainda abre — sem nomes resolvidos e
+    // sem lista de projetos, mas com as tarefas, que é o que importa.
+    projetos = (d2 && d2.projetos) || [];
+    usuarios = (d2 && d2.usuarios) || [];
+    cklStatus = {};
+    ((d2 && d2.checklist) || []).forEach(function(l) {
+      var tid = String(l.ID_Tarefa);
+      if (!cklStatus[tid]) cklStatus[tid] = [];
+      cklStatus[tid].push(l);
+    });
+    if (erroApoio) toast('Alguns dados não carregaram: ' + erroApoio, true);
+
+    renderUserBadge();
     aplicarFiltroInicial();
     if (modoAtual === 'home') {
       renderHome();
@@ -1099,6 +1108,15 @@ function carregarTudo() {
       popularFiltros();
       renderView();
     }
+  }
+
+  chamarAPI({ acao: 'bootstrap' }, function(d) {
+    if (d.erro) erroCritico = d.erro; else d1 = d;
+    aplicar();
+  });
+  chamarAPI({ acao: 'bootstrapApoio' }, function(d) {
+    if (d.erro) erroApoio = d.erro; else d2 = d;
+    aplicar();
   });
 }
 
@@ -2365,11 +2383,13 @@ function arquivarProjetoById(id, nome) {
     var resp;
     switch (acao) {
       case 'bootstrap': resp = {
-        usuario:   { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
-        tarefas:   MOCK_TAREFAS,
+        usuario: { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
+        tarefas: MOCK_TAREFAS
+      }; break;
+      case 'bootstrapApoio': resp = {
         checklist: MOCK_CKL,
-        projetos:  MOCK_PROJETOS,
-        usuarios:  MOCK_USUARIOS
+        usuarios:  MOCK_USUARIOS,
+        projetos:  MOCK_PROJETOS
       }; break;
       case 'getUsuario': resp = { email: EU, perfil: 'Admin', admin: true, podeExcluir: true }; break;
       case 'listarUsuarios': resp = { usuarios: MOCK_USUARIOS }; break;
