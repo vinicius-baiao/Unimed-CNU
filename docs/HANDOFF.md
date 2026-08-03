@@ -17,7 +17,25 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
-### Último bloco — fase 1 de performance (carga inicial)
+### Último bloco — performance da carga inicial (fechado)
+
+**Resultado: abertura do app de 4.350 ms para 2.850 ms (-35%), tempo de servidor por carga de
+~11,6 s para ~4,6 s (-60%).** Topologia no ar: duas rotas em paralelo — `bootstrap`
+(perfil + tarefas + checklist) e `bootstrapApoio` (usuários + projetos, ambos do
+`CacheService`). Mais o fim da chamada morta `listarTemplates`, cache de leitura por execução
+no backend e `gravarLogs` sem `getLastRow()` no laço.
+
+Percurso completo, com as duas previsões que erraram e o placar das cinco topologias
+testadas, em [`docs/DEBITO_TECNICO.md`](DEBITO_TECNICO.md). Resumo da lição: **num backend que
+já paraleliza, consolidar chamadas economiza quota, não tempo** — o overhead por execução é
+pago em paralelo, então o tempo de parede é o da rota mais lenta.
+
+⚠️ **Alavanca conhecida, caso alguém reclame da abertura:** 5 rotas paralelas medem ~0,5 s
+mais rápido que as 2 atuais, ao custo de 1,8× de tempo de servidor. Optei pelas 2 porque
+0,5 s cabe na variância da própria rota crítica e o consumo pela metade escala melhor com o
+piloto crescendo. Trocar é uma decisão de uma linha no front e uma no backend.
+
+### Bloco anterior — fase 1 de performance (histórico)
 
 Sweep de débito técnico virou implementação no mesmo dia. Medição no app publicado mostrou
 que abrir o app custava **4.353 ms**, quase tudo esperando **6 execuções** do Apps Script, e

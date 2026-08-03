@@ -374,6 +374,50 @@ duas em paralelo fecham em ~2,4 s, com 2 execuções em vez de 5 e mantendo o re
 (o front espera as duas antes de pintar). Junta a latência do paralelo com a economia do
 consolidado.
 
+## Placar final das topologias — 03/08/2026
+
+Todas medidas no mesmo dia, no app publicado, com uma medição em voo por vez. As três últimas
+já contam com o cache de usuários/projetos e sem a chamada morta de templates.
+
+| Topologia | Execuções | Espera do usuário | Tempo de servidor |
+|---|---|---|---|
+| 6 rotas paralelas (ponto de partida) | 6 | ~4.350 ms | ~11,6 s |
+| 1 rota consolidada | 1 | ~3.400 ms | ~3,4 s |
+| 2 rotas, divisão desbalanceada | 2 | ~3.600 ms | ~5,5 s |
+| **2 rotas equilibradas (no ar)** | **2** | **~2.850 ms** | **~4,6 s** |
+| 5 rotas paralelas | 5 | ~2.300 ms | ~8,5 s |
+
+**Resultado do dia: 4.350 ms → 2.850 ms na abertura do app (-35%), com o tempo de servidor
+por carga caindo de ~11,6 s para ~4,6 s (-60%).**
+
+**O ótimo de latência medido não é o que está no ar.** As 5 rotas paralelas são ~0,5 s mais
+rápidas, porque o Apps Script paraleliza tão bem que espalhar as leituras em execuções
+distintas ganha de agrupá-las — as duas leituras pesadas (`Tarefas` e `Checklist_Status`)
+rodam simultaneamente em vez de somar. O preço é 1,8× mais tempo de servidor e 5 execuções
+concorrentes por usuário em vez de 2.
+
+Ficou com as 2 rotas por julgamento de valor, não por medição: 0,5 s está dentro da variância
+observada na própria rota crítica (2.415-3.088 ms), enquanto metade do consumo de servidor é
+diferença estrutural que só melhora quando o piloto crescer. **Se alguém reclamar da abertura,
+trocar para 5 rotas é a alavanca conhecida** — e está medida.
+
+**Parar aqui é deliberado.** O retorno marginal caiu para ~0,5 s por rodada de
+publicação manual, e cada rodada depende de o Aurélio publicar a Nova versão. Os itens que
+sobraram no backlog (P2 fontes, P3 gravação incremental do checklist, D3 mapa de colunas)
+valem mais que os próximos milissegundos de topologia.
+
+## Lição que atravessou as três medições
+
+A intuição de "menos chamadas = mais rápido" está errada num backend que já paraleliza. O
+overhead por execução (~1,2-1,9 s aqui) é pago **em paralelo** quando as chamadas são
+simultâneas, então o tempo de parede é o da rota mais lenta, não a soma. Consolidar troca
+paralelismo por serialização: economiza quota, não tempo. Duas previsões minhas erraram por
+ignorar isso, e a terceira só acertou depois de medir as partes.
+
+Corolário prático: ao dividir rotas, contar as leituras **de dentro das funções**, não pelo
+nome delas. `listarChecklist_Status()` lê `Tarefas` sem anunciar no nome, e foi isso que
+desbalanceou a primeira divisão.
+
 ## Armadilha de medição (registrar para não repetir)
 
 1. **Rajadas saturam o script.** Sequências longas de chamadas levaram a `Failed to fetch` e
