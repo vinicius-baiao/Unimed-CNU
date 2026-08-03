@@ -123,21 +123,49 @@ legado). Há funções puras fáceis de cobrir sem framework: `parseData`, `isoD
 **Correção:** um arquivo `testes.html` que carrega as funções e imprime verde/vermelho, mais
 um punhado de casos por função. Sem npm, sem build — coerente com o projeto.
 
-## Instrumentação sugerida antes da fase 1
+## Instrumentação antes da fase 1
 
-Para trocar estimativa por número, rodar no console do app publicado (hard reload antes):
+Para trocar estimativa por número. **Só leitura** — nenhuma rota de escrita é chamada.
+Rodar no console do app publicado, após hard reload (Ctrl+Shift+R).
+
+Não é possível rodar isto por ferramenta: o Web App exige sessão Google autenticada, e o
+browser interno do Claude Code cai na tela de login (verificado em 03/08/2026). As opções são
+colar no console ou instalar a extensão Claude para Chrome, que dá acesso ao Chrome já logado.
 
 ```js
-(function(){ var t0=Date.now(), n=0;
-  var orig=chamarAPI;
-  window.chamarAPI=function(p,cb){ var s=Date.now(), a=p.acao; n++;
-    orig(p,function(d){ console.log(a, (Date.now()-s)+'ms'); cb(d); }); };
-  setTimeout(function(){ console.log('total', n, 'chamadas em', (Date.now()-t0)+'ms'); }, 15000);
-  carregarTudo();
+(async function(){
+  const nav = performance.getEntriesByType('navigation')[0] || {};
+  const rotas = ['getUsuario','listarUsuarios','listarTarefas','listarTemplates','listarChecklist_Status','listarProjetos'];
+  const t = a => new Promise(r => { const s=Date.now(); chamarAPI({acao:a}, d => r({rota:a, ms:Date.now()-s, erro:(d&&d.erro)||''})); });
+  const t0 = Date.now();
+  const paralelo = await Promise.all(rotas.map(t));
+  const totalParalelo = Date.now() - t0;
+  const isolado = [];
+  for (const r of rotas) isolado.push(await t(r));
+  const recursos = performance.getEntriesByType('resource')
+    .filter(e => e.name.indexOf('acao=') > -1)
+    .map(e => ({ rota:(e.name.match(/acao=([^&]+)/)||[])[1], ms:Math.round(e.duration), bytes:e.transferSize||0 }));
+  const out = {
+    htmlInicial: { descomprimidoKB: Math.round((nav.decodedBodySize||0)/1024), transferidoKB: Math.round((nav.transferSize||0)/1024), ms: Math.round(nav.duration||0) },
+    seisEmParalelo: { totalMs: totalParalelo, porRota: paralelo },
+    isolado, recursos
+  };
+  console.log(JSON.stringify(out, null, 2));
+  return out;
 })()
 ```
 
-Isso dá o custo por rota e o total da carga — a base para dizer se P1 vale antes de P2.
+Como ler o resultado:
+
+- `htmlInicial.descomprimidoKB` — o peso do HTML com as fontes base64 dentro. Quantifica P2:
+  se vier perto de 380 KB, os ~254 KB de fonte são a maior parte da primeira tela.
+  `transferidoKB` mostra quanto o gzip recupera (pouco, no caso do woff2 já comprimido).
+- `seisEmParalelo.totalMs` — o custo real da carga inicial hoje, com as 6 rotas concorrendo
+  pela mesma quota. É o número que P1 promete derrubar.
+- `isolado` — custo de cada rota sozinha. Se a soma for muito menor que o paralelo, há
+  contenção de quota; se for parecida, o gargalo é a leitura das abas.
+- `recursos[].bytes` — payload de cada rota; indica se algum JSON está grande demais para
+  caber num GET quando a base crescer (relevante para D5).
 
 ## Plano em fases
 
