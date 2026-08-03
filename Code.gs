@@ -890,10 +890,22 @@ function avisarMarcadoChecklist(dados) {
     return { erro: 'Este colega não está marcado em nenhum item desta tarefa.' };
   }
 
-  // Anti-repetição: cobre duplo-clique e reabertura do modal. A chave é
-  // reservada antes do envio (protege clique duplo e execuções concorrentes),
-  // mas passa a significar "envio em andamento ou concluído com sucesso": se
-  // o envio falhar, a chave é removida antes de retornar o erro, para que o
+  // Nome da tarefa vem da planilha, não do front. Lido antes da reserva da
+  // chave anti-repetição: se essa leitura falhar (erro transitório do Sheets),
+  // a exceção sobe antes de qualquer chave ser reservada, então não há chave
+  // presa por 60 s sem e-mail enviado.
+  var nomeTarefa = '';
+  var rowsT = lerAba(ABA_TAREFAS) || [];
+  for (var j = 1; j < rowsT.length; j++) {
+    if (String(rowsT[j][COL.ID]) === idTarefa) { nomeTarefa = String(rowsT[j][COL.TAREFA]); break; }
+  }
+
+  // Anti-repetição: cobre duplo-clique e reabertura do modal. A chave só é
+  // reservada aqui porque tudo que pode falhar antes do envio (validações,
+  // verificação de marcação, leitura do nome da tarefa) já aconteceu; a partir
+  // daqui, só resta o envio em si, protegido pelo try/catch abaixo. A chave
+  // passa a significar "envio em andamento ou concluído com sucesso": se o
+  // envio falhar, a chave é removida antes de retornar o erro, para que o
   // usuário não fique 60 s travado em "já enviado" quando nada foi enviado.
   var chaveCache = 'aviso_' + idTarefa + '_' + email;
   var cache = null;
@@ -905,13 +917,6 @@ function avisarMarcadoChecklist(dados) {
       }
       cache.put(chaveCache, '1', 60);
     } catch (e) {}
-  }
-
-  // Nome da tarefa vem da planilha, não do front.
-  var nomeTarefa = '';
-  var rowsT = lerAba(ABA_TAREFAS) || [];
-  for (var j = 1; j < rowsT.length; j++) {
-    if (String(rowsT[j][COL.ID]) === idTarefa) { nomeTarefa = String(rowsT[j][COL.TAREFA]); break; }
   }
 
   try {
