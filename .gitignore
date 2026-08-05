@@ -11,3 +11,6 @@ Thumbs.db
 # Editor
 .vscode/
 *.swp
+
+# Impeccable: config de exceções é versionada; cache de sessão não
+.impeccable/hook.cache.json
