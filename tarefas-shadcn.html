@@ -459,6 +459,8 @@
     .ckl-add-btn { flex-shrink: 0; font-size: 1.1rem; padding: 0 14px; }
     .ckl-progress { margin-top: 10px; font-size: .8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
     .ckl-progress .ckl-bar { flex: 1; height: 6px; }
+    .ckl-avisos { gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .ckl-aviso-btn { font-size: .78rem; height: 28px; padding: 0 10px; flex-shrink: 0; }
 
     /* ── Histórico ── */
     .hist-addform { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
@@ -858,6 +860,7 @@
               <span id="cklProgText"></span>
               <div class="ckl-bar"><div class="ckl-bar-fill" id="cklProgFill"></div></div>
             </div>
+            <div class="ckl-avisos" id="cklAvisos" style="display:none"></div>
             <div class="ckl-add-row">
               <input type="text" id="cklNovoItem" placeholder="Adicionar item e pressionar Enter…"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarItemCkl();}">
@@ -2018,7 +2021,7 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   sel.addEventListener('change', function() {
     div.dataset.responsavel = sel.value;
     sel.title = sel.value ? nomeDeUsuario(sel.value) : 'Atribuir este item a um colega';
-    if (typeof renderAvisosCkl === 'function') renderAvisosCkl();
+    renderAvisosCkl();
     if (modalModo === 'view') salvarCklImediato();
     else verificarMudancasModal();
   });
@@ -2044,6 +2047,7 @@ function adicionarItemCkl() {
 }
 
 function atualizarProgressoCkl() {
+  renderAvisosCkl();
   var itens  = document.querySelectorAll('#cklItems .ckl-item');
   var progEl = document.getElementById('cklProgress');
   if (!itens.length) { progEl.style.display = 'none'; return; }
@@ -2071,6 +2075,51 @@ function sincronizarCklLocal(idTarefa) {
     });
   });
   cklStatus[String(idTarefa)] = arr;
+}
+
+// Um botão por colega marcado na checklist. O aviso é sempre manual: até
+// 15/07/2026 o backend notificava a cada salvamento e virava spam.
+function renderAvisosCkl() {
+  var wrap = document.getElementById('cklAvisos');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Tarefa nova ainda não tem ID: não há o que avisar.
+  if (!modalTarefaAtual) { wrap.style.display = 'none'; return; }
+
+  var emails = [];
+  document.querySelectorAll('#cklItems .ckl-item').forEach(function(el) {
+    var e = el.dataset.responsavel;
+    if (e && emails.indexOf(e) === -1) emails.push(e);
+  });
+  if (!emails.length) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'flex';
+  emails.forEach(function(email) {
+    var b = document.createElement('button');
+    b.type      = 'button';
+    b.className = 'btn btn-ghost ckl-aviso-btn';
+    b.textContent = 'Avisar ' + nomeDeUsuario(email).split(' ')[0];
+    b.title     = 'Enviar e-mail para ' + email + ' com os itens atribuídos a ele nesta tarefa';
+    b.addEventListener('click', function() { avisarColega(email, b); });
+    wrap.appendChild(b);
+  });
+}
+
+function avisarColega(email, btn) {
+  var original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  chamarAPI({ acao: 'avisarMarcadoChecklist', dados: { idTarefa: String(modalTarefaAtual.ID), email: email } }, function(d) {
+    if (d.erro) {
+      btn.disabled = false;
+      btn.textContent = original;
+      toast('Erro: ' + d.erro, true);
+      return;
+    }
+    btn.textContent = 'Aviso enviado ✓';
+    toast('Aviso enviado para ' + nomeDeUsuario(email) + '.', false, true);
+  });
 }
 
 // Marcar item em modo visualização salva na hora, sem passar por Editar/Salvar.
@@ -2426,6 +2475,7 @@ function arquivarProjetoById(id, nome) {
       case 'criarTarefa': resp = { sucesso: true, id: 99 }; break;
       case 'criarProjeto': resp = { sucesso: true, id: 99 }; break;
       case 'adicionarInteracao': resp = { sucesso: true, id: 99 }; break;
+      case 'avisarMarcadoChecklist': resp = { sucesso: true, itens: 1 }; break;
       default: resp = { sucesso: true };
     }
     setTimeout(function () { callback(resp); }, 40);
