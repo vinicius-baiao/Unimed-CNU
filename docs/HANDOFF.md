@@ -32,9 +32,25 @@ e o código dela saíram.
 ⚠️ **Lembrete de comportamento:** atribuir um item a alguém **dá a essa pessoa acesso de
 leitura à tarefa inteira** (`idsTarefasVisiveis` trata "marcado em item" como critério).
 
-**Pendente de teste real** (o mock não exercita o backend): atribuir um item a si mesmo,
-clicar em avisar e conferir se o e-mail chega pelo `taskcenter@`; depois confirmar que avisar
-um e-mail não marcado é recusado.
+**Importante saber ao usar:** o botão de avisar aparece **só em modo visualização**. Em edição
+a marcação ainda não está na planilha, e a rota valida contra ela — o botão ficaria recusando.
+Fluxo certo: montar/atribuir em edição, **Salvar**, e avisar na visualização.
+
+**Pendente de teste real** (o mock não exercita o backend). As três validações da rota, uma a
+uma:
+
+1. **Caminho felizardo** — atribuir um item a si mesmo, salvar, clicar em avisar; o e-mail deve
+   chegar pelo `taskcenter@` com o item listado.
+2. **Colega não marcado** — chamar a rota com um e-mail que não está marcado na tarefa; deve
+   recusar com "Este colega não está marcado em nenhum item desta tarefa."
+3. **Visibilidade** — Guilherme (Usuário Padrão) chamando a rota com o ID de uma tarefa que ele
+   não enxerga; deve recusar com "Sem permissão para avisar nesta tarefa." Esta é a validação
+   que impede disparar e-mail sobre tarefa de outra pessoa, e é a que nenhuma verificação local
+   alcança.
+
+Já conferido antes de publicar: as 16 marcações existentes em produção usam só domínios
+permitidos, então a validação nova de domínio no `salvarChecklist` não bloqueia o save de
+nenhuma tarefa legada.
 
 ### Último bloco — performance da carga inicial (fechado)
 
