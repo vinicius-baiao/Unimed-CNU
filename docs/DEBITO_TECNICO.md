@@ -69,6 +69,7 @@ lenta que o registrado aqui.
 | ~~D1~~ ✅ | Mock com nomes/e-mails reais viaja no HTML de produção | Privacidade | 1 | 2 | 1 | **15** |
 | P6 ↓ | `carregarTudo()` recarrega tudo depois de cada save | Performance | 3 | 2 | 3 | **15** |
 | D5 | JSONP em vez de `google.script.run` | Arquitetura | 3 | 3 | 4 | **12** |
+| P7 | `.ckl-bar-fill` anima `width` (layout thrash); migrar para `transform: scaleX()` | Performance | 2 | 1 | 2 | **12** |
 
 ## Detalhamento dos itens de topo
 
@@ -181,6 +182,19 @@ legado). Há funções puras fáceis de cobrir sem framework: `parseData`, `isoD
 
 **Correção:** um arquivo `testes.html` que carrega as funções e imprime verde/vermelho, mais
 um punhado de casos por função. Sem npm, sem build — coerente com o projeto.
+
+### P7 — `.ckl-bar-fill` anima `width` (score 12)
+
+A barra de progresso do checklist (`atualizarProgressoCkl()`, no modal, e a barra inline
+equivalente gerada nos cards) anima a propriedade `width` a cada mudança de progresso. Isso
+força o browser a recalcular layout a cada frame (layout thrash) em vez de só recompor.
+
+**Correção:** migrar para `transform: scaleX()` com `transform-origin: left`, que anima só em
+composição. Mexe em três lugares: o CSS da `.ckl-bar-fill`, `atualizarProgressoCkl()` (que hoje
+escreve `fill.style.width`) e a barra inline gerada nos cards. Este é o item que a exceção
+`layout-transition` em `.impeccable/config.json` (linha sobre `.ckl-bar-fill`, `tarefas-shadcn.html:309`)
+cobre — a regra do hook de design está suprimida neste arquivo justamente para não reabrir esta
+divida a cada varredura.
 
 ## Instrumentação antes da fase 1
 

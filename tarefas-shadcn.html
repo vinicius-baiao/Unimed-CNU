@@ -2022,7 +2022,7 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   });
   // Marcação de alguém que não está mais na aba Usuários: cria a opção mesmo
   // assim, senão o select viria vazio e o próximo save apagaria a marcação.
-  if (responsavel && !usuarios.some(function(u) { return u.email === responsavel; })) {
+  if (responsavel && !usuarios.some(function(u) { return String(u.email).toLowerCase() === String(responsavel).toLowerCase(); })) {
     var oExtra = document.createElement('option');
     oExtra.value = responsavel;
     oExtra.textContent = responsavel;
@@ -2099,6 +2099,10 @@ function renderAvisosCkl() {
   // Tarefa nova ainda não tem ID: não há o que avisar.
   if (!modalTarefaAtual) { wrap.style.display = 'none'; return; }
 
+  // Em edição a marcação ainda não está na planilha e a rota (que valida contra
+  // ela) recusaria; avisar é ação de visualização, depois de salvar.
+  if (modalModo !== 'view') { wrap.style.display = 'none'; return; }
+
   var emails = [];
   document.querySelectorAll('#cklItems .ckl-item').forEach(function(el) {
     var e = el.dataset.responsavel;
@@ -2128,20 +2132,18 @@ function renderAvisosCkl() {
 }
 
 function avisarColega(email, btn) {
-  var original = btn.textContent;
   cklAvisos[email] = 'enviando';
   btn.disabled = true;
   btn.textContent = 'Enviando…';
   chamarAPI({ acao: 'avisarMarcadoChecklist', dados: { idTarefa: String(modalTarefaAtual.ID), email: email } }, function(d) {
     if (d.erro) {
       delete cklAvisos[email];
-      btn.disabled = false;
-      btn.textContent = original;
+      renderAvisosCkl();
       toast('Erro: ' + d.erro, true);
       return;
     }
     cklAvisos[email] = 'enviado';
-    btn.textContent = 'Aviso enviado ✓';
+    renderAvisosCkl();
     toast('Aviso enviado para ' + nomeDeUsuario(email) + '.', false, true);
   });
 }
