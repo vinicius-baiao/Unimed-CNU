@@ -940,6 +940,7 @@ var modalModo        = 'view';   // 'view' | 'edit' | 'create' — em view o che
 var cklSalvando      = false;    // envio em curso (a aba inteira é reescrita no backend)
 var cklPendente      = false;    // clique durante o envio: reenvia ao terminar
 var cklAvisos        = {};       // email -> 'enviando' | 'enviado'; zerado ao abrir o modal
+var cklAvisosTarefa  = '';       // ID da tarefa a que o registro acima pertence
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
@@ -1802,7 +1803,11 @@ function abrirModal(tarefa, modo) {
   var itensEl = document.getElementById('cklItems');
   itensEl.innerHTML = '';
   document.getElementById('cklNovoItem').value = '';
-  cklAvisos = {};
+  // O feedback de aviso pertence à tarefa aberta, não à chamada de abrirModal:
+  // entrarModoEdicao() reabre o modal na MESMA tarefa sem fechá-lo, e ali o
+  // estado precisa sobreviver, senão o botão volta clicável e reenvia o e-mail.
+  var idModal = tarefa ? String(tarefa.ID) : '';
+  if (idModal !== cklAvisosTarefa) { cklAvisos = {}; cklAvisosTarefa = idModal; }
   if (tarefa) {
     var ckl = (cklStatus[String(tarefa.ID)] || []).slice()
       .sort(function(a, b) { return (a.Ordem || 0) - (b.Ordem || 0); });
@@ -1895,7 +1900,11 @@ function duplicarTarefa() {
   });
 }
 
-function fecharModal()      { document.getElementById('overlay').classList.remove('open'); }
+function fecharModal()      {
+  document.getElementById('overlay').classList.remove('open');
+  cklAvisos = {};
+  cklAvisosTarefa = '';
+}
 
 // Fechar/Cancelar com guarda: se houver alterações não salvas, confirma o descarte.
 function tentarFecharModal() {
