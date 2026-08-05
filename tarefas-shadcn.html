@@ -939,6 +939,7 @@ var modalTarefaAtual = null;
 var modalModo        = 'view';   // 'view' | 'edit' | 'create' — em view o checklist salva na hora
 var cklSalvando      = false;    // envio em curso (a aba inteira é reescrita no backend)
 var cklPendente      = false;    // clique durante o envio: reenvia ao terminar
+var cklAvisos        = {};       // email -> 'enviando' | 'enviado'; zerado ao abrir o modal
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
@@ -1801,6 +1802,7 @@ function abrirModal(tarefa, modo) {
   var itensEl = document.getElementById('cklItems');
   itensEl.innerHTML = '';
   document.getElementById('cklNovoItem').value = '';
+  cklAvisos = {};
   if (tarefa) {
     var ckl = (cklStatus[String(tarefa.ID)] || []).slice()
       .sort(function(a, b) { return (a.Ordem || 0) - (b.Ordem || 0); });
@@ -2099,7 +2101,16 @@ function renderAvisosCkl() {
     var b = document.createElement('button');
     b.type      = 'button';
     b.className = 'btn btn-ghost ckl-aviso-btn';
-    b.textContent = 'Avisar ' + nomeDeUsuario(email).split(' ')[0];
+    var estado = cklAvisos[email];
+    if (estado === 'enviado') {
+      b.textContent = 'Aviso enviado ✓';
+      b.disabled    = true;
+    } else if (estado === 'enviando') {
+      b.textContent = 'Enviando…';
+      b.disabled    = true;
+    } else {
+      b.textContent = 'Avisar ' + nomeDeUsuario(email).split(' ')[0];
+    }
     b.title     = 'Enviar e-mail para ' + email + ' com os itens atribuídos a ele nesta tarefa';
     b.addEventListener('click', function() { avisarColega(email, b); });
     wrap.appendChild(b);
@@ -2108,15 +2119,18 @@ function renderAvisosCkl() {
 
 function avisarColega(email, btn) {
   var original = btn.textContent;
+  cklAvisos[email] = 'enviando';
   btn.disabled = true;
   btn.textContent = 'Enviando…';
   chamarAPI({ acao: 'avisarMarcadoChecklist', dados: { idTarefa: String(modalTarefaAtual.ID), email: email } }, function(d) {
     if (d.erro) {
+      delete cklAvisos[email];
       btn.disabled = false;
       btn.textContent = original;
       toast('Erro: ' + d.erro, true);
       return;
     }
+    cklAvisos[email] = 'enviado';
     btn.textContent = 'Aviso enviado ✓';
     toast('Aviso enviado para ' + nomeDeUsuario(email) + '.', false, true);
   });
