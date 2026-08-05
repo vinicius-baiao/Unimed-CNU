@@ -16,6 +16,11 @@ portal interno (Google Sites) e acessível por qualquer pessoa do domínio autor
 - **Lista** ordenável com os mesmos filtros;
 - **Filtros** por projeto e responsável (sidebar), busca por tarefa/projeto/responsável/observações;
 - **Checklists** por tarefa com barra de progresso;
+- **Atribuição de itens**: cada item de checklist pode ser atribuído a um colega
+  (`<select>` no item, ativo também em modo visualização). Atribuir **dá a essa pessoa
+  acesso de leitura à tarefa**, porque a regra de visibilidade considera quem está marcado.
+  O aviso por e-mail é **manual**, pelo botão "Avisar `<Nome>`" abaixo da checklist — nunca
+  automático, para não renotificar a cada salvamento;
 - **Notificações por e-mail** (atribuição, reatribuição, lembrete D-1) enviadas como
   `taskcenter@unimedcnu.coop.br`;
 - **Eventos no Google Calendar** no prazo da tarefa;

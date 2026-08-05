@@ -18,6 +18,24 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
+### Último bloco — marcação de colegas em itens de checklist
+
+Feature reativada (estava desligada desde 15/07 pelo commit `0a08c3a`, por spam de e-mail).
+Spec: [`docs/superpowers/specs/2026-08-03-marcacao-colegas-checklist-design.md`](superpowers/specs/2026-08-03-marcacao-colegas-checklist-design.md).
+
+Cada item tem um `<select>` de colega, ativo em visualização e em edição; em visualização
+salva na hora. Abaixo da checklist, um botão por pessoa marcada envia um e-mail com os itens
+dela. **Nenhuma notificação automática** — a antiga renotificava todos a cada save, e hoje
+seria pior porque o save ocorre a cada clique de checkbox. A flag `CHECKLIST_MARCACAO_ATIVA`
+e o código dela saíram.
+
+⚠️ **Lembrete de comportamento:** atribuir um item a alguém **dá a essa pessoa acesso de
+leitura à tarefa inteira** (`idsTarefasVisiveis` trata "marcado em item" como critério).
+
+**Pendente de teste real** (o mock não exercita o backend): atribuir um item a si mesmo,
+clicar em avisar e conferir se o e-mail chega pelo `taskcenter@`; depois confirmar que avisar
+um e-mail não marcado é recusado.
+
 ### Último bloco — performance da carga inicial (fechado)
 
 **Resultado: abertura do app de 4.350 ms para 2.850 ms (-35%), tempo de servidor por carga de

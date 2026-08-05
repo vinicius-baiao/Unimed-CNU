@@ -48,6 +48,7 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 | `listarTemplates` | `listarTemplates()` | Templates de checklist agrupados por `ID_Template` (⚠️ fora da carga inicial: o front não consome) |
 | `listarChecklist_Status` | `listarChecklist_Status()` | Estado dos itens de checklist por tarefa |
 | `salvarChecklist` | `salvarChecklist(dados)` | Substitui (remove + regrava) os itens de uma tarefa |
+| `avisarMarcadoChecklist` | `avisarMarcadoChecklist(dados)` | Envia e-mail manual ao colega marcado, com os itens dele naquela tarefa (valida visibilidade, domínio e se ele está marcado) |
 | `listarInteracoes` | `listarInteracoes(dados)` | Histórico de interações de uma tarefa |
 | `adicionarInteracao` | `adicionarInteracao(dados)` | Adiciona comentário/interação |
 | `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) |

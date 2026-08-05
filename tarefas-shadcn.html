@@ -939,7 +939,8 @@ var modalTarefaAtual = null;
 var modalModo        = 'view';   // 'view' | 'edit' | 'create' — em view o checklist salva na hora
 var cklSalvando      = false;    // envio em curso (a aba inteira é reescrita no backend)
 var cklPendente      = false;    // clique durante o envio: reenvia ao terminar
-var cklAvisos        = {};       // email -> 'enviando' | 'enviado'; zerado ao abrir o modal
+var cklAvisos        = {};       // email -> 'enviando' | 'enviado'; zerado ao abrir OUTRA tarefa e
+                                  // ao fechar o modal (troca visualizar/editar preserva)
 var cklAvisosTarefa  = '';       // ID da tarefa a que o registro acima pertence
 
 var filtroProjetoAtual    = '';

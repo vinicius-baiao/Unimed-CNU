@@ -844,7 +844,7 @@ function salvarChecklist(dados) {
   invalidarAba(ABA_CKL_STATUS);
 
   } finally {
-    lock.releaseLock(); // solta antes das notificações (e-mail é lento)
+    lock.releaseLock(); // solta ao fim da gravação
   }
 
   // Sem notificação automática aqui, de propósito. Até 15/07/2026 este ponto
