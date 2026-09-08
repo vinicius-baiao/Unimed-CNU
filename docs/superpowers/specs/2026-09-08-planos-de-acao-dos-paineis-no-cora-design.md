@@ -184,17 +184,21 @@ roteado pelo `doGet`. Execução manual no editor do Apps Script pelo Aurélio.
 - `importarPlanosDeAcao(apenasSimular)`: com `true`, apenas registra no `Logger` o que criaria
   (projetos, tarefas, itens, contagens por origem) e não escreve nada. Com `false`, grava.
 - Config no topo do arquivo: `IMPORT_SPRAVATO_SHEET_ID` (já conhecido, acima),
-  `IMPORT_PF_SHEET_ID` (**pendência**: copiar de Script Properties → `PA_SHEET_ID` no projeto
-  Apps Script do PF), e `IMPORT_EMAILS_GT`:
+  `IMPORT_PF_SHEET_ID` (opcional) e `IMPORT_EMAILS_GT`:
 
   | Nome no painel | E-mail | Fonte |
   |---|---|---|
   | Dr. Guilherme Amorim | `guilherme.amorim.ext@unimedcnu.coop.br` | planilha da equipe |
   | Taiara Rodrigues | `taiara.rodrigues@unimedcnu.coop.br` | planilha da equipe |
-  | Fabiane Minozzo | **pendência** | não está na planilha |
+  | Fabiane Minozzo | `fabiane.minozzo@unimedcnu.coop.br` | informado pelo Aurélio em 08/09 |
 
-  Se o e-mail da Fabiane não vier até a execução, as tarefas dela (16 e 21) entram sem
-  responsável e a nota "Resp.: Fabiane Minozzo" fica em `Observações`.
+- **Planilha do PF.** O ID vive só nas Propriedades do script do PF, não está em disco. Como
+  a planilha foi criada pelo script do PF rodando como o Aurélio, ela está no Drive dele com o
+  nome `Raio X PF — Plano de Ação (armazenamento)`. A importação a localiza por
+  `DriveApp.getFilesByName()` com esse nome exato; se `IMPORT_PF_SHEET_ID` estiver preenchido,
+  ele tem prioridade. Zero arquivos ou mais de um: erro claro no `Logger`, sem gravar nada.
+  Usar `DriveApp` acrescenta o escopo de Drive ao Cora, o que pede **reautorização** na próxima
+  Nova versão. Aceito, porque tira uma etapa manual do caminho.
 
 ### Idempotência
 
@@ -303,20 +307,33 @@ Gestores:
 | Nome | E-mail | Situação |
 |---|---|---|
 | Glaucia Berreta Ruggeri | `glaucia.ruggeri@unimedcnu.coop.br` | já é Gestor; só atualiza Unidade e Cargo |
-| Guilherme Borges G Da Silva | `guilherme.silva.ext@unimedcnu.coop.br` | já cadastrado como Usuário Padrão com `.ext`; vira Gestor. **Pendência:** a planilha traz `guilherme.silva@` sem `.ext`; a conta que ele usou e funcionou no piloto é a `.ext`. Manter `.ext` até ele confirmar. |
+| Guilherme Borges G Da Silva | `guilherme.silva@unimedcnu.coop.br` | virou CLT e coordenador; a conta `.ext` foi abandonada. Vira Gestor com o e-mail novo. Ver remapeamento abaixo. |
 | Taiara Rodrigues | `taiara.rodrigues@unimedcnu.coop.br` | novo |
 | Carina Milanez Guardia | `carina.guardia@unimedcnu.coop.br` | novo |
-| Fabiane Minozzo | **pendência** | não está na planilha; entra quando o e-mail chegar |
+| Fabiane Minozzo | `fabiane.minozzo@unimedcnu.coop.br` | novo; não está na planilha. Entra na constante com Unidade e Cargo vazios, para preencher depois. |
 
 Aurélio continua Admin. Jacqueline e Thiago continuam como estão.
+
+### Troca de e-mail do Guilherme Borges
+
+A conta `guilherme.silva.ext@` aparece hoje na aba `Usuários`, em `Responsável` e `Criado por`
+de tarefas dele e em `Responsavel` de itens de checklist. Se só o cadastro mudar, ele entra com a
+conta nova e não vê nada do que era dele. Função `remapearEmailUsuario(de, para, apenasSimular)`,
+execução manual, uma vez: troca o e-mail na aba `Usuários` e em todas as ocorrências nas abas
+`Tarefas` e `Checklist_Status`, comparando em minúsculas, e grava uma linha de `Log` por célula
+alterada com ação `REMAPEAR_EMAIL`. A aba `Log` e a `Interações` **não** são reescritas: são
+histórico e devem continuar dizendo quem fez o quê com a conta da época. Ao final,
+`limparCachePerfis()` e `limparCacheListas()`. Roda **antes** de `importarUsuariosEquipe`, para
+esta encontrar a linha já com o e-mail novo e só atualizar o perfil.
 
 ### Função
 
 `importarUsuariosEquipe(apenasSimular)`: lê a aba, indexa por e-mail em minúsculas, e para cada
-linha da constante: se não existe, adiciona; se existe, atualiza Perfil (só se o novo for
-Gestor), Unidade e Cargo, sem rebaixar ninguém. Registra no `Logger` adicionados, atualizados e
-ignorados. Ao final, `limparCachePerfis()` e `limparCacheListas()`. `adicionarUsuariosPiloto()`
-sai, substituída por esta.
+linha da constante (os 40 da planilha mais a Fabiane): se não existe, adiciona; se existe,
+atualiza Perfil (só se o novo for Gestor), Unidade e Cargo quando não vazios, sem rebaixar
+ninguém. Registra no `Logger` adicionados, atualizados e ignorados. Ao final,
+`limparCachePerfis()` e `limparCacheListas()`. `adicionarUsuariosPiloto()` sai, substituída por
+esta.
 
 Domínio: `cristiane.oltemann@unimednacional.coop.br` é o único fora de `@unimedcnu`; está em
 `DOMINIOS_PERMITIDOS`, entra normalmente.
@@ -393,38 +410,41 @@ repositório, então a mudança fica registrada no changelog e na cópia version
 
 **Importação de usuários:**
 
-9. `importarUsuariosEquipe(true)` reporta 38 a adicionar e 2 a atualizar (Glaucia e Guilherme Borges já existem). Com a Fabiane incluída, 39 e 2.
-10. Após `false`, Taiara abre o Cora como Gestor e vê todas as tarefas; Carina idem.
+9. `remapearEmailUsuario('guilherme.silva.ext@…', 'guilherme.silva@…', true)` lista as células que mudariam em `Usuários`, `Tarefas` e `Checklist_Status`; após `false`, o Guilherme abre o Cora com a conta nova e vê as tarefas que eram dele.
+10. `importarUsuariosEquipe(true)` reporta 39 a adicionar e 2 a atualizar (Glaucia e Guilherme Borges já existem).
+11. Após `false`, Taiara abre o Cora como Gestor e vê todas as tarefas; Carina e Fabiane idem.
 
 **Importação de planos:**
 
-11. `importarPlanosDeAcao(true)` lista: Spravato 8 + N custom, PF 12 + M custom, GT 17 tarefas e 34 itens. Conferir N e M contra as abas de origem.
-12. `importarPlanosDeAcao(false)` grava; rodar de novo com `true` reporta tudo como "já importada" e zero criações.
-13. Nenhum e-mail chegou a Guilherme Amorim, Fabiane ou Taiara; nenhum evento novo no Calendar.
+12. `importarPlanosDeAcao(true)` localiza a planilha do PF pelo nome (exatamente um arquivo) e lista: Spravato 8 + N custom, PF 12 + M custom, GT 17 tarefas e 34 itens. Conferir N e M contra as abas de origem.
+13. `importarPlanosDeAcao(false)` grava; rodar de novo com `true` reporta tudo como "já importada" e zero criações.
+14. Nenhum e-mail chegou a Guilherme Amorim, Fabiane ou Taiara; nenhum evento novo no Calendar.
 
 **Painéis, publicados:**
 
-14. Seção carrega do Cora com contagens iguais às do passo 11; "Editar no Cora" abre a tarefa certa; "Abrir no Cora" abre o projeto filtrado.
-15. Mudar um status no Cora reflete no painel em até 60 s.
-16. Preview local de cada painel mostra a amostra com aviso, sem erro no console.
+15. Seção carrega do Cora com contagens iguais às do passo 12; "Editar no Cora" abre a tarefa certa; "Abrir no Cora" abre o projeto filtrado.
+16. Mudar um status no Cora reflete no painel em até 60 s.
+17. Preview local de cada painel mostra a amostra com aviso, sem erro no console.
 
 ## Sequência de entrega
 
-1. Cora: seções 1 a 6. `clasp push` (meu) e **Nova versão** (Aurélio). `migrarProjetosPublico()` uma vez.
-2. `importarUsuariosEquipe` em simulação, depois real. Com a allowlist agora vindo da aba, isto libera o acesso dos 40.
-3. `importarPlanosDeAcao` em simulação, conferência, importação real. Anotar os três IDs de projeto.
-4. Painéis: preencher `CORA_PROJETO_ID`, aplicar seção 7, push e Nova versão em cada um.
-5. Atualizar `docs/HANDOFF.md`, `README.md` e `CLAUDE.md` do Cora (rota nova, coluna nova, arquivos novos, allowlist pela aba).
+1. Cora: seções 1 a 6. `clasp push` (meu) e **Nova versão** (Aurélio), reautorizando o escopo de Drive. `migrarProjetosPublico()` uma vez.
+2. `remapearEmailUsuario` do Guilherme Borges, em simulação e depois real.
+3. `importarUsuariosEquipe` em simulação, depois real. Com a allowlist agora vindo da aba, isto libera o acesso dos 41.
+4. `importarPlanosDeAcao` em simulação, conferência, importação real. Anotar os três IDs de projeto.
+5. Painéis: preencher `CORA_PROJETO_ID`, aplicar seção 7, push e Nova versão em cada um.
+6. Atualizar `docs/HANDOFF.md`, `README.md` e `CLAUDE.md` do Cora (rota nova, coluna nova, arquivos novos, allowlist pela aba).
 
 ## Pendências do Aurélio
 
 | # | Pendência |
 |---|---|
-| 1 | ID da planilha do plano de ação do PF: Apps Script do PF → Configurações do projeto → Propriedades do script → `PA_SHEET_ID`. |
-| 2 | E-mail de **Fabiane Minozzo** (não está na planilha da equipe). Entra como Gestor e como responsável das ações 16 e 21 do GT. |
-| 3 | Confirmar com **Guilherme Borges** se a conta dele é `guilherme.silva.ext@` (a que funcionou no piloto) ou `guilherme.silva@` (a da planilha). |
-| 4 | Confirmar os nomes dos três projetos (`Spravato`, `Carteira PF`, `GT Onco`). Renomear depois é seguro para os painéis, que usam o ID. |
-| 5 | Ciente de que, com a allowlist vindo da aba `Usuários`, os 40 passam a **entrar no Cora** assim que a importação rodar. Se a ideia for liberar por etapas, a importação pode receber um filtro por Equipe. |
+| 1 | Confirmar os nomes dos três projetos (`Spravato`, `Carteira PF`, `GT Onco`). Renomear depois é seguro para os painéis, que usam o ID. |
+| 2 | Ciente de que, com a allowlist vindo da aba `Usuários`, os 41 passam a **entrar no Cora** assim que a importação rodar. Se a ideia for liberar por etapas, a importação pode receber um filtro por Equipe. |
+| 3 | Unidade e Cargo da Fabiane, para completar o cadastro dela depois. |
+
+Resolvidas em 08/09: e-mail da Fabiane, conta do Guilherme Borges (`guilherme.silva@`, CLT) e
+planilha do PF (localizada pelo nome, sem precisar do ID).
 
 ## Fora de escopo
 
