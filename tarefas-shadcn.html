@@ -518,6 +518,7 @@
       .tarefas-table thead th { background: var(--primary) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .print-info { display: flex !important; }
       a { color: inherit; text-decoration: none; }
+      .home-alerta { display: none !important; }
     }
     .print-info { display: none; justify-content: space-between; align-items: center; padding: 8px 20px; background: var(--verde-bg); font-size: .78rem; color: var(--text-secondary); }
 
@@ -552,6 +553,9 @@
     .home-card-prazo.vence-hoje { background: var(--aviso-bg); color: var(--aviso-cor); }
     .home-card-prazo.atrasado   { background: var(--erro-bg); color: var(--erro-cor); }
     .home-empty { padding: 28px 16px; text-align: center; color: var(--muted-foreground); font-size: .84rem; background: var(--card); border: 1.5px dashed var(--border); border-radius: var(--radius); }
+    .home-alerta { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--erro-cor); border-radius: var(--radius); background: var(--surface); color: var(--foreground); font-size: .875rem; }
+    .home-alerta-txt strong { display: block; margin-bottom: 2px; }
+    .home-alerta-dica { margin-top: 6px; color: var(--muted-foreground); font-size: .82rem; }
     .btn-home { display: inline-flex; }
     .btn-inicio { font-size: .8rem; padding: 0 12px; height: 32px; }
 
@@ -644,6 +648,15 @@
       Ver todas as tarefas
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8 3 12 7 8 11"/></svg>
     </button>
+  </div>
+
+  <div id="homeAlerta" class="home-alerta" role="alert" style="display:none">
+    <div class="home-alerta-txt">
+      <strong>Não foi possível carregar seus dados</strong>
+      <div id="homeAlertaMsg"></div>
+      <div class="home-alerta-dica">Se você usa mais de uma conta Google neste navegador, abra o app com a conta <b>@unimedcnu.coop.br</b> pelo link direto ou em janela anônima.</div>
+    </div>
+    <button type="button" class="btn btn-ghost" onclick="carregarTudo()">Tentar de novo</button>
   </div>
 
   <!-- Painel de gestão (Admin/Gestor) -->
@@ -1127,6 +1140,17 @@ function modalTemMudancas() {
   return !!btn && btn.style.display !== 'none' && !btn.disabled;
 }
 
+function renderHomeAlerta(msg) {
+  var el = document.getElementById('homeAlerta');
+  if (!el) return;
+  document.getElementById('homeAlertaMsg').textContent = msg || '';
+  el.style.display = 'flex';
+}
+function limparHomeAlerta() {
+  var el = document.getElementById('homeAlerta');
+  if (el) el.style.display = 'none';
+}
+
 // Carga inicial: duas chamadas em paralelo, render só quando as duas voltam.
 // Medido em 03/08/2026: 6 rotas separadas ~3,1 s; tudo numa rota só ~3,4 s
 // (consolidar serializa as leituras e não acelerou); 5 rotas em paralelo ~2,3 s.
@@ -1134,6 +1158,7 @@ function modalTemMudancas() {
 // duas rotas equilibradas dão a latência do paralelo com 2 execuções em vez
 // de 5. Esperar as duas mantém o render único, com nome e perfil já prontos.
 function carregarTudo() {
+  limparHomeAlerta();
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
 
   var pendentes = 2;
@@ -1145,6 +1170,8 @@ function carregarTudo() {
     if (erroCritico) {
       document.getElementById('board').innerHTML =
         '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(erroCritico) + '</div>';
+      renderHomeAlerta(erroCritico); // o app abre na Home: o erro precisa aparecer lá
+      toast(erroCritico, true);
       return;
     }
 
