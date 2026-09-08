@@ -1,24 +1,62 @@
 # HANDOFF — Cora. Gestão de Tarefas
 
-> Estado do projeto ao final da sessão de **03/08/2026** (feedback do Guilherme, Send-As do
-> taskcenter, sweep de débito técnico com a fase 1 de performance e remoção do Gem).
+> Estado do projeto na sessão de **08/09/2026** (planos de ação dos painéis dentro do Cora,
+> cadastro da equipe de Atenção à Saúde, allowlist pela aba Usuários).
 > Ponto de partida para a próxima sessão: ler este arquivo + `CLAUDE.md` + `README.md`.
 > Manter atualizado ao fim de cada bloco de trabalho.
 
 ## Onde estamos
 
 - Branch de trabalho: **`mvp-shadcn-piloto`** (PR #3 aberto contra `main`, ainda não mergeado).
-- Último commit: `5c95c24`. Publicado no Apps Script até `bcbe051` (push de 03/08 13:40).
+- Último commit: ver `git log`. Publicado no Apps Script via `clasp deploy -i` (08/09/2026).
 - Endpoints da carga inicial: `bootstrap` + `bootstrapApoio`, chamados em paralelo pelo front.
 - O Web App atende **somente GET** — o `doPost` saiu com a integração do Gem.
 - Frontend servido: **`tarefas-shadcn.html`** (constante `HTML_FILE` no `Code.gs`).
   `tarefas.html` continua no repo apenas como rollback.
-- Beta ativo com allowlist (`PILOTO_ATIVO = true`): Aurélio, Jacqueline, Guilherme,
-  Thiago e Dra. Glaucia Ruggeri (Gestora).
+- Beta ativo (`PILOTO_ATIVO = true`): a allowlist é a **aba `Usuários`**. Depois de
+  `importarUsuariosEquipe(false)`, são 40 pessoas da Atenção à Saúde mais os 5 do piloto.
+- Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
-### Último bloco — marcação de colegas em itens de checklist
+### Último bloco — planos de ação dos painéis dentro do Cora (08/09/2026)
+
+Spec: [`docs/superpowers/specs/2026-09-08-planos-de-acao-dos-paineis-no-cora-design.md`](superpowers/specs/2026-09-08-planos-de-acao-dos-paineis-no-cora-design.md).
+Plano: [`docs/superpowers/plans/2026-09-08-planos-de-acao-dos-paineis-no-cora.md`](superpowers/plans/2026-09-08-planos-de-acao-dos-paineis-no-cora.md).
+
+Os painéis Spravato, Carteira PF e GT Onco passam a ler o plano de ação do Cora (rota
+`planoAcaoProjeto`, JSONP, somente leitura, botões "Abrir/Editar no Cora"). No Cora:
+
+- Coluna **`Publico`** (F) na aba Projetos; checkbox no modal; chip na lista.
+- `idsTarefasVisiveis()` inclui tarefas de projeto público. Pré-filtro "minhas tarefas" ao
+  abrir vale para todos os perfis.
+- **Allowlist = aba Usuários** (`EMAILS_PILOTO` saiu).
+- Rota `planoAcaoProjeto` fora da allowlist, cache 60 s invalidado pelas escritas.
+- Link profundo `?projeto=` / `?tarefa=` (atributo `data-deep-link` no `<body>`).
+- `ImportacaoUsuarios.gs`: 39 pessoas da planilha da equipe (não versionada) + Fabiane;
+  Gestores: Fabiane, Guilherme Borges (`guilherme.silva@`, CLT; a conta `.ext` é remapeada),
+  Glaucia, Taiara, Carina. `remapearEmailUsuario()` troca o e-mail em Usuários, Tarefas e
+  Checklist_Status (Log e Interações ficam como histórico).
+- `ImportacaoPlanos.gs`: 8 ações do Spravato + custom, 12 do PF + custom (planilha do PF
+  localizada pelo nome no Drive), 18 macroações do GT com 34 desdobramentos como checklist.
+  Idempotente pela marca `Origem: <painel>#<id>` em Observações. Sem e-mail, sem Calendar.
+  ⚠️ O painel GT diz "20 macroações", mas numera de 1 a 21; menos 3 canceladas = 18.
+- Harness de testes Node em `tests/` (`npm test`), `.claspignore` para não subir testes/docs.
+
+**Roteiro de execução no editor do Apps Script (nesta ordem; cada uma primeiro com `true`,
+conferindo o Logger, depois com `false`):**
+
+1. `migrarProjetosPublico()` — cria a coluna F na aba Projetos existente.
+2. `remapearEmailUsuario('guilherme.silva.ext@unimedcnu.coop.br', 'guilherme.silva@unimedcnu.coop.br', true)`
+3. `importarUsuariosEquipe(true)` — esperado: 38 a adicionar, 2 a atualizar (Glaucia e Guilherme).
+   A partir do `false`, **os 40 entram no Cora**.
+4. `importarPlanosDeAcao(true)` — esperado: Spravato 8+custom, PF 12+custom, GT 18; 34 itens.
+   Pede autorização do escopo de Drive na primeira execução. Anotar os **IDs dos projetos**
+   que o Logger imprime: eles vão em `CORA_PROJETO_ID` de cada painel.
+
+**Verificação publicada pendente:** os 17 passos da seção Verificação da spec.
+
+### Bloco anterior — marcação de colegas em itens de checklist
 
 Feature reativada (estava desligada desde 15/07 pelo commit `0a08c3a`, por spam de e-mail).
 Spec: [`docs/superpowers/specs/2026-08-03-marcacao-colegas-checklist-design.md`](superpowers/specs/2026-08-03-marcacao-colegas-checklist-design.md).
@@ -130,11 +168,13 @@ inalterados, console sem erros.
 |---|---|---|
 | 1 | ~~**Publicar Nova versão**~~ **feito em 03/08** | Publicado cobrindo tudo até `bcbe051`. Para os próximos deploys: `clasp push` é meu; publicar é Apps Script → Implantar → Gerenciar implantações → ✏️ → Nova versão, seguido de hard reload (Ctrl+Shift+R). Regra de ouro: **nunca** criar implantação nova. |
 | 2 | **Jac retestar** | Confirmar que salvar edição em tarefa atribuída a ela não bloqueia mais no prazo, e testar o botão **Duplicar**. |
-| 3 | **Glaucia** | Testar em janela anônima (o "Olá, …" vazio vem de `Session.getActiveUser()` sem e-mail quando há várias contas Google logadas). Se o perfil não aparecer, rodar `adicionarUsuariosPiloto()` no Apps Script. |
+| 3 | **Glaucia** | Testar em janela anônima (o "Olá, …" vazio vem de `Session.getActiveUser()` sem e-mail quando há várias contas Google logadas). O cadastro dela é mantido/atualizado por `importarUsuariosEquipe()`. |
 | 4 | **Repo da organização** | Criar repo **privado e vazio** `Unimed-CNU/cora-gestao-de-tarefas`. O remote `cnu` já está configurado localmente; depois é só `git push cnu main mvp-shadcn-piloto`. |
 | 5 | **Segurança** | Tornar **privado** o repo `vinicius-baiao/Unimed-CNU` (hoje público com a lista de e-mails da equipe). O token que também estava exposto lá deixou de importar: o endpoint que o usava foi removido em 03/08/2026 junto com a integração do Gem. |
 | 6 | ~~**Remetente `taskcenter@`**~~ **resolvido em 03/08** | `verificarAliases()` retornou `true` com o alias na conta que executa o script (`aurelio.pereira.ext@`): `["taskcenter@unimedcnu.coop.br"]`. Nada a mudar no código — `enviarEmail()` consulta `GmailApp.getAliases()` a cada envio e usa `from: taskcenter@`. **Falta só conferir no primeiro e-mail real** se o cliente exibe "enviado por aurelio.pereira.ext@…" abaixo do `De:`: Send-As por alias mantém a conta real no cabeçalho `Sender:`, e remover isso exigiria a TI configurar SMTP do domínio em vez de alias. |
 | 7 | ~~**Gui retestar checklist**~~ **validado em 03/08** | Guilherme testou na versão publicada e aprovou: marcar itens do checklist em modo visualização funciona. Encerra o feedback que abriu a sessão. |
+| 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. |
+| 10 | **Comunicar a equipe** | Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
 | 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
 
 ## Backlog técnico (fase 2)

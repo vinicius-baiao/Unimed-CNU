@@ -51,10 +51,20 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 | `avisarMarcadoChecklist` | `avisarMarcadoChecklist(dados)` | Envia e-mail manual ao colega marcado, com os itens dele naquela tarefa (valida visibilidade, domínio e se ele está marcado) |
 | `listarInteracoes` | `listarInteracoes(dados)` | Histórico de interações de uma tarefa |
 | `adicionarInteracao` | `adicionarInteracao(dados)` | Adiciona comentário/interação |
+| `listarProjetos` / `criarProjeto` / `atualizarProjeto` / `arquivarProjeto` | idem | CRUD de projetos (Admin/Gestor). Aceitam `publico` (coluna F da aba Projetos) |
+| `planoAcaoProjeto` | `planoAcaoProjeto(dados)` | **Leitura pública** das tarefas de um projeto público (`projetoId` ou `projetoNome`), com checklist e última interação. Passa **por fora da allowlist** do piloto; consumida pelos painéis Spravato / PF / GT Onco. Cache 60 s |
 | `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) |
 
 Funções **sem rota** (rodam por trigger/manual): `setup()` (cria abas e validações, rodar 1x),
-`relatorioDiario()` (e-mail HTML de resumo), `lembretesDiarios()` (lembrete D-1).
+`relatorioDiario()` (e-mail HTML de resumo), `lembretesDiarios()` (lembrete D-1),
+`migrarProjetosPublico()` (coluna F em planilha antiga), e as importações manuais de
+`ImportacaoUsuarios.gs` (`remapearEmailUsuario`, `importarUsuariosEquipe`) e
+`ImportacaoPlanos.gs` (`importarPlanosDeAcao`) — todas com modo de simulação.
+
+**Link profundo:** o `doGet` sem `acao` aceita `?projeto=<id>` e `?tarefa=<id>` e injeta em
+`data-deep-link` no `<body>`; o front filtra o projeto ou abre o modal.
+
+**Allowlist do piloto** (`PILOTO_ATIVO`): é a aba `Usuários`. Não existe mais lista no código.
 
 ## Esquema da aba Tarefas (ordem fixa — `Code.gs` usa índices)
 
@@ -117,6 +127,10 @@ no Apps Script. Sempre editar a existente (lápis ✏️ → Nova versão). Apó
 | Arquivo | Papel |
 |---|---|
 | `Code.gs` | Backend Apps Script: roteador, CRUD, checklists, interações, e-mails, triggers |
+| `ImportacaoUsuarios.gs` | Equipe de Atenção à Saúde como constante + importação/remapeamento de e-mail (manual) |
+| `ImportacaoPlanos.gs` | Ações fixas dos painéis + macroações do GT; importação idempotente para tarefas (manual) |
+| `integracoes/PlanoAcaoCora.html` | Fonte de referência do bloco de leitura copiado nos três painéis (não sobe para o script) |
+| `tests/` | Testes Node dos `.gs` (`npm test`); `harness.js` carrega os `.gs` num `vm` com stubs |
 | `tarefas.html` | Frontend completo (markup + CSS + JS vanilla): Kanban/Lista, modal, checklist, PDF |
 | `appsscript.json` | Manifesto do Apps Script |
 | `docs/resumo_projeto.md` | Contexto do projeto (⚠️ tabela de fases está desatualizada — código já entregue) |

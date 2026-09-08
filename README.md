@@ -71,13 +71,34 @@ Perfis vêm da aba `Usuários` (`Admin` / `Gestor` / `Usuário Padrão`).
 
 | Ação | Usuário Padrão | Admin / Gestor |
 |---|---|---|
-| Ver tarefas | Só as suas (responsável, criador ou marcado em checklist) — **aplicado no servidor** | Todas |
+| Ver tarefas | As suas (responsável, criador ou marcado em checklist) **e as de projetos públicos** — aplicado no servidor | Todas |
 | Criar / editar / concluir | ✔ (no que enxerga) | ✔ |
 | Alterar **prazo** | Só se for o criador | ✔ |
 | Excluir tarefa | Só se for o criador | ✔ |
 | Gerenciar projetos | ✖ | ✔ |
 
-O board de Admin/Gestor abre pré-filtrado nas próprias tarefas ("Limpar filtros" desfaz).
+O board abre pré-filtrado nas próprias tarefas, para todos os perfis ("Limpar filtros" desfaz).
+
+## Planos de ação dos painéis (desde 08/09/2026)
+
+Os painéis **Raio X Spravato**, **Raio X da Carteira PF** e **GT Terapias Oncológicas** não
+têm mais storage próprio de plano de ação: cada ação é uma tarefa do Cora nos projetos
+**Spravato**, **Carteira PF** e **GT Onco**, marcados como **públicos** (coluna `Publico` da
+aba `Projetos`, checkbox "Visível a todo o domínio" no modal). Desdobramentos são itens de
+checklist. Cada tarefa importada traz `Origem: <painel>#<id>` na última linha de Observações.
+
+- **Rota `planoAcaoProjeto`** (`dados={"projetoId":N}` ou `{"projetoNome":"..."}`): devolve
+  projeto, tarefas ativas com checklist e última interação. Exige conta do domínio, **não** a
+  allowlist. Recusa projeto inexistente, arquivado ou não público com a mesma mensagem.
+  Cache de 60 s por projeto, invalidado pelas escritas.
+- **Link profundo**: `…/exec?projeto=<id>` abre Tarefas filtradas no projeto;
+  `…/exec?tarefa=<id>` abre o modal da tarefa. É o destino dos botões "Abrir/Editar no Cora"
+  dos painéis.
+- **Importações manuais** (editor do Apps Script, nesta ordem, cada uma primeiro com `true`):
+  `migrarProjetosPublico()`, `remapearEmailUsuario(de, para, simular)`,
+  `importarUsuariosEquipe(simular)`, `importarPlanosDeAcao(simular)`. Ver
+  `ImportacaoUsuarios.gs` e `ImportacaoPlanos.gs`.
+- Bloco de leitura copiado nos três painéis: `integracoes/PlanoAcaoCora.html`.
 
 ## Configuração (1ª instalação)
 
@@ -92,8 +113,8 @@ O board de Admin/Gestor abre pré-filtrado nas próprias tarefas ("Limpar filtro
    - `lembretesDiarios` — diário (lembrete D-1 ao responsável);
    - `arquivarTarefasAntigas` — mensal (move concluídas há 30+ dias para `Arquivo`);
    - `relatorioDiario` — opcional; controlado pelo flag `RESUMO_DIario_ATIVO`.
-6. **Acesso restrito (beta)**: `PILOTO_ATIVO = true` limita o acesso aos e-mails de
-   `EMAILS_PILOTO`. Desative quando abrir para o domínio inteiro.
+6. **Acesso restrito (beta)**: `PILOTO_ATIVO = true` limita o acesso a quem está na aba
+   `Usuários` (qualquer perfil). Desative quando abrir para o domínio inteiro.
 
 ## Desenvolvimento e deploy
 
@@ -101,14 +122,21 @@ O board de Admin/Gestor abre pré-filtrado nas próprias tarefas ("Limpar filtro
 # preview local da UI (dados mockados quando hostname = localhost)
 npx serve -p 3000 .
 
+# testes dos .gs (Node, sem dependências; carrega Code.gs num vm com stubs do Apps Script)
+npm test
+
 # subir código para o Apps Script
 # .clasp.json não vem no clone (gitignore) — recriar: {"scriptId":"<id>","rootDir":"."}
 npx clasp push
+
+# publicar: nova versão NA IMPLANTAÇÃO EXISTENTE (a URL /exec é preservada)
+npx clasp deploy -i AKfycbyFDVgvECw8xT70q5K-feokScLs-Z85Q6Ka4_qFyJe10cSE10K_TXEl4ws5nC3lkAF8 -d "descrição"
 ```
 
-**Regra de ouro do deploy:** NUNCA criar uma nova implantação. Sempre
-**Implantar → Gerenciar implantações → ✏️ → Nova versão → Implantar** (a URL `/exec`
-é preservada). Depois, hard reload (Ctrl+Shift+R) para furar o cache.
+**Regra de ouro do deploy:** NUNCA criar uma nova implantação (`clasp deploy` sem `-i`, ou
+"Nova implantação" na UI). Sempre nova versão da existente. Depois, hard reload
+(Ctrl+Shift+R) para furar o cache. `.claspignore` mantém `tests/`, `docs/` e `integracoes/`
+fora do script.
 
 O preview local usa um **mock de dados** (ativo apenas em `localhost`) — a UI
 renderiza populada sem backend; em produção o mock é inerte.
