@@ -243,7 +243,7 @@ Sem responsável, sem checklist.
 ### Fonte GT
 
 Lista estática no próprio arquivo, transcrita de `cora-painel-gt/Painel.html` (seção
-`#plano`, `<details class="macro">`). Só as 17 macroações não canceladas. Regras:
+`#plano`, `<details class="macro">`). Só as 18 macroações não canceladas (o painel numera de 1 a 21, embora o título diga 20). Regras:
 
 - Desdobramentos numerados (`n.m …`) → itens de checklist, feito conforme ✓ ou "concluído".
 - Bullets não numerados (Evidência, Pendências, listas de patologias, texto livre) → notas em
@@ -279,7 +279,7 @@ Tabela fechada, para não sobrar interpretação na implementação:
 A ação 3 fica **atrasada** de propósito: é o que o painel diz hoje (período mar–jun/26, em
 andamento). O Cora vai mostrá-la em vermelho, e isso é informação, não erro.
 
-Marca `gt#<número>`. Total esperado: 17 tarefas e 34 itens de checklist.
+Marca `gt#<número>`. Total esperado: 18 tarefas e 34 itens de checklist.
 
 ## 6. Importação dos usuários — `ImportacaoUsuarios.gs`
 
@@ -416,7 +416,7 @@ repositório, então a mudança fica registrada no changelog e na cópia version
 
 **Importação de planos:**
 
-12. `importarPlanosDeAcao(true)` localiza a planilha do PF pelo nome (exatamente um arquivo) e lista: Spravato 8 + N custom, PF 12 + M custom, GT 17 tarefas e 34 itens. Conferir N e M contra as abas de origem.
+12. `importarPlanosDeAcao(true)` localiza a planilha do PF pelo nome (exatamente um arquivo) e lista: Spravato 8 + N custom, PF 12 + M custom, GT 18 tarefas e 34 itens. Conferir N e M contra as abas de origem.
 13. `importarPlanosDeAcao(false)` grava; rodar de novo com `true` reporta tudo como "já importada" e zero criações.
 14. Nenhum e-mail chegou a Guilherme Amorim, Fabiane ou Taiara; nenhum evento novo no Calendar.
 

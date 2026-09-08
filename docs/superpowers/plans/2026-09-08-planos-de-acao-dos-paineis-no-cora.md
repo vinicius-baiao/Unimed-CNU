@@ -120,9 +120,9 @@
 - Test: `tests/test_import_planos.js`
 
 **Interfaces:**
-- Produces: `IMPORT_SPRAVATO_SHEET_ID`, `IMPORT_PF_SHEET_ID` (''), `IMPORT_PF_NOME_PLANILHA`, `IMPORT_EMAILS_GT`, `PLANO_SPRAVATO_FIXOS` (8), `PLANO_PF_FIXOS` (12), `PLANO_GT` (17 objetos `{n, titulo, status, prazo, resp, desc, itens:[{texto, feito}], notas:[]}`), `PROJETOS_PLANO` (3), `converterAcaoPainel(item, origem)` → `{tarefa, status, prazo, observacoes, marca}`, `mesclarPlanoPainel(fixos, rowsAba, origem)` → lista de ações (fixas + custom), `importarPlanosDeAcao(apenasSimular)`.
+- Produces: `IMPORT_SPRAVATO_SHEET_ID`, `IMPORT_PF_SHEET_ID` (''), `IMPORT_PF_NOME_PLANILHA`, `IMPORT_EMAILS_GT`, `PLANO_SPRAVATO_FIXOS` (8), `PLANO_PF_FIXOS` (12), `PLANO_GT` (18 objetos `{n, titulo, status, prazo, resp, desc, itens:[{texto, feito}], notas:[]}`), `PROJETOS_PLANO` (3), `converterAcaoPainel(item, origem)` → `{tarefa, status, prazo, observacoes, marca}`, `mesclarPlanoPainel(fixos, rowsAba, origem)` → lista de ações (fixas + custom), `importarPlanosDeAcao(apenasSimular)`.
 
-- [ ] Teste: `PLANO_GT.length === 17`, soma de `itens` = 34, nenhum `n` em `[9,18,19]`; `converterAcaoPainel({titulo:'💰 X', desc:'d', status:'concluída', prazo:'2026-01-05'}, 'pf#custo')` → `{tarefa:'X', status:'Concluído', prazo:'2026-01-05', observacoes:'d\nOrigem: pf#custo'}`; `mesclarPlanoPainel` com aba contendo override de status e uma linha custom devolve 9 itens para os 8 fixos. Simulação com `Tarefas` já contendo `Origem: gt#1` pula 1.
+- [ ] Teste: `PLANO_GT.length === 18`, soma de `itens` = 34, nenhum `n` em `[9,18,19]`; `converterAcaoPainel({titulo:'💰 X', desc:'d', status:'concluída', prazo:'2026-01-05'}, 'pf#custo')` → `{tarefa:'X', status:'Concluído', prazo:'2026-01-05', observacoes:'d\nOrigem: pf#custo'}`; `mesclarPlanoPainel` com aba contendo override de status e uma linha custom devolve 9 itens para os 8 fixos. Simulação com `Tarefas` já contendo `Origem: gt#1` pula 1.
 - [ ] Implementar. Planilha do PF: `IMPORT_PF_SHEET_ID || DriveApp.getFilesByName(IMPORT_PF_NOME_PLANILHA)` exigindo exatamente 1. Gravação: `LockService`, `appendRow` em Tarefas com 12 colunas (EVENT_ID vazio), itens em `Checklist_Status` (8 colunas), `gravarLog('IMPORTAR', 'Origem', '', marca)`, `invalidarAba` + `limparCacheListas` + `invalidarCachePlano`.
 - [ ] Commit `feat: importação dos planos de ação dos painéis`.
 
