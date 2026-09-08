@@ -1,0 +1,201 @@
+<!--
+  PlanoAcaoCora — bloco de leitura do plano de ação a partir do Cora.
+  FONTE DE REFERÊNCIA. Copiado (não incluído) nos Painel.html de:
+    Raio X Spravato · Raio X da Carteira PF · GT Terapias Oncológicas
+  Padrão do Design System: includes por cópia, sem dependência entre repositórios.
+
+  Como usar em um painel:
+    1. Copiar o <style> para o CSS do painel e o <script> para o JS.
+    2. Antes do script, definir:
+         var PAC_CONFIG = {
+           url: '<URL /exec do Cora>',
+           projetoId: 0,               // id do projeto no Cora (preferido); 0 = usar o nome
+           projetoNome: 'GT Onco',     // fallback enquanto o id não for conhecido
+           hostId: 'pac-host',         // <div id="pac-host"></div> dentro da seção do plano
+           especial: {                 // opcional: link extra por marca de origem
+             'spravato#protocolo': { texto: 'Acessar o protocolo →', onclick: "mostrarAba('protocolo')" }
+           }
+         };
+    3. Chamar pacIniciar() quando a seção abrir (INIT.acoes no Spravato/PF; DOMContentLoaded no GT).
+
+  Backend: rota planoAcaoProjeto do Cora (Code.gs), JSONP, cache de 60 s.
+  Spec: docs/superpowers/specs/2026-09-08-planos-de-acao-dos-paineis-no-cora-design.md
+-->
+<style>
+/* ══ PlanoAcaoCora — plano de ação lido do Cora (copiado de integracoes/PlanoAcaoCora.html) ══ */
+.pac-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+.pac-bar .pac-fonte{font-size:12px;color:var(--muted-foreground,#6E807D)}
+.pac-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:8px 16px;font:inherit;font-weight:700;font-size:12.5px;
+  background:var(--primary,#004E4C);color:#fff;text-decoration:none;cursor:pointer;white-space:nowrap}
+.pac-btn:hover{background:var(--primary-hover,#00615E);color:#fff}
+.pac-btn.sec{background:transparent;color:var(--primary,#004E4C);border:1px solid var(--border,#E3E0D8);padding:5px 12px;font-size:12px}
+.pac-btn.sec:hover{background:rgba(0,78,76,.06)}
+.pac-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:0 0 16px}
+.pac-kpi{background:var(--card,#fff);border:1px solid var(--border,#E3E0D8);border-left:4px solid var(--primary,#004E4C);border-radius:var(--radius,12px);padding:12px 14px}
+.pac-kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;color:var(--text-secondary,#4A5F5C)}
+.pac-kpi .v{font-size:26px;font-weight:750;letter-spacing:-.02em;line-height:1.1;margin-top:4px;color:var(--foreground,#16302E)}
+.pac-kpi .h{font-size:11.5px;color:var(--muted-foreground,#6E807D);margin-top:4px}
+.pac-kpi.ok{border-left-color:var(--verde,#00995D)} .pac-kpi.doing{border-left-color:var(--dourado,#C9A84C)} .pac-kpi.wait{border-left-color:#B8B3A6}
+.pac-lista{background:var(--card,#fff);border:1px solid var(--border,#E3E0D8);border-radius:var(--radius,12px);padding:4px 18px}
+.pac-item{padding:14px 0;border-top:1px solid var(--border,#E3E0D8)}
+.pac-item:first-child{border-top:none}
+.pac-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pac-top b{font-size:13.5px;color:var(--foreground,#16302E)}
+.pac-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pac-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.pac-badge.ok{background:var(--ok-bg,#E4F3EC);color:var(--ok-ink,#0A6B45)}
+.pac-badge.doing{background:var(--warn-bg,#FAF4E6);color:var(--warn-ink,#7A5F16)}
+.pac-badge.wait{background:var(--muted-bg,#F1EFE9);color:var(--muted-foreground,#6E807D)}
+.pac-badge.block{background:var(--late-bg,#F8E4E0);color:var(--late-ink,#8F2417)}
+.pac-meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--text-secondary,#4A5F5C);margin-top:6px}
+.pac-meta b{font-weight:600;color:var(--foreground,#16302E)}
+.pac-meta .vencido{color:var(--late-ink,#8F2417);font-weight:700}
+.pac-desc{font-size:12.5px;color:var(--text-secondary,#4A5F5C);line-height:1.5;margin-top:6px;white-space:pre-line}
+.pac-prog{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:12px;color:var(--muted-foreground,#6E807D)}
+.pac-prog .bar{flex:1;max-width:220px;height:6px;border-radius:999px;background:var(--muted-bg,#F1EFE9);overflow:hidden}
+.pac-prog .bar i{display:block;height:100%;background:var(--verde,#00995D);border-radius:999px}
+.pac-item details{margin-top:6px}
+.pac-item summary{cursor:pointer;font-size:12px;color:var(--primary,#004E4C);font-weight:600;list-style:none}
+.pac-item summary::before{content:'▸ ';color:var(--muted-foreground,#6E807D)}
+.pac-item details[open] summary::before{content:'▾ '}
+.pac-item summary::-webkit-details-marker{display:none}
+.pac-item ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--foreground,#16302E)}
+.pac-item li{margin:4px 0;line-height:1.45}
+.pac-item li.feito{color:var(--muted-foreground,#6E807D);text-decoration:line-through}
+.pac-item li .quem{color:var(--muted-foreground,#6E807D);font-size:11.5px;text-decoration:none;display:inline-block;margin-left:6px}
+.pac-acoes{margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pac-link{font-size:12px;font-weight:600;color:var(--primary,#004E4C);text-decoration:none}
+.pac-link:hover{text-decoration:underline}
+.pac-nota{font-size:11.5px;color:var(--muted-foreground,#6E807D);margin-top:10px}
+.pac-aviso{background:var(--warn-bg,#FAF4E6);border:1px solid #EAD9A8;border-left:3px solid var(--dourado,#C9A84C);color:var(--warn-ink,#7A5F16);
+  border-radius:var(--radius,12px);padding:12px 16px;font-size:13px;line-height:1.5;margin-bottom:12px}
+.pac-aviso a{color:inherit;font-weight:700}
+.pac-carregando{padding:22px;color:var(--muted-foreground,#6E807D);font-size:13px}
+</style>
+
+<script>
+/* ══ PlanoAcaoCora — leitura do plano de ação a partir do Cora (JSONP). ══
+   Copiado de integracoes/PlanoAcaoCora.html no repositório do Cora. Não editar
+   só aqui: alterar lá e recopiar nos três painéis. Requer PAC_CONFIG definido antes. */
+var PAC_ORDEM = { 'Em andamento': 0, 'Bloqueado': 1, 'A fazer': 2, 'Backlog': 3, 'Concluído': 4 };
+var PAC_BADGE = { 'Em andamento': 'doing', 'Bloqueado': 'block', 'A fazer': 'wait', 'Backlog': 'wait', 'Concluído': 'ok' };
+var PAC_TIMEOUT_MS = 15000;
+var PAC_AMOSTRA = [
+  { id: 1, tarefa: 'Ação de exemplo em andamento', status: 'Em andamento', prazo: '2026-12-31', responsavel: 'colega@unimedcnu.coop.br',
+    observacoes: 'Card ilustrativo do preview local. Em produção, os dados vêm do Cora.\nOrigem: amostra#1', ultimaAtualizacao: '2026-09-08T10:00:00',
+    checklist: { total: 3, feitos: 1, itens: [{ item: '1.1 Primeiro desdobramento', feito: true, responsavel: '' }, { item: '1.2 Segundo', feito: false, responsavel: '' }, { item: '1.3 Terceiro', feito: false, responsavel: '' }] } },
+  { id: 2, tarefa: 'Ação de exemplo a iniciar', status: 'A fazer', prazo: '', responsavel: '', observacoes: 'Origem: amostra#2', ultimaAtualizacao: '', checklist: { total: 0, feitos: 0, itens: [] } },
+  { id: 3, tarefa: 'Ação de exemplo concluída', status: 'Concluído', prazo: '2026-08-06', responsavel: 'outra@unimedcnu.coop.br', observacoes: 'Origem: amostra#3', ultimaAtualizacao: '2026-08-06T16:20:00', checklist: { total: 2, feitos: 2, itens: [{ item: 'a', feito: true, responsavel: '' }, { item: 'b', feito: true, responsavel: '' }] } }
+];
+
+function pacEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function pacPreview() { return location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname); }
+function pacHoje() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function pacDataBR(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+function pacDataHoraBR(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : pacDataBR(iso); }
+function pacNome(email) {
+  var u = String(email || '').split('@')[0]; if (!u) return '';
+  return u.split('.').filter(function (p) { return p && p !== 'ext'; }).map(function (p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
+}
+function pacMarca(obs) { var m = /Origem:\s*(\S+)/.exec(obs || ''); return m ? m[1] : ''; }
+function pacSemMarca(obs) { return String(obs || '').replace(/\n?Origem:\s*\S+\s*$/, '').trim(); }
+
+/* JSONP autossuficiente (mesmo padrão do chamarAPI do Cora), com timeout. */
+function pacJsonp(url, params, cb) {
+  var nome = '_pac_' + Date.now() + '_' + Math.floor(Math.random() * 1e6), feito = false;
+  var s = document.createElement('script');
+  function fim(res) { if (feito) return; feito = true; try { delete window[nome]; } catch (e) { window[nome] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); cb(res); }
+  window[nome] = function (data) { fim(data); };
+  params.callback = nome;
+  s.src = url + '?' + Object.keys(params).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]); }).join('&');
+  s.onerror = function () { fim({ erro: 'Falha de rede ao contatar o Cora.' }); };
+  document.body.appendChild(s);
+  setTimeout(function () { fim({ erro: 'O Cora não respondeu em ' + Math.round(PAC_TIMEOUT_MS / 1000) + ' s.' }); }, PAC_TIMEOUT_MS);
+}
+
+function pacOrdenar(tarefas) {
+  return tarefas.slice().sort(function (a, b) {
+    var oa = PAC_ORDEM[a.status], ob = PAC_ORDEM[b.status];
+    if (oa === undefined) oa = 9; if (ob === undefined) ob = 9;
+    if (oa !== ob) return oa - ob;
+    if (a.prazo && b.prazo && a.prazo !== b.prazo) return a.prazo < b.prazo ? -1 : 1;
+    if (!!a.prazo !== !!b.prazo) return a.prazo ? -1 : 1;
+    return a.id - b.id;
+  });
+}
+
+function pacKpisHTML(t) {
+  var total = t.length, conc = t.filter(function (x) { return x.status === 'Concluído'; }).length;
+  var and = t.filter(function (x) { return x.status === 'Em andamento' || x.status === 'Bloqueado'; }).length;
+  var ini = t.filter(function (x) { return x.status === 'A fazer' || x.status === 'Backlog'; }).length;
+  var pct = total ? Math.round(conc / total * 100) : 0;
+  return '<div class="pac-kpis">' +
+    '<div class="pac-kpi"><div class="l">Ações no plano</div><div class="v">' + total + '</div><div class="h">geridas no Cora</div></div>' +
+    '<div class="pac-kpi ok"><div class="l">De execução</div><div class="v">' + pct + '%</div><div class="h">' + conc + ' concluída' + (conc === 1 ? '' : 's') + '</div></div>' +
+    '<div class="pac-kpi doing"><div class="l">Em andamento</div><div class="v">' + and + '</div><div class="h">inclui bloqueadas</div></div>' +
+    '<div class="pac-kpi wait"><div class="l">A iniciar</div><div class="v">' + ini + '</div><div class="h">a fazer + backlog</div></div>' +
+    '</div>';
+}
+
+function pacCardHTML(t, urlCora) {
+  var hoje = pacHoje(), badge = PAC_BADGE[t.status] || 'wait';
+  var vencido = t.prazo && t.prazo < hoje && t.status !== 'Concluído';
+  var meta = '';
+  meta += '<span>Responsável: <b>' + (t.responsavel ? pacEsc(pacNome(t.responsavel)) : 'a definir') + '</b></span>';
+  if (t.prazo) meta += '<span' + (vencido ? ' class="vencido"' : '') + '>' + (vencido ? 'Venceu em ' : 'Prazo ') + pacDataBR(t.prazo) + '</span>';
+  if (t.ultimaAtualizacao) meta += '<span>Atualizado em ' + pacDataHoraBR(t.ultimaAtualizacao) + '</span>';
+  var desc = pacSemMarca(t.observacoes);
+  var ck = t.checklist || { total: 0, feitos: 0, itens: [] }, prog = '';
+  if (ck.total) {
+    var pct = Math.round(ck.feitos / ck.total * 100);
+    prog = '<div class="pac-prog"><div class="bar"><i style="width:' + pct + '%"></i></div><span>' + ck.feitos + '/' + ck.total + ' desdobramentos</span></div>' +
+      '<details><summary>Ver desdobramentos</summary><ul>' + ck.itens.map(function (i) {
+        return '<li class="' + (i.feito ? 'feito' : '') + '">' + pacEsc(i.item) + (i.responsavel ? '<span class="quem">' + pacEsc(pacNome(i.responsavel)) + '</span>' : '') + '</li>';
+      }).join('') + '</ul></details>';
+  }
+  var esp = (PAC_CONFIG.especial || {})[pacMarca(t.observacoes)], extra = '';
+  if (esp) extra = '<a class="pac-link" href="javascript:void 0" onclick="' + pacEsc(esp.onclick || '') + '">' + pacEsc(esp.texto) + '</a>';
+  var editar = urlCora ? '<a class="pac-link" href="' + pacEsc(urlCora) + '?tarefa=' + t.id + '" target="_blank" rel="noopener">Editar no Cora →</a>' : '';
+  return '<div class="pac-item" data-id="' + t.id + '">' +
+    '<div class="pac-top"><b>' + pacEsc(t.tarefa) + '</b><span class="pac-badge ' + badge + '">' + pacEsc(t.status) + '</span></div>' +
+    '<div class="pac-meta">' + meta + '</div>' +
+    (desc ? '<div class="pac-desc">' + pacEsc(desc) + '</div>' : '') +
+    prog + '<div class="pac-acoes">' + extra + editar + '</div></div>';
+}
+
+function pacRender(host, dados, aviso) {
+  var tarefas = pacOrdenar(dados.tarefas || []), urlCora = dados.urlCora || PAC_CONFIG.url;
+  var abrir = urlCora && dados.projeto ? '<a class="pac-btn" href="' + pacEsc(urlCora) + '?projeto=' + dados.projeto.id + '" target="_blank" rel="noopener">Abrir no Cora</a>' : '';
+  host.innerHTML =
+    (aviso ? '<div class="pac-aviso">' + aviso + '</div>' : '') +
+    '<div class="pac-bar"><span class="pac-fonte">Fonte: Cora · Gestão de Tarefas' + (dados.projeto ? ' · projeto <b>' + pacEsc(dados.projeto.nome) + '</b>' : '') + '</span>' + abrir + '</div>' +
+    pacKpisHTML(tarefas) +
+    (tarefas.length ? '<div class="pac-lista">' + tarefas.map(function (t) { return pacCardHTML(t, urlCora); }).join('') + '</div>'
+                    : '<div class="pac-lista"><div class="pac-carregando">Nenhuma ação cadastrada neste projeto ainda.</div></div>') +
+    '<div class="pac-nota">Plano gerido no Cora. Alterações feitas lá aparecem aqui em até um minuto. Para editar status, prazo, responsável ou desdobramentos, use os links.</div>';
+}
+
+function pacErro(host, msg) {
+  host.innerHTML = '<div class="pac-aviso"><b>O plano de ação não pôde ser carregado.</b> ' + pacEsc(msg || '') +
+    ' <a href="' + pacEsc(PAC_CONFIG.url) + '" target="_blank" rel="noopener">Abrir no Cora</a></div>';
+}
+
+var pacIniciado = false;
+function pacIniciar() {
+  if (pacIniciado) return; pacIniciado = true;
+  var host = document.getElementById(PAC_CONFIG.hostId || 'pac-host');
+  if (!host) return;
+  if (pacPreview()) {
+    console.warn('Preview local: plano de ação de AMOSTRA — nada vem do Cora.');
+    pacRender(host, { projeto: { id: 0, nome: PAC_CONFIG.projetoNome || 'amostra' }, urlCora: PAC_CONFIG.url, tarefas: PAC_AMOSTRA },
+      '<b>Preview local:</b> cards de amostra. Em produção esta seção lê o projeto <b>' + pacEsc(PAC_CONFIG.projetoNome || '') + '</b> do Cora.');
+    return;
+  }
+  host.innerHTML = '<div class="pac-lista"><div class="pac-carregando">Carregando plano de ação do Cora…</div></div>';
+  var dados = PAC_CONFIG.projetoId ? { projetoId: PAC_CONFIG.projetoId } : { projetoNome: PAC_CONFIG.projetoNome };
+  pacJsonp(PAC_CONFIG.url, { acao: 'planoAcaoProjeto', dados: dados }, function (res) {
+    if (!res || res.erro) { pacErro(host, res && res.erro); return; }
+    pacRender(host, res, '');
+  });
+}
+</script>
