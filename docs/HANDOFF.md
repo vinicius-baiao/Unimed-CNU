@@ -8,11 +8,11 @@
 ## Onde estamos
 
 - Branch de trabalho: **`mvp-shadcn-piloto`** (PR #3 aberto contra `main`, ainda não mergeado).
-- Publicado em 08/09/2026 via `clasp deploy -i` (nova versão na implantação existente):
+- (Manhã) Publicado em 08/09/2026 via `clasp deploy -i` (nova versão na implantação existente):
   Cora **@65**; Spravato **v4.74** (@251 e @252, as duas implantações existentes); Carteira PF
   **v8.47** (@77); GT Onco **v1.39** (@64). Os três painéis já leem do Cora; até a importação
   rodar, a seção deles mostra "Nenhuma ação cadastrada" (projeto ainda não existe) ou o erro
-  "Projeto não disponível" — esperado.
+  "Projeto não disponível" — esperado. **Superado à tarde: importação feita, painéis republicados — ver bullet abaixo e o bloco de 08/09 (tarde).**
 - Endpoints da carga inicial: `bootstrap` + `bootstrapApoio`, chamados em paralelo pelo front.
 - O Web App atende **somente GET** — o `doPost` saiu com a integração do Gem.
 - Frontend servido: **`tarefas-shadcn.html`** (constante `HTML_FILE` no `Code.gs`).
@@ -34,7 +34,7 @@ Executado via Chrome (sessão do Aurélio) + `clasp`, seguindo
 |---|---|
 | 1 `migrarProjetosPublico` | OK 13:28 — coluna `Publico` criada, 4 projetos legados em FALSE |
 | 2 remap Guilherme Borges | OK — sim 13:39 (3 células: Usuários L40; Tarefas L19/L20 col 4) → gravado 13:58. Ele é `guilherme.silva@` (ainda *Usuário Padrão*) |
-| 3 `importarUsuariosEquipe` | **NÃO gravada** — simulação 14:02 = "38 a adicionar, 2 a atualizar" (Glaucia unidade/cargo; Guilherme → Gestor). É a 1ª execução: **o Cora ainda não está aberto para os 38 da equipe**. Decisão do Aurélio (pendência 9) |
+| 3 `importarUsuariosEquipe` | **NÃO gravada** — simulação 14:02 = "38 a adicionar, 2 a atualizar" (Glaucia unidade/cargo; Guilherme → Gestor). É a 1ª execução: **o Cora ainda não está aberto para os 38 da equipe**. Decisão do Aurélio (pendência 11) |
 | 4 `importarPlanosDeAcao` | OK — sim 14:24 (`Spravato 10 · PF 17 · GT 18 · novas 45 · itens 34`, N=2, M=5) → gravado ~14:26. **IDs: Spravato 5 · Carteira PF 6 · GT Onco 7** (verificado pela rota `planoAcaoProjeto`: 10/17/18 tarefas) |
 | 6 painéis | OK — `projetoId` 5/6/7 em `Painel.html` (Spravato, PF, GT) e `build/body_gt.html`; bumps v4.75 / v8.48 (+CHANGELOG) / v1.40; `clasp push -f` + `clasp deploy -i` → @253 / @78 / @65 |
 
@@ -223,10 +223,10 @@ inalterados, console sem erros.
 | 5 | **Segurança** | Tornar **privado** o repo `vinicius-baiao/Unimed-CNU` (hoje público com a lista de e-mails da equipe). O token que também estava exposto lá deixou de importar: o endpoint que o usava foi removido em 03/08/2026 junto com a integração do Gem. |
 | 6 | ~~**Remetente `taskcenter@`**~~ **resolvido em 03/08** | `verificarAliases()` retornou `true` com o alias na conta que executa o script (`aurelio.pereira.ext@`): `["taskcenter@unimedcnu.coop.br"]`. Nada a mudar no código — `enviarEmail()` consulta `GmailApp.getAliases()` a cada envio e usa `from: taskcenter@`. **Falta só conferir no primeiro e-mail real** se o cliente exibe "enviado por aurelio.pereira.ext@…" abaixo do `De:`: Send-As por alias mantém a conta real no cabeçalho `Sender:`, e remover isso exigiria a TI configurar SMTP do domínio em vez de alias. |
 | 7 | ~~**Gui retestar checklist**~~ **validado em 03/08** | Guilherme testou na versão publicada e aprovou: marcar itens do checklist em modo visualização funciona. Encerra o feedback que abriu a sessão. |
-| 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 10.** |
-| 10 | **Comunicar a equipe** | Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
 | 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
-| 10 | **Etapa 3 — liberar os 38 da equipe** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
+| 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 11.** |
+| 10 | **Comunicar a equipe** | Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
+| 11 | **Etapa 3 — liberar os 38 da equipe** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
 
 ## Backlog técnico (fase 2)
 
