@@ -1,7 +1,7 @@
 # HANDOFF — Cora. Gestão de Tarefas
 
 > Estado do projeto ao final da sessão de **08/09/2026 (tarde)** — roteiro de conclusão dos planos de
-> ação executado (Etapas 1, 2 e 4 concluídas; painéis republicados com os IDs; Etapa 3 aguarda decisão).
+> ação executado (Etapas 1, 2 e 4 concluídas; painéis republicados com os IDs; Etapa 3 gravada às 14:51).
 > Ponto de partida para a próxima sessão: ler este arquivo + `CLAUDE.md` + `README.md`.
 > Manter atualizado ao fim de cada bloco de trabalho.
 
@@ -24,6 +24,8 @@
   (config local de ferramentas).
 - **Publicado em 08/09 à tarde:** painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48),
   GT Onco **@65** (v1.40). Cora segue na **@65** (HEAD do script = repo, push 14:32). IDs no Cora: Spravato 5 · PF 6 · GT 7.
+- **Etapa 3 gravada 08/09 14:51:** aba Usuários com **79** pessoas (38 da Atenção à Saúde adicionadas; Glaucia e
+  Guilherme atualizados, ele agora Gestor). O Cora está aberto para a equipe — falta comunicar (pendência 10).
 
 ### Último bloco — 08/09 (tarde): roteiro de conclusão executado pelo Claude Code
 
@@ -34,7 +36,7 @@ Executado via Chrome (sessão do Aurélio) + `clasp`, seguindo
 |---|---|
 | 1 `migrarProjetosPublico` | OK 13:28 — coluna `Publico` criada, 4 projetos legados em FALSE |
 | 2 remap Guilherme Borges | OK — sim 13:39 (3 células: Usuários L40; Tarefas L19/L20 col 4) → gravado 13:58. Ele é `guilherme.silva@` (ainda *Usuário Padrão*) |
-| 3 `importarUsuariosEquipe` | **NÃO gravada** — simulação 14:02 = "38 a adicionar, 2 a atualizar" (Glaucia unidade/cargo; Guilherme → Gestor). É a 1ª execução: **o Cora ainda não está aberto para os 38 da equipe**. Decisão do Aurélio (pendência 11) |
+| 3 `importarUsuariosEquipe` | OK — simulação 14:02 ("38 a adicionar, 2 a atualizar") → **gravada 14:51** após autorização do Aurélio. Aba Usuários com **79** pessoas; Guilherme, Taiara, Carina e Fabiane = Gestor; Glaucia com unidade/cargo. **O Cora está aberto para a equipe** (comunicar: pendência 10) |
 | 4 `importarPlanosDeAcao` | OK — sim 14:24 (`Spravato 10 · PF 17 · GT 18 · novas 45 · itens 34`, N=2, M=5) → gravado ~14:26. **IDs: Spravato 5 · Carteira PF 6 · GT Onco 7** (verificado pela rota `planoAcaoProjeto`: 10/17/18 tarefas) |
 | 6 painéis | OK — `projetoId` 5/6/7 em `Painel.html` (Spravato, PF, GT) e `build/body_gt.html`; bumps v4.75 / v8.48 (+CHANGELOG) / v1.40; `clasp push -f` + `clasp deploy -i` → @253 / @78 / @65 |
 
@@ -225,8 +227,8 @@ inalterados, console sem erros.
 | 7 | ~~**Gui retestar checklist**~~ **validado em 03/08** | Guilherme testou na versão publicada e aprovou: marcar itens do checklist em modo visualização funciona. Encerra o feedback que abriu a sessão. |
 | 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
 | 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 11.** |
-| 10 | **Comunicar a equipe** | Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
-| 11 | **Etapa 3 — liberar os 38 da equipe** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
+| 10 | **Comunicar a equipe** | **Já vale (Etapa 3 gravada 14:51):** Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
+| 11 | ~~**Etapa 3 — liberar os 38 da equipe**~~ **feita em 08/09 às 14:51** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
 
 ## Backlog técnico (fase 2)
 

@@ -19,7 +19,7 @@ o resultado aparece em **Registro de execução** (Logger).
 ## Resultado da execução — 08/09/2026, 13:28–14:32 (Claude Code via Chrome + clasp)
 
 - **Etapa 1** OK (coluna `Publico`, 4 legados FALSE). **Etapa 2** OK (3 células; Guilherme = `guilherme.silva@`).
-- **Etapa 3** simulada e aprovada (38 a adicionar, 2 a atualizar) — **não gravada**: abre o Cora para 40 pessoas, decisão do Aurélio.
+- **Etapa 3** gravada às 14:51 após autorização (38 adicionados, 2 atualizados; 79 na aba Usuários; Guilherme, Taiara, Carina e Fabiane = Gestor).
 - **Etapa 4** OK: `Spravato 10 (N=2) · PF 17 (M=5) · GT 18 · novas 45 · itens 34`. **IDs: Spravato 5 · Carteira PF 6 · GT Onco 7.**
   Precisou preencher `IMPORT_PF_SHEET_ID` (nome com travessão não casava no Drive).
 - **Etapa 6 (1)** feita: `projetoId` 5/6/7 nos painéis; Spravato @253 (v4.75), PF @78 (v8.48), GT @65 (v1.40).
