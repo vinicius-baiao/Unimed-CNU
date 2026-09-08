@@ -1900,11 +1900,11 @@ function abrirModal(tarefa, modo) {
   var addRow = document.querySelector('.ckl-add-row');
   if (addRow) addRow.style.display = modoEdicao ? '' : 'none';
 
-  // Em visualização, checkbox e select de colega continuam ativos: marcar item
+  // Em visualização, checkbox e chip de colega continuam ativos: marcar item
   // e atribuir são execução da tarefa, não edição de cadastro, e salvam na hora
   // (ver salvarCklImediato). Só excluir item fica travado.
   if (!modoEdicao) {
-    itensEl.querySelectorAll('button').forEach(function(el) { el.disabled = true; });
+    itensEl.querySelectorAll('.ckl-delete').forEach(function(el) { el.disabled = true; });
   }
 
   // Botão Fechar/Cancelar: em edição/criação deixa claro que descarta
