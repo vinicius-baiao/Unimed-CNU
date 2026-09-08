@@ -3,7 +3,7 @@
 > Spec validado com o Aurélio em 08/09/2026. Os planos de ação dos painéis **Raio X Spravato**,
 > **Raio X da Carteira PF** e **GT Terapias Oncológicas** deixam de ter storage próprio e passam
 > a ser tarefas do Cora. Os painéis continuam mostrando o plano, lido do Cora, somente leitura.
-> Junto, entra o cadastro da equipe de Atenção à Saúde (40 pessoas) como usuários do Cora.
+> Junto, entra o cadastro da equipe de Atenção à Saúde (39 pessoas da planilha mais a Fabiane) como usuários do Cora.
 
 ## Situação atual
 
@@ -287,7 +287,7 @@ Arquivo novo, mesma natureza do anterior: execução manual, sem rota.
 
 ### Fonte
 
-`Equipe Atenção a saúde.xlsx`, na raiz do projeto, aba `Planilha2`, 40 linhas com
+`Equipe Atenção a saúde.xlsx`, na raiz do projeto, aba `Planilha2`, 39 pessoas (40 linhas com cabeçalho) com
 `Funcionários | Equipe | E-mail | Cargo | Obs`. Os dados entram no `.gs` como constante
 `EQUIPE_ATENCAO_SAUDE`, transcrita da planilha na implementação. O `.xlsx` **entra no
 `.gitignore`**: tem nome, e-mail e cargo de 40 pessoas, e o repositório vai para a organização.
@@ -329,7 +329,7 @@ esta encontrar a linha já com o e-mail novo e só atualizar o perfil.
 ### Função
 
 `importarUsuariosEquipe(apenasSimular)`: lê a aba, indexa por e-mail em minúsculas, e para cada
-linha da constante (os 40 da planilha mais a Fabiane): se não existe, adiciona; se existe,
+linha da constante (os 39 da planilha mais a Fabiane): se não existe, adiciona; se existe,
 atualiza Perfil (só se o novo for Gestor), Unidade e Cargo quando não vazios, sem rebaixar
 ninguém. Registra no `Logger` adicionados, atualizados e ignorados. Ao final,
 `limparCachePerfis()` e `limparCacheListas()`. `adicionarUsuariosPiloto()` sai, substituída por
@@ -411,7 +411,7 @@ repositório, então a mudança fica registrada no changelog e na cópia version
 **Importação de usuários:**
 
 9. `remapearEmailUsuario('guilherme.silva.ext@…', 'guilherme.silva@…', true)` lista as células que mudariam em `Usuários`, `Tarefas` e `Checklist_Status`; após `false`, o Guilherme abre o Cora com a conta nova e vê as tarefas que eram dele.
-10. `importarUsuariosEquipe(true)` reporta 39 a adicionar e 2 a atualizar (Glaucia e Guilherme Borges já existem).
+10. `importarUsuariosEquipe(true)` reporta 38 a adicionar e 2 a atualizar (Glaucia e Guilherme Borges já existem).
 11. Após `false`, Taiara abre o Cora como Gestor e vê todas as tarefas; Carina e Fabiane idem.
 
 **Importação de planos:**
@@ -430,7 +430,7 @@ repositório, então a mudança fica registrada no changelog e na cópia version
 
 1. Cora: seções 1 a 6. `clasp push` (meu) e **Nova versão** (Aurélio), reautorizando o escopo de Drive. `migrarProjetosPublico()` uma vez.
 2. `remapearEmailUsuario` do Guilherme Borges, em simulação e depois real.
-3. `importarUsuariosEquipe` em simulação, depois real. Com a allowlist agora vindo da aba, isto libera o acesso dos 41.
+3. `importarUsuariosEquipe` em simulação, depois real. Com a allowlist agora vindo da aba, isto libera o acesso dos 40.
 4. `importarPlanosDeAcao` em simulação, conferência, importação real. Anotar os três IDs de projeto.
 5. Painéis: preencher `CORA_PROJETO_ID`, aplicar seção 7, push e Nova versão em cada um.
 6. Atualizar `docs/HANDOFF.md`, `README.md` e `CLAUDE.md` do Cora (rota nova, coluna nova, arquivos novos, allowlist pela aba).
@@ -439,7 +439,7 @@ repositório, então a mudança fica registrada no changelog e na cópia version
 
 Nenhuma. Resolvidas em 08/09/2026: e-mail da Fabiane (`fabiane.minozzo@`, cargo Gerente),
 conta do Guilherme Borges (`guilherme.silva@`, CLT), planilha do PF (localizada pelo nome, sem
-precisar do ID), nomes dos três projetos confirmados, e ciência de que os 41 usuários passam a
+precisar do ID), nomes dos três projetos confirmados, e ciência de que os 40 usuários passam a
 entrar no Cora assim que a importação rodar. Os três projetos entram na aba `Projetos` como
 qualquer outro, só com `Publico = TRUE`.
 

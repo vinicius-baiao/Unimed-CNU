@@ -1412,34 +1412,8 @@ function popularUsuarios() {
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }
 
-// ── adicionarUsuariosPiloto ── adiciona os 4 usuários do piloto sem apagar os demais ──
-// Idempotente: pula quem já existe (por e-mail). Rodar 1x manualmente no editor.
-function adicionarUsuariosPiloto() {
-  var sheet = getSheet(ABA_USUARIOS);
-  if (!sheet) { Logger.log('Aba Usuários não existe. Rode setup() primeiro.'); return; }
-
-  var pilotos = [
-    ['Jacqueline Wahrhaftig',           'jacqueline.wahrhaftig.ext@unimedcnu.coop.br', 'Usuário Padrão', '', ''],
-    ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',       'Usuário Padrão', '', ''],
-    ['Thiago Viana Santos',             'thiago.viana.ext@unimedcnu.coop.br',          'Usuário Padrão', '', ''],
-    ['Dra. Glaucia Ruggeri',            'glaucia.ruggeri@unimedcnu.coop.br',           'Gestor',         '', 'Médica']
-  ];
-
-  var rows = sheet.getDataRange().getValues();
-  var existentes = {};
-  for (var i = 1; i < rows.length; i++) {
-    if (rows[i][1]) existentes[String(rows[i][1]).toLowerCase()] = true;
-  }
-
-  var novos = pilotos.filter(function(u) { return !existentes[u[1].toLowerCase()]; });
-  if (!novos.length) { Logger.log('adicionarUsuariosPiloto: todos já cadastrados.'); return; }
-
-  sheet.getRange(sheet.getLastRow() + 1, 1, novos.length, 5).setValues(novos);
-  SpreadsheetApp.flush();
-  limparCachePerfis(); // sem isso, o perfil só vale após o TTL de 5 min
-  limparCacheListas();
-  Logger.log('adicionarUsuariosPiloto: ' + novos.length + ' usuário(s) adicionado(s).');
-}
+// adicionarUsuariosPiloto() saiu em 08/09/2026: substituída por importarUsuariosEquipe()
+// em ImportacaoUsuarios.gs, que também é a fonte da allowlist do piloto.
 
 // ── popularProjetos ── rodar 1x após setup() ──────────────────
 function popularProjetos() {
