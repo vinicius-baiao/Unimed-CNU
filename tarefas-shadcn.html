@@ -562,7 +562,7 @@
     }
   </style>
 </head>
-<body>
+<body data-deep-link="<?= deepLink ?>">
 
 <!-- Sidebar rail (padrão Shell dos portais) -->
 <aside class="side">
@@ -972,6 +972,40 @@ function aplicarFiltroInicial() {
   if (modoAtual === 'tarefas') { popularFiltros(); renderView(); }
 }
 
+// Link profundo: ?projeto=<id> filtra a visão Tarefas nesse projeto;
+// ?tarefa=<id> abre o modal da tarefa em visualização. O doGet injeta os dois
+// (saneados) em data-deep-link; no preview local o atributo fica com o
+// scriptlet cru e o JSON.parse cai no catch. Roda uma vez, na primeira carga.
+// Devolve true quando aplicou algo (aí o pré-filtro por responsável não roda).
+var deepLinkAplicado = false;
+function aplicarDeepLink() {
+  if (deepLinkAplicado) return false;
+  deepLinkAplicado = true;
+  var dl = null;
+  try { dl = JSON.parse(document.body.dataset.deepLink || ''); } catch (e) { return false; }
+  if (!dl || (!dl.projeto && !dl.tarefa)) return false;
+  var aplicou = false;
+  if (dl.projeto) {
+    var proj = projetos.filter(function(p) { return String(p.id) === String(dl.projeto); })[0];
+    if (proj) {
+      filtroInicialAplicado = true;
+      filtroProjetoAtual = proj.nome;
+      modoAtual = 'tarefas';
+      setModo('tarefas');
+      aplicou = true;
+    }
+  }
+  if (dl.tarefa) {
+    var t = tarefas.filter(function(x) { return String(x.ID) === String(dl.tarefa); })[0];
+    if (t) {
+      if (!aplicou) { filtroInicialAplicado = true; modoAtual = 'tarefas'; setModo('tarefas'); }
+      abrirModal(t, 'view');
+      aplicou = true;
+    }
+  }
+  return aplicou;
+}
+
 // ── JSONP ─────────────────────────────────────────────────────
 function chamarAPI(params, callback) {
   var cbName = '_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
@@ -1116,7 +1150,7 @@ function carregarTudo() {
     if (erroApoio) toast('Alguns dados não carregaram: ' + erroApoio, true);
 
     renderUserBadge();
-    aplicarFiltroInicial();
+    if (!aplicarDeepLink()) aplicarFiltroInicial();
     if (modoAtual === 'home') {
       renderHome();
     } else {

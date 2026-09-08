@@ -109,7 +109,7 @@ function carregar(stubs) {
     },
     LockService: { getScriptLock() { return { waitLock() {}, releaseLock() {}, tryLock() { return true; } }; } },
     PropertiesService: { getScriptProperties() { return { getProperty: k => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = v; } }; } },
-    Utilities: { formatDate: fmtDate, sleep() {}, base64Encode: s => Buffer.from(s).toString('base64') },
+    Utilities: { formatDate: (d, tz, fmt) => fmtDate(d, fmt), sleep() {}, base64Encode: s => Buffer.from(s).toString('base64') },
     Logger: { log(m) { logs.push(String(m)); } },
     ScriptApp: { getService() { return { getUrl: () => 'https://script.google.com/a/macros/unimedcnu.coop.br/s/FAKE/exec' }; } },
     HtmlService: {

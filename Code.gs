@@ -87,7 +87,11 @@ function doGet(e) {
         .setTitle('Acesso restrito — Gestão de Tarefas CNU');
     }
     // Template (não arquivo estático): permite <?!= include('Estilos_Fontes') ?>
-    return HtmlService.createTemplateFromFile(HTML_FILE).evaluate()
+    // deepLink: ?projeto=<id> e ?tarefa=<id> na URL abrem o app já filtrado /
+    // com o modal aberto (botões "Abrir/Editar no Cora" dos painéis).
+    var tpl = HtmlService.createTemplateFromFile(HTML_FILE);
+    tpl.deepLink = deepLinkJson(e.parameter);
+    return tpl.evaluate()
       .setTitle('Gestão de Tarefas — Rede Ambulatorial CNU')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -98,6 +102,11 @@ function doGet(e) {
     var emailReq = Session.getActiveUser().getEmail();
     if (!emailReq) {
       resultado = { erro: 'Conta Google não identificada. Feche outras contas ou use janela anônima com a conta @unimedcnu.coop.br.' };
+    } else if (acao === 'planoAcaoProjeto') {
+      // Leitura pública por projeto (painéis Spravato / PF / GT Onco): exige só
+      // conta identificada do domínio, NÃO a allowlist do piloto. A própria
+      // rota recusa projeto que não seja ativo e público.
+      resultado = planoAcaoProjeto(dados);
     } else if (!acessoPermitido(emailReq)) {
       resultado = { erro: 'Acesso restrito ao piloto.' };
     } else {
@@ -147,6 +156,120 @@ function doGet(e) {
 // include() do padrão HtmlService — usado pelo template (Estilos_Fontes)
 function include(nome) {
   return HtmlService.createHtmlOutputFromFile(nome).getContent();
+}
+
+// JSON dos parâmetros de link profundo, saneados para dígitos (vai para um
+// atributo do <body>; no preview local o scriptlet fica cru e o front ignora).
+function deepLinkJson(params) {
+  params = params || {};
+  function id(v) { v = String(v == null ? '' : v); return /^\d{1,9}$/.test(v) ? v : ''; }
+  return JSON.stringify({ projeto: id(params.projeto), tarefa: id(params.tarefa) });
+}
+
+// ── planoAcaoProjeto ──────────────────────────────────────────
+// Leitura pública das tarefas de um projeto público, consumida pelos painéis
+// (Spravato, Carteira PF, GT Onco) via JSONP. Cache de 60 s por projeto,
+// invalidado pelas escritas (invalidarCachePlano). Mensagem de erro única de
+// propósito: não revela se o projeto existe.
+var CACHE_PLANO_PREFIXO = 'planoAcao_';
+var CACHE_PLANO_SEG     = 60;
+var ERRO_PLANO_INDISPONIVEL = 'Projeto não disponível.';
+
+function localizarProjetoPublico(dados) {
+  var rows = lerAba(ABA_PROJETOS) || [];
+  var porId = dados && dados.projetoId !== undefined && /^\d{1,9}$/.test(String(dados.projetoId)) ? String(dados.projetoId) : '';
+  var porNome = !porId && dados && dados.projetoNome ? String(dados.projetoNome).trim() : '';
+  if (!porId && !porNome) return null;
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[COL_PROJ.NOME]) continue;
+    if (porId && String(r[COL_PROJ.ID]) !== porId) continue;
+    if (porNome && String(r[COL_PROJ.NOME]) !== porNome) continue;
+    if (r[COL_PROJ.ATIVO] === false || r[COL_PROJ.ATIVO] === 'false') return null;
+    if (!ehVerdadeiro(r[COL_PROJ.PUBLICO])) return null;
+    return { id: Number(r[COL_PROJ.ID]), nome: String(r[COL_PROJ.NOME]), cor: corSegura(r[COL_PROJ.COR]), descricao: String(r[COL_PROJ.DESCRICAO] || '') };
+  }
+  return null;
+}
+
+function planoAcaoProjeto(dados) {
+  var projeto = localizarProjetoPublico(dados);
+  if (!projeto) return { erro: ERRO_PLANO_INDISPONIVEL };
+  return comCache(CACHE_PLANO_PREFIXO + projeto.id, CACHE_PLANO_SEG, function() {
+    return montarPlanoAcaoProjeto(projeto);
+  });
+}
+
+function montarPlanoAcaoProjeto(projeto) {
+  var tz = Session.getScriptTimeZone();
+  function dia(v) { return v ? Utilities.formatDate(new Date(v), tz, 'yyyy-MM-dd') : ''; }
+  function instante(v) { return v ? Utilities.formatDate(new Date(v), tz, "yyyy-MM-dd'T'HH:mm:ss") : ''; }
+
+  var rowsT = lerAba(ABA_TAREFAS) || [];
+  var tarefas = [], porId = {};
+  for (var i = 1; i < rowsT.length; i++) {
+    var l = rowsT[i];
+    if (!l[COL.ID]) continue;
+    if (l[COL.ATIVO] === false || l[COL.ATIVO] === 'false') continue;
+    if (String(l[COL.PROJETO] || '') !== projeto.nome) continue;
+    var t = {
+      id: Number(l[COL.ID]),
+      tarefa: String(l[COL.TAREFA] || ''),
+      status: String(l[COL.STATUS] || ''),
+      prioridade: String(l[COL.PRIORIDADE] || ''),
+      prazo: dia(l[COL.PRAZO]),
+      responsavel: String(l[COL.RESPONSAVEL] || ''),
+      observacoes: String(l[COL.OBSERVACOES] || ''),
+      ultimaAtualizacao: '',
+      checklist: { total: 0, feitos: 0, itens: [] }
+    };
+    tarefas.push(t);
+    porId[String(t.id)] = t;
+  }
+
+  var rowsC = lerAba(ABA_CKL_STATUS) || [];
+  for (var c = 1; c < rowsC.length; c++) {
+    var t2 = porId[String(rowsC[c][1])];
+    if (!t2) continue;
+    var feito = ehVerdadeiro(rowsC[c][5]);
+    t2.checklist.itens.push({ item: String(rowsC[c][3] || ''), feito: feito, responsavel: String(rowsC[c][7] || '') });
+    t2.checklist.total++;
+    if (feito) t2.checklist.feitos++;
+  }
+
+  var rowsI = lerAba(ABA_INTERACOES) || [];
+  var ultima = {};
+  for (var k = 1; k < rowsI.length; k++) {
+    var t3 = porId[String(rowsI[k][1])];
+    if (!t3 || !rowsI[k][2]) continue;
+    var ms = new Date(rowsI[k][2]).getTime();
+    if (isNaN(ms)) continue;
+    if (!ultima[t3.id] || ms > ultima[t3.id]) ultima[t3.id] = ms;
+  }
+  tarefas.forEach(function(t4) { if (ultima[t4.id]) t4.ultimaAtualizacao = instante(new Date(ultima[t4.id])); });
+
+  return {
+    projeto: projeto,
+    urlCora: ScriptApp.getService().getUrl(),
+    geradoEm: instante(new Date()),
+    tarefas: tarefas
+  };
+}
+
+// Chamar após escrever em tarefa/checklist de um projeto, ou no próprio
+// projeto. Sem efeito para projeto não público; falha de cache é silenciosa
+// (pior caso: painel atrasa 60 s).
+function invalidarCachePlano(nomeProjeto) {
+  if (!nomeProjeto) return;
+  try {
+    var rows = lerAba(ABA_PROJETOS) || [];
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][COL_PROJ.NOME]) === String(nomeProjeto)) {
+        CacheService.getScriptCache().remove(CACHE_PLANO_PREFIXO + rows[i][COL_PROJ.ID]);
+        return;
+      }
+    }
+  } catch (e) {}
 }
 
 // ── Projetos ──────────────────────────────────────────────────
@@ -278,6 +401,7 @@ function atualizarProjeto(dados) {
     gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, (dados.nome || '') + (dados.publico !== undefined ? ' publico=' + row[COL_PROJ.PUBLICO] : ''));
     invalidarAba(ABA_PROJETOS);
     limparCacheListas();
+    try { CacheService.getScriptCache().remove(CACHE_PLANO_PREFIXO + dados.id); } catch (e) {}
     return { sucesso: true };
   }
   return { erro: 'Projeto não encontrado.' };
@@ -296,6 +420,7 @@ function arquivarProjeto(dados) {
     gravarLog('ARQUIVAR_PROJETO', 'ID', dados.id, 'inativo');
     invalidarAba(ABA_PROJETOS);
     limparCacheListas();
+    try { CacheService.getScriptCache().remove(CACHE_PLANO_PREFIXO + dados.id); } catch (e) {}
     return { sucesso: true };
   }
   return { erro: 'Projeto não encontrado.' };
@@ -619,6 +744,7 @@ function criarTarefa(dados) {
 
   gravarLog('CRIAR', 'Tarefa', '', dados.tarefa);
   lock.releaseLock();
+  invalidarCachePlano(dados.projeto);
 
   return { sucesso: true, id: id };
 }
@@ -690,7 +816,11 @@ function atualizarTarefa(dados) {
       logEntradas.push(['ATUALIZAR', campo, anterior, novo]);
     });
     gravarLogs(logEntradas);
-    if (logEntradas.length) invalidarAba(ABA_TAREFAS); // cache desta execução ficou velho
+    if (logEntradas.length) {
+      invalidarAba(ABA_TAREFAS); // cache desta execução ficou velho
+      invalidarCachePlano(linhas[i][COL.PROJETO]);
+      if (dados.projeto !== undefined && dados.projeto !== linhas[i][COL.PROJETO]) invalidarCachePlano(dados.projeto);
+    }
 
     if (dados.responsavel && dados.responsavel !== responsavelAnterior) {
       // Falha de e-mail não pode derrubar a resposta (a atualização já foi gravada)
@@ -745,6 +875,7 @@ function excluirTarefa(dados) {
 
     sheet.getRange(i + 1, COL.ATIVO + 1).setValue(false);
     encontrou = true;
+    invalidarCachePlano(linhas[i][COL.PROJETO]);
   }
 
   if (!encontrou) return { erro: 'Tarefa não encontrada: ' + dados.id };
@@ -889,6 +1020,13 @@ function salvarChecklist(dados) {
   } finally {
     lock.releaseLock(); // solta ao fim da gravação
   }
+  // Painéis leem o progresso do checklist pela rota planoAcaoProjeto
+  try {
+    var rowsTp = lerAba(ABA_TAREFAS) || [];
+    for (var p = 1; p < rowsTp.length; p++) {
+      if (String(rowsTp[p][COL.ID]) === idTarefa) { invalidarCachePlano(rowsTp[p][COL.PROJETO]); break; }
+    }
+  } catch (e) {}
 
   // Sem notificação automática aqui, de propósito. Até 15/07/2026 este ponto
   // notificava todos os marcados a cada salvamento, e como o save reescreve a
