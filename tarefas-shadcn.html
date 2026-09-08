@@ -442,14 +442,21 @@
     .ckl-section > label { margin-bottom: 6px; }
     .ckl-items { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
     .ckl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); transition: border-color .15s; }
+    .ckl-item { position: relative; }  /* ancora o popover de colega */
     .ckl-item:hover { border-color: var(--border-hover); }
     .ckl-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; cursor: pointer; }
     /* Controle travado precisa parecer travado — sem isso o clique só "não funciona" */
     .ckl-item input[type="checkbox"]:disabled, .ckl-delete:disabled { opacity: .4; cursor: not-allowed; }
     .ckl-item-text { font-size: .875rem; flex: 1; }
     .ckl-item.concluido .ckl-item-text { text-decoration: line-through; color: var(--muted-foreground); }
-    .ckl-responsavel-sel { font-size: .75rem; height: 28px; width: auto; max-width: 190px; padding: 0 8px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--text-secondary); cursor: pointer; flex-shrink: 0; }
-    .ckl-responsavel-sel:focus { outline: none; border-color: var(--ring); box-shadow: none; }
+    .ckl-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; max-width: 190px; padding: 0 10px 0 4px; border: 1px solid var(--input); border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: .75rem; cursor: pointer; flex-shrink: 0; }
+    .ckl-chip:hover { border-color: var(--border-hover); }
+    .ckl-chip:focus-visible { outline: none; border-color: var(--ring); }
+    .ckl-chip .ckl-chip-av { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: #fff; font-size: .6rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ckl-chip .ckl-chip-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ckl-chip.vazio { border-style: dashed; color: var(--muted-foreground); padding-left: 10px; }
+    .combo-busca { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 4px; border: none; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--foreground); font-size: .875rem; }
+    .combo-busca:focus { outline: none; box-shadow: none; }
     /* Combobox de responsável (busca) */
     .combo-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-modal); max-height: 240px; overflow-y: auto; padding: 4px; }
     .combo-opt { padding: 8px 10px; border-radius: calc(var(--radius) - 2px); font-size: .875rem; cursor: pointer; color: var(--foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -865,6 +872,12 @@
           <div class="full ckl-section">
             <label>Checklist</label>
             <div class="ckl-items" id="cklItems"></div>
+            <div id="cklDropdownHome" style="display:none">
+              <div id="cklDropdown" class="combo-dropdown" style="display:none">
+                <input type="text" id="cklBuscaInput" class="combo-busca" placeholder="Buscar colega…" autocomplete="off">
+                <div id="cklOpcoes"></div>
+              </div>
+            </div>
             <div class="ckl-progress" id="cklProgress" style="display:none">
               <span id="cklProgText"></span>
               <div class="ckl-bar"><div class="ckl-bar-fill" id="cklProgFill"></div></div>
@@ -1067,12 +1080,19 @@ document.addEventListener('DOMContentLoaded', function() {
     try { this.showPicker(); } catch (e) { /* iframe cross-origin: mantém comportamento nativo */ }
   });
 
-  // Fecha o dropdown de responsável ao clicar fora
+  // Fecha os dropdowns (responsável e colega do checklist) ao clicar fora
   document.addEventListener('click', function(e) {
     var wrap = document.getElementById('respWrap');
     var dd   = document.getElementById('respDropdown');
     if (wrap && dd && !wrap.contains(e.target)) dd.style.display = 'none';
+    var cdd = document.getElementById('cklDropdown');
+    if (cklComboAlvo && cdd && !cdd.contains(e.target) && !(e.target.closest && e.target.closest('.ckl-chip'))) fecharCklCombo();
   });
+  var cklBusca = document.getElementById('cklBuscaInput');
+  if (cklBusca) {
+    cklBusca.addEventListener('input',   function() { renderCklOpcoes(cklBusca.value); });
+    cklBusca.addEventListener('keydown', cklBuscaKeydown);
+  }
 });
 
 // Rodapé da rail (padrão Shell): avatar dourado de iniciais + nome + perfil
@@ -1858,6 +1878,7 @@ function abrirModal(tarefa, modo) {
   document.getElementById('btnDuplicar').style.display = (modoEdicao && tarefa) ? '' : 'none';
 
   // Checklist
+  fecharCklCombo();
   var itensEl = document.getElementById('cklItems');
   itensEl.innerHTML = '';
   document.getElementById('cklNovoItem').value = '';
@@ -1959,6 +1980,7 @@ function duplicarTarefa() {
 }
 
 function fecharModal()      {
+  fecharCklCombo();
   document.getElementById('overlay').classList.remove('open');
   cklAvisos = {};
   cklAvisosTarefa = '';
@@ -2031,6 +2053,92 @@ function salvarTarefa(e) {
   });
 }
 
+var cklComboAlvo = null; // .ckl-item com o popover de colega aberto (ou null)
+
+// Chip do item: iniciais + primeiro nome de quem está marcado, ou "+ colega".
+function renderCklChip(div) {
+  var chip = div.querySelector('.ckl-chip');
+  if (!chip) return;
+  var email = div.dataset.responsavel || '';
+  chip.innerHTML = '';
+  if (email) {
+    var nome = nomeDeUsuario(email);
+    var av = document.createElement('span'); av.className = 'ckl-chip-av'; av.textContent = avatarInitials(email);
+    var nm = document.createElement('span'); nm.className = 'ckl-chip-nome'; nm.textContent = nome.split(' ')[0];
+    chip.appendChild(av); chip.appendChild(nm);
+    chip.classList.remove('vazio');
+    chip.title = nome;
+  } else {
+    var vazio = document.createElement('span'); vazio.className = 'ckl-chip-nome'; vazio.textContent = '+ colega';
+    chip.appendChild(vazio);
+    chip.classList.add('vazio');
+    chip.title = 'Atribuir este item a um colega';
+  }
+}
+
+function renderCklOpcoes(termo) {
+  if (!cklComboAlvo) return;
+  var atual  = cklComboAlvo.dataset.responsavel || '';
+  var extras = [];
+  if (atual && !usuarios.some(function(u) { return String(u.email).toLowerCase() === atual.toLowerCase(); })) {
+    extras.push({ email: atual, nome: nomeDeUsuario(atual) });
+  }
+  var box = document.getElementById('cklOpcoes');
+  box.innerHTML = montarOpcoesUsuarios(termo, atual, extras);
+  Array.from(box.querySelectorAll('.combo-opt')).forEach(function(el) {
+    el.addEventListener('mousedown', function(e) {
+      e.preventDefault(); // não perde o foco do input antes do clique
+      selecionarCklColega(el.getAttribute('data-email'));
+    });
+  });
+}
+
+function abrirCklCombo(div) {
+  if (cklComboAlvo === div) { fecharCklCombo(); return; } // clicar de novo fecha
+  fecharCklCombo();
+  cklComboAlvo = div;
+  var dd = document.getElementById('cklDropdown');
+  div.appendChild(dd); // .ckl-item é position:relative → o CSS de .combo-dropdown posiciona
+  var input = document.getElementById('cklBuscaInput');
+  input.value = '';
+  renderCklOpcoes('');
+  dd.style.display = 'block';
+  input.focus();
+}
+
+function fecharCklCombo() {
+  var dd = document.getElementById('cklDropdown');
+  if (!dd) return;
+  dd.style.display = 'none';
+  var home = document.getElementById('cklDropdownHome');
+  if (home && dd.parentNode !== home) home.appendChild(dd); // sai do item antes que ele seja removido/recriado
+  cklComboAlvo = null;
+}
+
+function selecionarCklColega(email) {
+  var div = cklComboAlvo;
+  fecharCklCombo();
+  if (!div) return;
+  div.dataset.responsavel = email || '';
+  renderCklChip(div);
+  renderAvisosCkl();
+  if (modalModo === 'view') salvarCklImediato();
+  else verificarMudancasModal();
+}
+
+function cklBuscaKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    var opts = document.querySelectorAll('#cklOpcoes .combo-opt');
+    for (var i = 0; i < opts.length; i++) {
+      if (opts[i].getAttribute('data-email')) { selecionarCklColega(opts[i].getAttribute('data-email')); return; }
+    }
+  } else if (e.key === 'Escape') {
+    e.stopPropagation(); // fecha só o popover, não o modal
+    fecharCklCombo();
+  }
+}
+
 // ── Checklist ─────────────────────────────────────────────────
 function criarItemCkl(texto, ordem, concluido, responsavel) {
   var div = document.createElement('div');
@@ -2058,47 +2166,27 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   del.className = 'ckl-delete';
   del.textContent = '×';
   del.addEventListener('click', function() {
+    fecharCklCombo();
     div.remove();
     atualizarProgressoCkl();
     verificarMudancasModal();
   });
 
-  // Select de colega: atribui o item a alguém. Ativo também em visualização —
-  // atribuir é execução, como marcar o checkbox.
-  var sel = document.createElement('select');
-  sel.className = 'ckl-responsavel-sel';
-  var optVazia = document.createElement('option');
-  optVazia.value = '';
-  optVazia.textContent = '— colega —';
-  sel.appendChild(optVazia);
-  usuarios.forEach(function(u) {
-    var o = document.createElement('option');
-    o.value = u.email;
-    o.textContent = u.nome || u.email;
-    sel.appendChild(o);
-  });
-  // Marcação de alguém que não está mais na aba Usuários: cria a opção mesmo
-  // assim, senão o select viria vazio e o próximo save apagaria a marcação.
-  if (responsavel && !usuarios.some(function(u) { return String(u.email).toLowerCase() === String(responsavel).toLowerCase(); })) {
-    var oExtra = document.createElement('option');
-    oExtra.value = responsavel;
-    oExtra.textContent = responsavel;
-    sel.appendChild(oExtra);
-  }
-  sel.value = responsavel || '';
-  sel.title = responsavel ? nomeDeUsuario(responsavel) : 'Atribuir este item a um colega';
-  sel.addEventListener('change', function() {
-    div.dataset.responsavel = sel.value;
-    sel.title = sel.value ? nomeDeUsuario(sel.value) : 'Atribuir este item a um colega';
-    renderAvisosCkl();
-    if (modalModo === 'view') salvarCklImediato();
-    else verificarMudancasModal();
+  // Chip de colega: abre o popover de busca compartilhado. Ativo também em
+  // visualização — atribuir é execução, como marcar o checkbox.
+  var chip = document.createElement('button');
+  chip.type      = 'button';
+  chip.className = 'ckl-chip';
+  chip.addEventListener('click', function(e) {
+    e.stopPropagation();
+    abrirCklCombo(div);
   });
 
   div.appendChild(chk);
   div.appendChild(span);
-  div.appendChild(sel);
+  div.appendChild(chip);
   div.appendChild(del);
+  renderCklChip(div);
   return div;
 }
 
