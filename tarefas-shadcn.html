@@ -2260,7 +2260,7 @@ function renderInteracoes(idTarefa) {
       + '<div class="hist-meta">'
       + '<span class="hist-tipo hist-' + tipoClass(i.Tipo) + '">' + esc(i.Tipo || '') + '</span>'
       + '<span class="hist-data">' + esc(dtStr) + '</span>'
-      + '<span class="hist-editor">' + esc(nomeDeEmail(i.Editor || '')) + '</span>'
+      + '<span class="hist-editor">' + esc(nomeDeUsuario(i.Editor || '')) + '</span>'
       + '</div>'
       + '<div class="hist-conteudo">' + esc(i['Conteúdo'] || '') + '</div>'
       + '</div>';
@@ -2331,8 +2331,15 @@ function isoDate(val) {
 function formatarData(val) {
   return dataValida(val) ? parseData(val).toLocaleDateString('pt-BR') : '';
 }
+// Fallback quando o e-mail não está na aba Usuários: humaniza a parte local.
+// "fabiane.minozzo" → "Fabiane Minozzo"; "guilherme.amorim.ext" → "Guilherme Amorim".
 function nomeDeEmail(email) {
-  return email ? email.split('@')[0] : '';
+  var local = String(email || '').split('@')[0];
+  if (!local) return '';
+  return local.split(/[._-]+/)
+    .filter(function(p) { return p && p.toLowerCase() !== 'ext'; })
+    .map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); })
+    .join(' ');
 }
 function nomeDeUsuario(email) {
   if (!email) return '';
