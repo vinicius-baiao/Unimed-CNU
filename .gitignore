@@ -14,3 +14,6 @@ Thumbs.db
 
 # Impeccable: config de exceções é versionada; cache de sessão não
 .impeccable/hook.cache.json
+
+# Dados pessoais da equipe (nome, e-mail, cargo) — nunca versionar
+Equipe*.xlsx
