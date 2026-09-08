@@ -27,19 +27,16 @@ var HTML_FILE        = 'tarefas-shadcn';
 // Além deste flag, remova/desative o gatilho no Apps Script → Gatilhos.
 var RESUMO_DIARIO_ATIVO = false;
 
-// Piloto: restringe o acesso aos e-mails abaixo. Desligar com PILOTO_ATIVO = false.
+// Piloto: acesso restrito a quem está na aba Usuários (qualquer perfil).
+// Desde 08/09/2026 a lista fixa de e-mails saiu: manter 40+ endereços em dois
+// lugares era erro esperando para acontecer. Desligar com PILOTO_ATIVO = false
+// abre para o domínio inteiro. Remoção da aba vale após o TTL do cache de
+// perfis (5 min) ou limparCachePerfis().
 var PILOTO_ATIVO  = true;
-var EMAILS_PILOTO = [
-  'aurelio.pereira.ext@unimedcnu.coop.br',
-  'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',
-  'guilherme.silva.ext@unimedcnu.coop.br',
-  'thiago.viana.ext@unimedcnu.coop.br',
-  'glaucia.ruggeri@unimedcnu.coop.br'
-];
 function acessoPermitido(email) {
   if (!PILOTO_ATIVO) return true;
   if (!email) return false; // sem e-mail = sem identidade; doGet mostra tela de troca de conta
-  return EMAILS_PILOTO.indexOf(String(email).toLowerCase()) !== -1;
+  return !!getPerfil(email);
 }
 
 // Índices das colunas (base 0) na aba Tarefas
@@ -463,10 +460,12 @@ function gravarLogs(entradas) {
 // ── Visibilidade por perfil ───────────────────────────────────
 // Admin/Gestor veem tudo (retorna null = sem restrição).
 // Usuário Padrão vê apenas tarefas onde: é o responsável, é o criador,
-// ou está marcado como responsável em algum item de checklist.
+// está marcado como responsável em algum item de checklist, ou a tarefa
+// pertence a um projeto público (planos de ação dos painéis).
 function idsTarefasVisiveis(email, rowsTarefas) {
   if (!email || podeExcluir(email)) return null;
   var alvo = String(email).trim().toLowerCase();
+  var publicos = projetosPublicos();
 
   // Tarefas onde o usuário está marcado em item de checklist (col. 7 = Responsavel)
   var marcado = {};
@@ -485,7 +484,8 @@ function idsTarefasVisiveis(email, rowsTarefas) {
     var id      = String(rowsT[j][COL.ID]);
     var resp    = String(rowsT[j][COL.RESPONSAVEL] || '').trim().toLowerCase();
     var criador = String(rowsT[j][COL.CRIADO_POR]  || '').trim().toLowerCase();
-    if (resp === alvo || criador === alvo || marcado[id]) visiveis[id] = true;
+    var projeto = String(rowsT[j][COL.PROJETO] || '');
+    if (resp === alvo || criador === alvo || marcado[id] || publicos[projeto]) visiveis[id] = true;
   }
   return visiveis;
 }

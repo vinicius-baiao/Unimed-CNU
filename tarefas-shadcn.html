@@ -957,12 +957,12 @@ var filtroResponsavelAtual = '';
 var filtroInicialAplicado  = false;
 
 // Abre o board já filtrado nas tarefas do próprio usuário (pedido do piloto).
-// Usuário Padrão já recebe só as suas do backend; o filtro extra vale para
-// Admin/Gestor. "Limpar filtros" na sidebar remove com um clique.
+// Vale para todos os perfis: desde 08/09/2026 o Usuário Padrão também recebe
+// as tarefas dos projetos públicos (planos de ação dos painéis), então o board
+// dele deixou de ser só "as suas". "Limpar filtros" na sidebar remove com um clique.
 function aplicarFiltroInicial() {
   if (filtroInicialAplicado || !currentUser || !tarefas.length) return;
   filtroInicialAplicado = true;
-  if (!currentUserPodeExcluir) return;
   var eu = currentUser.trim().toLowerCase();
   var tem = tarefas.some(function(t) {
     return String(t['Responsável'] || '').trim().toLowerCase() === eu;
