@@ -22,6 +22,8 @@
 - Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
+- **Publicado em 08/09 à tarde:** painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48),
+  GT Onco **@65** (v1.40). Cora segue na **@65** (HEAD do script = repo, push 14:32). IDs no Cora: Spravato 5 · PF 6 · GT 7.
 
 ### Último bloco — 08/09 (tarde): roteiro de conclusão executado pelo Claude Code
 
@@ -221,10 +223,10 @@ inalterados, console sem erros.
 | 5 | **Segurança** | Tornar **privado** o repo `vinicius-baiao/Unimed-CNU` (hoje público com a lista de e-mails da equipe). O token que também estava exposto lá deixou de importar: o endpoint que o usava foi removido em 03/08/2026 junto com a integração do Gem. |
 | 6 | ~~**Remetente `taskcenter@`**~~ **resolvido em 03/08** | `verificarAliases()` retornou `true` com o alias na conta que executa o script (`aurelio.pereira.ext@`): `["taskcenter@unimedcnu.coop.br"]`. Nada a mudar no código — `enviarEmail()` consulta `GmailApp.getAliases()` a cada envio e usa `from: taskcenter@`. **Falta só conferir no primeiro e-mail real** se o cliente exibe "enviado por aurelio.pereira.ext@…" abaixo do `De:`: Send-As por alias mantém a conta real no cabeçalho `Sender:`, e remover isso exigiria a TI configurar SMTP do domínio em vez de alias. |
 | 7 | ~~**Gui retestar checklist**~~ **validado em 03/08** | Guilherme testou na versão publicada e aprovou: marcar itens do checklist em modo visualização funciona. Encerra o feedback que abriu a sessão. |
-| 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. |
+| 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 10.** |
 | 10 | **Comunicar a equipe** | Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
 | 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
-| 9 | **Etapa 3 — liberar os 38 da equipe** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
+| 10 | **Etapa 3 — liberar os 38 da equipe** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
 
 ## Backlog técnico (fase 2)
 
