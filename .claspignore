@@ -1,0 +1,8 @@
+# Não subir para o Apps Script: testes Node, docs e referência de integração
+tests/**
+integracoes/**
+docs/**
+node_modules/**
+package.json
+**/*.md
+**/*.xlsx
