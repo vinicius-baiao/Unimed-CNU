@@ -70,7 +70,26 @@ Setas no dropdown, agrupar por unidade, foto de perfil, alterar o botão Avisar 
 - Opção extra do popover e o chip usam `nomeDeUsuario`, logo herdam o fallback.
 - Painéis (`integracoes/PlanoAcaoCora.html`, `pacNome`) já normalizam do mesmo jeito; nada muda.
 
-## 3. CSS
+## 3. Erro de carga visível na Home
+
+Hoje, quando as duas chamadas da carga inicial falham (`erroCritico`), a mensagem vai só para o
+`#board` da aba Tarefas — e o app abre na Home. Quem cai nisso (conta Google padrão não corporativa,
+cookies de terceiros bloqueados no embed do Sites) vê o site vazio e conclui que "não tem acesso".
+Caso real: Glaucia, 08/09/2026.
+
+- Em `aplicar()`, quando `erroCritico`: além do texto no board, renderizar um alerta no topo da Home
+  (`#homeAlerta`, `role="alert"`) com: título "Não foi possível carregar seus dados", a mensagem do
+  servidor (`esc(erroCritico)`), a orientação fixa "Se você usa mais de uma conta Google neste
+  navegador, abra o app com a conta @unimedcnu.coop.br pelo link direto ou em janela anônima." e um
+  botão **Tentar de novo** que chama `carregarTudo()`. Um `toast(erroCritico, true)` também dispara.
+- O alerta é removido no início de cada `carregarTudo()` (nova tentativa limpa o estado).
+- `erroApoio` (só projetos/usuários falharam) continua com o toast atual — o app segue utilizável.
+- Mensagens do servidor cobertas sem mudança no backend: "Conta Google não identificada…",
+  "Acesso restrito ao piloto.", "Falha de rede ao contatar o servidor." (onerror do JSONP).
+- CSS: `.home-alerta` com borda esquerda em `var(--erro-cor)`, fundo suave, texto em
+  `var(--foreground)`, botão secundário à direita; some no modo impressão.
+
+## 4. CSS
 
 - `.ckl-chip`: altura 28px, `border: 1px solid var(--input)`, `border-radius: 999px`, avatar de 18px
   + nome em `.75rem`, `max-width: 190px` com ellipsis, `flex-shrink: 0` — ocupa o lugar do select.
@@ -79,9 +98,13 @@ Setas no dropdown, agrupar por unidade, foto de perfil, alterar o botão Avisar 
 - `#cklDropdown .combo-busca`: input no topo do popover, largura 100%, borda inferior.
 - Remover `.ckl-responsavel-sel` (sem uso).
 
-## 4. Verificação
+## 5. Verificação
 
 Sem testes Node para o front. Verificar no preview local (`npx serve -p 3000 .`, mock embutido):
+
+0. Erro de carga: no console, forçar o mock de `chamarAPI` a devolver `{erro:'Conta Google não
+   identificada…'}` para `bootstrap` e recarregar → alerta na Home com a mensagem e a orientação,
+   toast vermelho, botão "Tentar de novo" refaz a carga e remove o alerta quando o mock volta ao normal.
 
 1. Visualização como Usuário Padrão em tarefa de outro (`currentUser`/`currentUserPodeExcluir` no
    console): chip clicável; digitar filtra por nome, e-mail e cargo; Enter marca a primeira; o mock de
