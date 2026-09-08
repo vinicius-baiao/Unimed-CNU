@@ -22,6 +22,10 @@
 - Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
+- **Publicado em 08/09 (tarde/noite):** Cora **@67** (chip de colega com busca, nomes humanizados, alerta de carga);
+  painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48), GT Onco **@65** (v1.40).
+  IDs no Cora: Spravato 5 · PF 6 · GT 7. **Etapa 3 gravada 14:51:** aba Usuários com **79** pessoas; Guilherme,
+  Taiara, Carina e Fabiane = Gestor. O Cora está aberto para a equipe — falta comunicar (pendência 10).
 
 ### Último bloco — 08/09 (noite): marcar colega com busca + nomes humanizados + alerta de carga — publicado @67
 
