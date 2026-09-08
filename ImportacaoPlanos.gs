@@ -20,7 +20,7 @@
 // ============================================================
 
 var IMPORT_SPRAVATO_SHEET_ID  = '1nZGEIK0T4lJBc9HrSEg3x8YIXkKlwlRjOUo11meoqA4';
-var IMPORT_PF_SHEET_ID        = '';   // opcional: Script Properties → PA_SHEET_ID do painel PF
+var IMPORT_PF_SHEET_ID        = '1QD-jYJl8j8a5Ww0oJ_Hru-7zRHZ1VcIGdbgKdrQGyaQ';   // opcional: Script Properties → PA_SHEET_ID do painel PF
 var IMPORT_PF_NOME_PLANILHA   = 'Raio X PF — Plano de Ação (armazenamento)';
 var IMPORT_ABA_PLANO          = 'PLANO_ACAO';
 var IMPORT_EMAILS_GT = {

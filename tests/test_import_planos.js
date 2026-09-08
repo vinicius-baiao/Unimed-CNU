@@ -130,10 +130,20 @@ function base() {
   assert.ok(ctx._escritas.some(e => e.aba === 'Projetos' && e.op === 'setValue' && e.args[1] === 6 && e.args[2] === true), 'marcou público');
 
   const ctx2 = carregar({ abas: base(), email: ADMIN, planilhas: { [ctx_sprId()]: { PLANO_ACAO: [cabPA] } }, drive: { [PF_NOME]: ['A', 'B'] } });
+  ctx2.IMPORT_PF_SHEET_ID = ''; // força a busca no Drive (o default agora é o ID fixo do PF)
   assert.throws(() => ctx2.importarPlanosDeAcao(true), /mais de uma/);
   const ctx3 = carregar({ abas: base(), email: ADMIN, planilhas: { [ctx_sprId()]: { PLANO_ACAO: [cabPA] } }, drive: {} });
+  ctx3.IMPORT_PF_SHEET_ID = '';
   assert.throws(() => ctx3.importarPlanosDeAcao(true), /não encontrada/);
   assert.strictEqual(ctx3._escritas.length, 0);
+
+  // com IMPORT_PF_SHEET_ID preenchido (default atual), abre a planilha do PF por ID e não consulta o Drive
+  const ctx4 = carregar({ abas: base(), email: ADMIN,
+    planilhas: { [ctx_sprId()]: { PLANO_ACAO: [cabPA] }, [ctx_pfId()]: { PLANO_ACAO: [cabPA] } }, drive: {} });
+  assert.ok(ctx4.IMPORT_PF_SHEET_ID, 'IMPORT_PF_SHEET_ID preenchido');
+  assert.doesNotThrow(() => ctx4.importarPlanosDeAcao(true), 'com ID fixo a importação não depende do Drive');
 }
 
 function ctx_sprId() { return carregar({ abas: {} }).IMPORT_SPRAVATO_SHEET_ID; }
+
+function ctx_pfId() { return carregar({ abas: {} }).IMPORT_PF_SHEET_ID; }
