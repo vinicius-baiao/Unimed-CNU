@@ -418,6 +418,10 @@
     .proj-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,.1); }
     .proj-list-nome { flex: 1; font-size: .875rem; font-weight: 500; }
     .proj-list-desc { font-size: .75rem; color: var(--muted-foreground); }
+    .proj-chip-publico { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--primary); background: var(--accent); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+    .proj-check { display: flex; align-items: center; gap: 8px; font-size: .82rem; color: var(--foreground); cursor: pointer; margin-top: 4px; }
+    .proj-check input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+    .proj-check small { color: var(--muted-foreground); font-size: .72rem; }
     .proj-list-actions { display: flex; gap: 6px; }
     .proj-btn-edit, .proj-btn-archive {
       padding: 4px 10px; border-radius: calc(var(--radius) - 2px); border: 1px solid var(--input);
@@ -763,6 +767,11 @@
           <label>Cor</label>
           <div class="proj-color-palette" id="projPaleta"></div>
           <input type="hidden" id="projCor" value="#004e4c">
+        </div>
+        <div class="full">
+          <label class="proj-check"><input type="checkbox" id="projPublico">
+            <span>Visível a todo o domínio <small>· as tarefas deste projeto aparecem para qualquer pessoa da Unimed CNU, inclusive nos painéis</small></span>
+          </label>
         </div>
       </div>
       <div class="proj-form-actions">
@@ -2375,6 +2384,7 @@ function renderListaProjetos() {
       +   '<div class="proj-list-nome">' + esc(p.nome) + '</div>'
       +   (p.descricao ? '<div class="proj-list-desc">' + esc(p.descricao) + '</div>' : '')
       + '</div>'
+      + (p.publico ? '<span class="proj-chip-publico" title="Visível a todo o domínio">público</span>' : '')
       + '<div class="proj-list-actions">'
       +   '<button class="proj-btn-archive" onclick="arquivarProjetoById(' + Number(p.id) + ',\'' + esc(p.nome).replace(/'/g,"\\'") + '\')">Arquivar</button>'
       + '</div>'
@@ -2387,16 +2397,18 @@ function salvarNovoProjeto() {
   if (!nome) { toast('Informe o nome do projeto.', true); return; }
   var desc = document.getElementById('projDesc').value.trim();
   var cor  = document.getElementById('projCor').value || PALETA_CORES[0];
+  var publico = !!document.getElementById('projPublico').checked;
 
   var btn = document.querySelector('#projModal .btn-primary');
   btn.disabled = true; btn.textContent = 'Salvando…';
 
-  chamarAPI({ acao: 'criarProjeto', dados: { nome: nome, descricao: desc, cor: cor } }, function(data) {
+  chamarAPI({ acao: 'criarProjeto', dados: { nome: nome, descricao: desc, cor: cor, publico: publico } }, function(data) {
     btn.disabled = false; btn.textContent = 'Criar Projeto';
     if (data.erro) { toast('Erro: ' + data.erro, true); return; }
-    projetos.push({ id: data.id, nome: nome, descricao: desc, cor: cor });
+    projetos.push({ id: data.id, nome: nome, descricao: desc, cor: cor, publico: publico });
     document.getElementById('projNome').value = '';
     document.getElementById('projDesc').value = '';
+    document.getElementById('projPublico').checked = false;
     renderListaProjetos();
     popularFiltros();
     fecharGerenciarProjetos();
@@ -2443,7 +2455,8 @@ function arquivarProjetoById(id, nome) {
     { id: 4, nome: 'Alto Custo', descricao: '', cor: '#e11d48' },
     { id: 5, nome: 'Demandas Linhas de Cuidados - Oportunidades', descricao: '', cor: '#7c3aed' },
     { id: 6, nome: 'Negociação de Rede - SSA', descricao: '', cor: '#16a34a' },
-    { id: 7, nome: 'Atenção à Saúde', descricao: '', cor: '#f59f00' }
+    { id: 7, nome: 'Atenção à Saúde', descricao: '', cor: '#f59f00' },
+    { id: 8, nome: 'GT Onco', descricao: 'Plano de ação do GT (público)', cor: '#7c3aed', publico: true }
   ];
   function T(id, tarefa, projeto, resp, prazo, status, prioridade, obs) {
     return { ID: id, Tarefa: tarefa, Projeto: projeto, 'Responsável': resp, Prazo: prazo,

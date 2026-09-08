@@ -153,19 +153,58 @@ function include(nome) {
 }
 
 // ── Projetos ──────────────────────────────────────────────────
-var COL_PROJ = { ID: 0, NOME: 1, DESCRICAO: 2, COR: 3, ATIVO: 4 };
+// Publico (col. F): projeto visível a todo o domínio — as tarefas dele entram
+// em idsTarefasVisiveis() para qualquer perfil e a rota planoAcaoProjeto
+// devolve o plano a quem não está na aba Usuários. Usado pelos painéis
+// (Spravato, Carteira PF, GT Onco) para o plano de ação.
+var COL_PROJ = { ID: 0, NOME: 1, DESCRICAO: 2, COR: 3, ATIVO: 4, PUBLICO: 5 };
+var HEADERS_PROJ = ['ID','Nome','Descrição','Cor','Ativo','Publico'];
 
 function getOrCreateProjetosSheet() {
   var ss    = _ss || (_ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet());
   var sheet = ss.getSheetByName(ABA_PROJETOS);
   if (!sheet) {
     sheet = ss.insertSheet(ABA_PROJETOS);
-    var hProj = ['ID','Nome','Descrição','Cor','Ativo'];
-    sheet.getRange(1, 1, 1, hProj.length).setValues([hProj]).setFontWeight('bold');
+    sheet.getRange(1, 1, 1, HEADERS_PROJ.length).setValues([HEADERS_PROJ]).setFontWeight('bold');
     sheet.setFrozenRows(1);
-    sheet.setColumnWidths(1, hProj.length, 100);
+    sheet.setColumnWidths(1, HEADERS_PROJ.length, 100);
   }
   return sheet;
+}
+
+// Células booleanas chegam como true, 'TRUE' ou 'true' conforme a origem.
+function ehVerdadeiro(v) {
+  return v === true || String(v).toLowerCase() === 'true';
+}
+
+// Migração única (08/09/2026): aba criada antes da coluna Publico ganha o
+// cabeçalho em F1 e FALSE nas linhas existentes. Idempotente — rodar no editor.
+function migrarProjetosPublico() {
+  var sheet = getOrCreateProjetosSheet();
+  if (sheet.getLastColumn() >= HEADERS_PROJ.length) { Logger.log('migrarProjetosPublico: coluna já existe.'); return; }
+  var c = COL_PROJ.PUBLICO + 1;
+  sheet.getRange(1, c).setValue('Publico');
+  var n = sheet.getLastRow() - 1;
+  if (n > 0) {
+    var falsos = [];
+    for (var i = 0; i < n; i++) falsos.push([false]);
+    sheet.getRange(2, c, n, 1).setValues(falsos);
+  }
+  invalidarAba(ABA_PROJETOS);
+  limparCacheListas();
+  Logger.log('migrarProjetosPublico: coluna criada, ' + n + ' linha(s) com FALSE.');
+}
+
+// {nome: true} dos projetos ativos e públicos. Lê pelo cache de execução.
+function projetosPublicos() {
+  var rows = lerAba(ABA_PROJETOS) || [];
+  var mapa = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][COL_PROJ.NOME]) continue;
+    if (rows[i][COL_PROJ.ATIVO] === false || rows[i][COL_PROJ.ATIVO] === 'false') continue;
+    if (ehVerdadeiro(rows[i][COL_PROJ.PUBLICO])) mapa[String(rows[i][COL_PROJ.NOME])] = true;
+  }
+  return mapa;
 }
 
 function proximoIdProjeto() {
@@ -191,7 +230,8 @@ function listarProjetosDaPlanilha() {
       id:       rows[i][COL_PROJ.ID],
       nome:     String(rows[i][COL_PROJ.NOME]),
       descricao: String(rows[i][COL_PROJ.DESCRICAO] || ''),
-      cor:      String(rows[i][COL_PROJ.COR] || '#64748b')
+      cor:      String(rows[i][COL_PROJ.COR] || '#64748b'),
+      publico:  ehVerdadeiro(rows[i][COL_PROJ.PUBLICO])
     });
   }
   return { projetos: lista };
@@ -213,8 +253,9 @@ function criarProjeto(dados) {
 
   var sheet = getOrCreateProjetosSheet();
   var id    = proximoIdProjeto();
-  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', corSegura(dados.cor), true]);
-  gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome);
+  var publico = ehVerdadeiro(dados.publico);
+  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', corSegura(dados.cor), true, publico]);
+  gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome + (publico ? ' (público)' : ''));
   lock.releaseLock();
   invalidarAba(ABA_PROJETOS);
   limparCacheListas();
@@ -231,11 +272,13 @@ function atualizarProjeto(dados) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
     var row = rows[i].slice();
+    while (row.length < HEADERS_PROJ.length) row.push(row.length === COL_PROJ.PUBLICO ? false : '');
     if (dados.nome      !== undefined) row[COL_PROJ.NOME]     = dados.nome;
     if (dados.descricao !== undefined) row[COL_PROJ.DESCRICAO] = dados.descricao;
     if (dados.cor       !== undefined) row[COL_PROJ.COR]      = corSegura(dados.cor);
+    if (dados.publico   !== undefined) row[COL_PROJ.PUBLICO]  = ehVerdadeiro(dados.publico);
     sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
-    gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, dados.nome || '');
+    gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, (dados.nome || '') + (dados.publico !== undefined ? ' publico=' + row[COL_PROJ.PUBLICO] : ''));
     invalidarAba(ABA_PROJETOS);
     limparCacheListas();
     return { sucesso: true };
@@ -1132,14 +1175,14 @@ function setup() {
 
   // ── Aba Projetos ─────────────────────────────────────────────
   var proj = ss.getSheetByName(ABA_PROJETOS) || ss.insertSheet(ABA_PROJETOS);
-  var hProj = ['ID', 'Nome', 'Descrição', 'Cor', 'Ativo'];
+  var hProj = HEADERS_PROJ;
   proj.getRange(1, 1, 1, hProj.length).setValues([hProj])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   proj.setFrozenRows(1);
-  proj.getRange(2, 5, 999).setDataValidation(
+  proj.getRange(2, 5, 999, 2).setDataValidation(
     SpreadsheetApp.newDataValidation()
       .requireValueInList(['TRUE','FALSE'], true).build());
-  [60, 220, 300, 90, 60].forEach(function(w, i) { proj.setColumnWidth(i + 1, w); });
+  [60, 220, 300, 90, 60, 70].forEach(function(w, i) { proj.setColumnWidth(i + 1, w); });
 
   SpreadsheetApp.flush();
   Logger.log('Setup concluído — abas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários, Arquivo, Projetos');
@@ -1266,19 +1309,19 @@ function popularProjetos() {
   if (!sheet) { Logger.log('Aba Projetos não existe. Rode setup() primeiro.'); return; }
 
   var ultima = sheet.getLastRow();
-  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, 5).clearContent();
+  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, HEADERS_PROJ.length).clearContent();
 
   var lista = [
-    [1, 'Gestão de Demandas',                               '', '#004e4c', true],
-    [2, 'Rede Higiene',                                     '', '#0052cc', true],
-    [3, 'Cuidado Transicional',                             '', '#c9a84c', true],
-    [4, 'Alto Custo',                                       '', '#e8384f', true],
-    [5, 'Demandas Linhas de Cuidados - Oportunidades',      '', '#7c3aed', true],
-    [6, 'Negociação de Rede - SSA',                         '', '#16a34a', true],
-    [7, 'Atenção à Saúde',                                  '', '#f59f00', true]
+    [1, 'Gestão de Demandas',                               '', '#004e4c', true, false],
+    [2, 'Rede Higiene',                                     '', '#0052cc', true, false],
+    [3, 'Cuidado Transicional',                             '', '#c9a84c', true, false],
+    [4, 'Alto Custo',                                       '', '#e8384f', true, false],
+    [5, 'Demandas Linhas de Cuidados - Oportunidades',      '', '#7c3aed', true, false],
+    [6, 'Negociação de Rede - SSA',                         '', '#16a34a', true, false],
+    [7, 'Atenção à Saúde',                                  '', '#f59f00', true, false]
   ];
 
-  sheet.getRange(2, 1, lista.length, 5).setValues(lista);
+  sheet.getRange(2, 1, lista.length, HEADERS_PROJ.length).setValues(lista);
   SpreadsheetApp.flush();
   limparCacheListas();
   Logger.log('popularProjetos: ' + lista.length + ' projetos inseridos.');
