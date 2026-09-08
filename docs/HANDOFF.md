@@ -22,6 +22,19 @@
 - Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
+
+### ⏸️ Em andamento (pausado 08/09 ~16h por limite de tokens) — marcar colega com busca + nomes + alerta de carga
+
+Spec: `docs/superpowers/specs/2026-09-08-marcar-colega-busca-e-nomes-design.md`. Plano:
+`docs/superpowers/plans/2026-09-08-marcar-colega-busca-e-nomes.md`. Execução por subagentes; ledger em
+`.superpowers/sdd/2026-09-08-marcar-colega-busca-e-nomes/progress.md` (git-ignored — ler primeiro ao retomar).
+
+- Tasks 1–4 implementadas, revisadas e verificadas no preview (commits `47f0dcd..6c3aa87`); revisão final da
+  branch aprovou; onda única de correções aplicada no `76286ec` (chip sem `stopPropagation`, copy do combo de
+  Responsável preservada, CSS consolidado). **Nada publicado ainda: a @65 continua no ar.**
+- **Falta:** re-revisão escopada do `76286ec`; Task 5 = `npm test` → `clasp push` → `clasp deploy -i` na
+  implantação existente (vira @66) → hard reload e conferir chips/Histórico em produção → registrar aqui.
+- Próximo passo pedido pelo Aurélio: **visão de gestores para indicadores** (levantar escopo em brainstorming).
 - **Publicado em 08/09 à tarde:** painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48),
   GT Onco **@65** (v1.40). Cora segue na **@65** (HEAD do script = repo, push 14:32). IDs no Cora: Spravato 5 · PF 6 · GT 7.
 - **Etapa 3 gravada 08/09 14:51:** aba Usuários com **79** pessoas (38 da Atenção à Saúde adicionadas; Glaucia e
