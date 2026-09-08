@@ -47,6 +47,9 @@ Os painéis Spravato, Carteira PF e GT Onco passam a ler o plano de ação do Co
   ⚠️ O painel GT diz "20 macroações", mas numera de 1 a 21; menos 3 canceladas = 18.
 - Harness de testes Node em `tests/` (`npm test`), `.claspignore` para não subir testes/docs.
 
+**Roteiro passo a passo, com o que anotar e o que colar no Claude Code depois:**
+[`docs/ROTEIRO_CONCLUSAO_PLANOS_DE_ACAO.md`](ROTEIRO_CONCLUSAO_PLANOS_DE_ACAO.md). Resumo:
+
 **Roteiro de execução no editor do Apps Script (nesta ordem; cada uma primeiro com `true`,
 conferindo o Logger, depois com `false`):**
 
