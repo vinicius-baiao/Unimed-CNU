@@ -1682,22 +1682,36 @@ function setRespValor(email) {
   document.getElementById('campoRespInput').value = email ? nomeDeUsuario(email) : '';
 }
 
-function renderRespDropdown(termo) {
+// Lista de usuários para os combos com busca (campo Responsável e chip do
+// checklist). "— Nenhum —" primeiro; `extras` inclui e-mails fora da aba
+// Usuários (marcação legada) para a opção não sumir.
+function montarOpcoesUsuarios(termo, emailAtual, extras) {
   termo = (termo || '').toLowerCase().trim();
-  var dd    = document.getElementById('respDropdown');
-  var atual = document.getElementById('campoResponsavel').value;
+  emailAtual = String(emailAtual || '').toLowerCase();
   var lista = usuariosOrdenados().filter(function(u) {
     if (!u.email) return false;
     if (!termo) return true;
     return (u.nome + ' ' + u.email + ' ' + (u.cargo || '')).toLowerCase().indexOf(termo) !== -1;
   });
-  var html = '<div class="combo-opt' + (!atual ? ' active' : '') + '" data-email="">— Nenhum —</div>';
+  (extras || []).forEach(function(x) {
+    if (!x || !x.email) return;
+    var ja = lista.some(function(u) { return String(u.email).toLowerCase() === String(x.email).toLowerCase(); });
+    if (!ja && (!termo || (x.nome + ' ' + x.email).toLowerCase().indexOf(termo) !== -1)) lista.push({ email: x.email, nome: x.nome, cargo: '' });
+  });
+  var html = '<div class="combo-opt' + (!emailAtual ? ' active' : '') + '" data-email="">— Nenhum —</div>';
   lista.forEach(function(u) {
-    html += '<div class="combo-opt' + (u.email === atual ? ' active' : '') + '" data-email="' + esc(u.email) + '">'
+    var ativo = String(u.email).toLowerCase() === emailAtual;
+    html += '<div class="combo-opt' + (ativo ? ' active' : '') + '" data-email="' + esc(u.email) + '">'
       + esc(u.nome) + (u.cargo ? ' <small>· ' + esc(u.cargo) + '</small>' : '') + '</div>';
   });
-  if (!lista.length && termo) html += '<div class="combo-empty">Nenhum responsável encontrado</div>';
-  dd.innerHTML = html;
+  if (!lista.length && termo) html += '<div class="combo-empty">Nenhum colega encontrado</div>';
+  return html;
+}
+
+function renderRespDropdown(termo) {
+  var dd    = document.getElementById('respDropdown');
+  var atual = document.getElementById('campoResponsavel').value;
+  dd.innerHTML = montarOpcoesUsuarios(termo, atual, []);
   Array.from(dd.querySelectorAll('.combo-opt')).forEach(function(el) {
     el.addEventListener('mousedown', function(e) {
       e.preventDefault(); // evita perder o foco antes do clique
