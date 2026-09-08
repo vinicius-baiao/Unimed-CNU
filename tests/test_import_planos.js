@@ -110,7 +110,7 @@ function base() {
   assert.strictEqual(cRows[0][1], tRows.find(t => /gt#1$/.test(t[9]))[0], 'itens apontam para a tarefa certa');
   assert.ok(cRows.every(c => c.length === 8 && c[2] === '' && c[7] === ''));
   assert.strictEqual(cRows.filter(c => c[5] === true).length, 6 + 3 + 3 + 1 + 1 + 1 + 2, 'feitos: 1(6) 7(3) 16(3) 5.1 6.3 11.2 15(2)');
-  assert.strictEqual(ctx._escritas.filter(e => e.aba === 'Log' && e.op === 'appendRow' && e.args[3] === 'IMPORTAR').length, 38);
+  assert.strictEqual(ctx._escritas.filter(e => e.aba === 'Log' && e.op === 'appendRow' && e.args[3] === 'IMPORTAR' && e.args[4] === 'Origem').length, 38);
   assert.strictEqual(ctx._emails.length, 0, 'nenhum e-mail');
   // idempotência
   const r2 = J(ctx.importarPlanosDeAcao(true));
