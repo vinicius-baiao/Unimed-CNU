@@ -8,7 +8,11 @@
 ## Onde estamos
 
 - Branch de trabalho: **`mvp-shadcn-piloto`** (PR #3 aberto contra `main`, ainda não mergeado).
-- Último commit: ver `git log`. Publicado no Apps Script via `clasp deploy -i` (08/09/2026).
+- Publicado em 08/09/2026 via `clasp deploy -i` (nova versão na implantação existente):
+  Cora **@65**; Spravato **v4.74** (@251 e @252, as duas implantações existentes); Carteira PF
+  **v8.47** (@77); GT Onco **v1.39** (@64). Os três painéis já leem do Cora; até a importação
+  rodar, a seção deles mostra "Nenhuma ação cadastrada" (projeto ainda não existe) ou o erro
+  "Projeto não disponível" — esperado.
 - Endpoints da carga inicial: `bootstrap` + `bootstrapApoio`, chamados em paralelo pelo front.
 - O Web App atende **somente GET** — o `doPost` saiu com a integração do Gem.
 - Frontend servido: **`tarefas-shadcn.html`** (constante `HTML_FILE` no `Code.gs`).
@@ -54,7 +58,19 @@ conferindo o Logger, depois com `false`):**
    Pede autorização do escopo de Drive na primeira execução. Anotar os **IDs dos projetos**
    que o Logger imprime: eles vão em `CORA_PROJETO_ID` de cada painel.
 
-**Verificação publicada pendente:** os 17 passos da seção Verificação da spec.
+**Painéis já publicados** com `PAC_CONFIG.projetoId = 0` (localizam o projeto pelo **nome**; a
+rota aceita `projetoNome` como fallback). Depois da importação, preencher o ID em cada
+`Painel.html` (Spravato `appscript/`, PF `cora-carteira-pf/`, GT `cora-painel-gt/` + `build/body_gt.html`)
+e republicar com `clasp deploy -i` — ou deixar pelo nome, que funciona enquanto ninguém renomear
+o projeto. O bloco copiado nos três é `integracoes/PlanoAcaoCora.html`; reaplicar com
+`python integracoes/aplicar_painel.py <spravato|pf|gt>` (idempotente por asserções).
+
+**Ainda não executado (depende do editor do Apps Script, `clasp run` não está habilitado):** o
+roteiro abaixo. **Verificação publicada pendente:** os 17 passos da seção Verificação da spec.
+
+⚠️ Efeito imediato da publicação @65 que já está no ar: a allowlist virou a aba `Usuários`. Os 5
+do piloto continuam entrando (estão na aba). O Guilherme Borges ainda entra pela conta `.ext`
+até o remapeamento rodar.
 
 ### Bloco anterior — marcação de colegas em itens de checklist
 
