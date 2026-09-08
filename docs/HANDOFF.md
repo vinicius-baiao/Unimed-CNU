@@ -1,7 +1,7 @@
 # HANDOFF — Cora. Gestão de Tarefas
 
-> Estado do projeto na sessão de **08/09/2026** (planos de ação dos painéis dentro do Cora,
-> cadastro da equipe de Atenção à Saúde, allowlist pela aba Usuários).
+> Estado do projeto ao final da sessão de **08/09/2026 (tarde)** — roteiro de conclusão dos planos de
+> ação executado (Etapas 1, 2 e 4 concluídas; painéis republicados com os IDs; Etapa 3 aguarda decisão).
 > Ponto de partida para a próxima sessão: ler este arquivo + `CLAUDE.md` + `README.md`.
 > Manter atualizado ao fim de cada bloco de trabalho.
 
@@ -22,6 +22,35 @@
 - Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
+
+### Último bloco — 08/09 (tarde): roteiro de conclusão executado pelo Claude Code
+
+Executado via Chrome (sessão do Aurélio) + `clasp`, seguindo
+[`docs/ROTEIRO_CONCLUSAO_PLANOS_DE_ACAO.md`](ROTEIRO_CONCLUSAO_PLANOS_DE_ACAO.md). Simulação antes de cada gravação.
+
+| Etapa | Resultado |
+|---|---|
+| 1 `migrarProjetosPublico` | OK 13:28 — coluna `Publico` criada, 4 projetos legados em FALSE |
+| 2 remap Guilherme Borges | OK — sim 13:39 (3 células: Usuários L40; Tarefas L19/L20 col 4) → gravado 13:58. Ele é `guilherme.silva@` (ainda *Usuário Padrão*) |
+| 3 `importarUsuariosEquipe` | **NÃO gravada** — simulação 14:02 = "38 a adicionar, 2 a atualizar" (Glaucia unidade/cargo; Guilherme → Gestor). É a 1ª execução: **o Cora ainda não está aberto para os 38 da equipe**. Decisão do Aurélio (pendência 9) |
+| 4 `importarPlanosDeAcao` | OK — sim 14:24 (`Spravato 10 · PF 17 · GT 18 · novas 45 · itens 34`, N=2, M=5) → gravado ~14:26. **IDs: Spravato 5 · Carteira PF 6 · GT Onco 7** (verificado pela rota `planoAcaoProjeto`: 10/17/18 tarefas) |
+| 6 painéis | OK — `projetoId` 5/6/7 em `Painel.html` (Spravato, PF, GT) e `build/body_gt.html`; bumps v4.75 / v8.48 (+CHANGELOG) / v1.40; `clasp push -f` + `clasp deploy -i` → @253 / @78 / @65 |
+
+Correção no caminho: `IMPORT_PF_SHEET_ID` preenchido com o `PA_SHEET_ID` do PF
+(`1QD-jYJl8j8a5Ww0oJ_Hru-7zRHZ1VcIGdbgKdrQGyaQ`), porque a busca por nome no Drive não casava (nome com travessão);
+teste ajustado. A 1ª tentativa da Etapa 4 (14:10) falhou por isso — aparece como "Falha" na página Execuções.
+
+**Glaucia (abriu a sessão):** está na aba Usuários como Gestor e na allowlist. `bootstrapApoio` devolve projetos e
+usuários normalmente e não filtra por usuário → o "vê o site mas não vê projetos/usuários" foi falha pontual da 2ª
+chamada da carga inicial (o front abre mesmo assim, por desenho). Hard reload resolve; se repetir, investigar rede.
+
+**Verificação da spec (17 passos):** feitos os checks server-side (rota pública por nome para os 3 projetos,
+contagens, projetos ativos e públicos). Pendentes os que exigem navegador/pessoas — Etapa 5 itens 1–3 (Cora: chip
+`público`, `?projeto=7`, `?tarefa=<id>`), 4–5 (seção Plano de Ação nos 3 painéis), 6 (conta fora da aba Usuários) e
+7 (Taiara/Carina — depende da Etapa 3).
+
+**Limpeza:** `_Roteiro.gs` e os `case '_roteiro_*'` temporários do `doGet` foram removidos e o HEAD re-pushado;
+a `@65` do Cora nunca mudou. O Cora **não** foi republicado (a única mudança de código é a constante da importação).
 
 ### Último bloco — planos de ação dos painéis dentro do Cora (08/09/2026)
 
@@ -195,6 +224,7 @@ inalterados, console sem erros.
 | 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. |
 | 10 | **Comunicar a equipe** | Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
 | 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
+| 9 | **Etapa 3 — liberar os 38 da equipe** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
 
 ## Backlog técnico (fase 2)
 
@@ -242,3 +272,13 @@ Silenciar esses avisos via config do hook depende de OK explícito do Aurélio.
   (computed styles, spy em `chamarAPI`) em vez de captura de tela.
 - **`Estilos_Fontes.html`** é o arquivo do starter kit com as fontes em base64: nunca
   editar à mão.
+- **Automação do editor do Apps Script pelo Chrome é frágil**: o frame de coordenadas do Claude-in-Chrome mudou
+  no meio da sessão (1568×698 → 784×349) e cliques "no Executar" caíram fora do botão; um `zoom` fora do frame
+  falha *antes* do clique e serve de trava. Clique por **ref** resolve a posição real, mas só "pega" com a página
+  assentada há bastante tempo. O editor congela ~30 s após cada Run (log renderizando). A página **Execuções**
+  tem Trusted Types (sem JSONP), mas é o lugar confiável para ler status/log (`get_page_text` com a linha expandida).
+- **Rodar função manual sem o IDE**: `case` temporário no `doGet` (ramo da allowlist) que executa a função e devolve
+  `Logger.getLog()` + erro; chamar via JSONP pela implantação **@HEAD** (`AKfycbybhelw1wWoAAlm0UXUfh_90QMqkjwgWL75OlYHc-0`)
+  a partir da página do app (esperar ≥12 s após o load). A `@65` não muda. Remover o `case` depois. Gravações longas
+  (>40 s) estouram o cliente — verificar o efeito por outra rota.
+- **`get_page_text` não lê valores de `<input>`** (ex.: Propriedades do script) — usar `javascript_tool` lendo `.value`.
