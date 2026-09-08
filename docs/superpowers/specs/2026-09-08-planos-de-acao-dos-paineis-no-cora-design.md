@@ -310,7 +310,7 @@ Gestores:
 | Guilherme Borges G Da Silva | `guilherme.silva@unimedcnu.coop.br` | virou CLT e coordenador; a conta `.ext` foi abandonada. Vira Gestor com o e-mail novo. Ver remapeamento abaixo. |
 | Taiara Rodrigues | `taiara.rodrigues@unimedcnu.coop.br` | novo |
 | Carina Milanez Guardia | `carina.guardia@unimedcnu.coop.br` | novo |
-| Fabiane Minozzo | `fabiane.minozzo@unimedcnu.coop.br` | novo; não está na planilha. Entra na constante com Unidade e Cargo vazios, para preencher depois. |
+| Fabiane Minozzo | `fabiane.minozzo@unimedcnu.coop.br` | novo; não está na planilha. Entra na constante com Cargo `Gerente` e Unidade vazia (responde pelas duas equipes). |
 
 Aurélio continua Admin. Jacqueline e Thiago continuam como estão.
 
@@ -437,14 +437,11 @@ repositório, então a mudança fica registrada no changelog e na cópia version
 
 ## Pendências do Aurélio
 
-| # | Pendência |
-|---|---|
-| 1 | Confirmar os nomes dos três projetos (`Spravato`, `Carteira PF`, `GT Onco`). Renomear depois é seguro para os painéis, que usam o ID. |
-| 2 | Ciente de que, com a allowlist vindo da aba `Usuários`, os 41 passam a **entrar no Cora** assim que a importação rodar. Se a ideia for liberar por etapas, a importação pode receber um filtro por Equipe. |
-| 3 | Unidade e Cargo da Fabiane, para completar o cadastro dela depois. |
-
-Resolvidas em 08/09: e-mail da Fabiane, conta do Guilherme Borges (`guilherme.silva@`, CLT) e
-planilha do PF (localizada pelo nome, sem precisar do ID).
+Nenhuma. Resolvidas em 08/09/2026: e-mail da Fabiane (`fabiane.minozzo@`, cargo Gerente),
+conta do Guilherme Borges (`guilherme.silva@`, CLT), planilha do PF (localizada pelo nome, sem
+precisar do ID), nomes dos três projetos confirmados, e ciência de que os 41 usuários passam a
+entrar no Cora assim que a importação rodar. Os três projetos entram na aba `Projetos` como
+qualquer outro, só com `Publico = TRUE`.
 
 ## Fora de escopo
 
