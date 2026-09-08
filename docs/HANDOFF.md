@@ -23,22 +23,26 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
-### ⏸️ Em andamento (pausado 08/09 ~16h por limite de tokens) — marcar colega com busca + nomes + alerta de carga
+### Último bloco — 08/09 (noite): marcar colega com busca + nomes humanizados + alerta de carga — publicado @67
 
-Spec: `docs/superpowers/specs/2026-09-08-marcar-colega-busca-e-nomes-design.md`. Plano:
-`docs/superpowers/plans/2026-09-08-marcar-colega-busca-e-nomes.md`. Execução por subagentes; ledger em
-`.superpowers/sdd/2026-09-08-marcar-colega-busca-e-nomes/progress.md` (git-ignored — ler primeiro ao retomar).
+Spec: `docs/superpowers/specs/2026-09-08-marcar-colega-busca-e-nomes-design.md`; plano:
+`docs/superpowers/plans/2026-09-08-marcar-colega-busca-e-nomes.md`. Executado por subagentes (implementador +
+revisor por tarefa, revisão final da branch), commits `47f0dcd..76286ec`, só `tarefas-shadcn.html`.
 
-- Tasks 1–4 implementadas, revisadas e verificadas no preview (commits `47f0dcd..6c3aa87`); revisão final da
-  branch aprovou; onda única de correções aplicada no `76286ec` (chip sem `stopPropagation`, copy do combo de
-  Responsável preservada, CSS consolidado). **Nada publicado ainda: a @65 continua no ar.**
-- **Falta:** re-revisão escopada do `76286ec`; Task 5 = `npm test` → `clasp push` → `clasp deploy -i` na
-  implantação existente (vira @66) → hard reload e conferir chips/Histórico em produção → registrar aqui.
-- Próximo passo pedido pelo Aurélio: **visão de gestores para indicadores** (levantar escopo em brainstorming).
-- **Publicado em 08/09 à tarde:** painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48),
-  GT Onco **@65** (v1.40). Cora segue na **@65** (HEAD do script = repo, push 14:32). IDs no Cora: Spravato 5 · PF 6 · GT 7.
-- **Etapa 3 gravada 08/09 14:51:** aba Usuários com **79** pessoas (38 da Atenção à Saúde adicionadas; Glaucia e
-  Guilherme atualizados, ele agora Gestor). O Cora está aberto para a equipe — falta comunicar (pendência 10).
+- **Checklist:** o `<select>` de colega virou um **chip** por item (iniciais + primeiro nome, ou "+ colega") que abre
+  um **popover de busca único** (nome, e-mail, cargo; Enter escolhe; Esc fecha só o popover; clique fora fecha).
+  Ativo em visualização (salva na hora) e edição. `montarOpcoesUsuarios()` é compartilhada com o combo de Responsável.
+- **Nomes:** `nomeDeEmail` humaniza o fallback (`fabiane.minozzo` → "Fabiane Minozzo", `.ext` removido); o
+  Histórico usa `nomeDeUsuario`.
+- **Erro de carga visível na Home** (`#homeAlerta`, com a orientação de conta e "Tentar de novo") — caso Glaucia.
+- **Publicação:** @66 subiu com um arquivo de teste Node do workspace `.superpowers/` por engano (definia `esc` e
+  `usuarios` globais — perigoso); corrigido em ~1 min com `.claspignore += .superpowers/**` e **@67** limpa.
+  Verificado em produção via JSONP: `bootstrap` 80 tarefas / 103 itens, `bootstrapApoio` 79 usuários / 7 projetos.
+  A verificação visual do front em produção não é possível pelo Chrome automatizado (iframe cross-origin) — o arquivo
+  é o mesmo verificado no preview; **conferir com hard reload** ao abrir.
+- **Parqueado (revisão final, sem bloqueio):** foco não volta ao chip após Esc/seleção e Tab não fecha o popover
+  (igual ao combo de Responsável); alerta da Home não é visível se a recarga pós-save falhar com a Home oculta
+  (toast + board cobrem); `nomeDeEmail` devolve vazio para e-mail só com `ext`.
 
 ### Último bloco — 08/09 (tarde): roteiro de conclusão executado pelo Claude Code
 
@@ -244,6 +248,8 @@ inalterados, console sem erros.
 | 11 | ~~**Etapa 3 — liberar os 38 da equipe**~~ **feita em 08/09 às 14:51** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
 
 ## Backlog técnico (fase 2)
+- **Visão de gestores para indicadores** — próximo passo pedido pelo Aurélio em 08/09/2026: painel de indicadores
+  para o perfil Gestor (escopo a levantar em brainstorming: quais indicadores, por projeto/equipe/pessoa, período).
 
 > 📋 Sweep completo de performance e débito técnico em
 > [`docs/DEBITO_TECNICO.md`](DEBITO_TECNICO.md) (03/08/2026): 12 itens priorizados por
@@ -299,3 +305,6 @@ Silenciar esses avisos via config do hook depende de OK explícito do Aurélio.
   a partir da página do app (esperar ≥12 s após o load). A `@65` não muda. Remover o `case` depois. Gravações longas
   (>40 s) estouram o cliente — verificar o efeito por outra rota.
 - **`get_page_text` não lê valores de `<input>`** (ex.: Propriedades do script) — usar `javascript_tool` lendo `.value`.
+- **`clasp push` espelha tudo que não está no `.claspignore`** — em 08/09 um `.js` de teste deixado em
+  `.superpowers/` subiu na @66 e definia globais no Apps Script. Ler a lista de arquivos que o push imprime **antes**
+  do `clasp deploy`; qualquer diretório de trabalho novo entra no `.claspignore` primeiro.
