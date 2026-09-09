@@ -129,10 +129,13 @@ function doGet(e) {
       case 'criarProjeto':          resultado = criarProjeto(dados);           break;
       case 'atualizarProjeto':      resultado = atualizarProjeto(dados);       break;
       case 'arquivarProjeto':       resultado = arquivarProjeto(dados);        break;
+      case 'atualizarUsuario':      resultado = atualizarUsuario(dados);       break;
+      case 'adicionarUsuario':      resultado = adicionarUsuario(dados);       break;
+      case 'removerUsuario':        resultado = removerUsuario(dados);         break;
       case 'getUsuario': {
         var _u = Session.getActiveUser().getEmail();
         var _p = getPerfil(_u);
-        resultado = { email: _u, perfil: _p, admin: _p === 'Admin', podeExcluir: _p === 'Admin' || _p === 'Gestor' };
+        resultado = { email: _u, perfil: _p, admin: _p === 'Admin', podeExcluir: _p === 'Admin' || _p === 'Gestor', superAdmin: ehSuperAdmin(_u) };
         break;
       }
       default:
@@ -511,6 +514,126 @@ function podeExcluir(email) {
   return p === 'Admin' || p === 'Gestor';
 }
 
+// ── Super-admin (gerenciamento de acessos) ────────────────────
+// Capacidade ACIMA de Admin, restrita por código: só quem está aqui vê a aba
+// Acessos e altera a aba Usuários pela tela. Não é um 4º perfil na planilha,
+// justamente para que ninguém a conceda pela própria tela.
+var SUPER_ADMINS   = ['aurelio.pereira.ext@unimedcnu.coop.br'];
+var PERFIS_VALIDOS = ['Admin', 'Gestor', 'Usuário Padrão'];
+
+function ehSuperAdmin(email) {
+  if (!email) return false;
+  return SUPER_ADMINS.indexOf(String(email).trim().toLowerCase()) !== -1;
+}
+
+// Sufixo real (não indexOf): "x@gmail.com?y=@unimedcnu.coop.br" não passa.
+// Exige exatamente um '@': senão o sufixo bateria mesmo com um domínio falso
+// antes de um segundo '@' seguido do domínio confiável.
+function dominioPermitido(email) {
+  var e = String(email || '').trim().toLowerCase();
+  var pos = e.indexOf('@');
+  if (pos < 1 || e.indexOf('@', pos + 1) !== -1) return false;
+  return DOMINIOS_PERMITIDOS.some(function(d) { return e.slice(-d.length) === d; });
+}
+
+// Linha (1-based) de um e-mail na aba Usuários → { linha, dados } ou null.
+function localizarUsuario_(sheet, email) {
+  var alvo = String(email || '').trim().toLowerCase();
+  if (!alvo) return null;
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1] || '').trim().toLowerCase() === alvo) return { linha: i + 1, dados: rows[i] };
+  }
+  return null;
+}
+
+function usuarioDaLinha_(r) {
+  return { nome: String(r[0] || ''), email: String(r[1] || ''), perfil: String(r[2] || ''), unidade: String(r[3] || ''), cargo: String(r[4] || '') };
+}
+
+// Após qualquer escrita na aba Usuários: a allowlist e os perfis mudaram.
+// _perfis é o memo por execução de mapaPerfis(); sem zerá-lo, um getPerfil()
+// na mesma execução (e os testes) ainda veria o perfil antigo.
+function posEscritaUsuarios_() {
+  SpreadsheetApp.flush();
+  invalidarAba(ABA_USUARIOS);
+  _perfis = null;
+  limparCachePerfis();
+  limparCacheListas();
+}
+
+// dados = { email, perfil?, nome?, unidade?, cargo? } — grava só o que mudou.
+function atualizarUsuario(dados) {
+  if (!ehSuperAdmin(Session.getActiveUser().getEmail())) return { erro: 'Apenas o administrador do sistema.' };
+  dados = dados || {};
+  if (dados.perfil !== undefined && PERFIS_VALIDOS.indexOf(dados.perfil) === -1) return { erro: 'Perfil inválido.' };
+  if (dados.perfil !== undefined && dados.perfil !== 'Admin' && ehSuperAdmin(dados.email)) return { erro: 'O administrador do sistema permanece Admin.' };
+  if (dados.nome !== undefined && !String(dados.nome).trim()) return { erro: 'Nome é obrigatório.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet  = getSheet(ABA_USUARIOS);
+    var achado = sheet ? localizarUsuario_(sheet, dados.email) : null;
+    if (!achado) return { erro: 'Usuário não encontrado.' };
+    var email  = String(achado.dados[1]);
+    var campos = [['nome', 1, 0], ['perfil', 3, 2], ['unidade', 4, 3], ['cargo', 5, 4]]; // [chave, coluna 1-based, índice]
+    var linha  = achado.dados.slice(), logs = [];
+    campos.forEach(function(c) {
+      if (dados[c[0]] === undefined) return;
+      var novo = String(dados[c[0]]).trim(), antes = String(achado.dados[c[2]] || '');
+      if (novo === antes) return;
+      sheet.getRange(achado.linha, c[1]).setValue(novo);
+      linha[c[2]] = novo;
+      logs.push(['ACESSO', email, antes, c[0] + ': ' + novo]);
+    });
+    if (logs.length) { gravarLogs(logs); posEscritaUsuarios_(); }
+    return { sucesso: true, alterados: logs.length, usuario: usuarioDaLinha_(linha) };
+  } finally { lock.releaseLock(); }
+}
+
+// dados = { nome, email, perfil, unidade?, cargo? } — incluir = conceder acesso.
+function adicionarUsuario(dados) {
+  if (!ehSuperAdmin(Session.getActiveUser().getEmail())) return { erro: 'Apenas o administrador do sistema.' };
+  dados = dados || {};
+  var nome = String(dados.nome || '').trim(), email = String(dados.email || '').trim();
+  if (!nome) return { erro: 'Nome é obrigatório.' };
+  if (!dominioPermitido(email)) return { erro: 'E-mail deve ser @unimedcnu.coop.br ou @unimednacional.coop.br' };
+  if (PERFIS_VALIDOS.indexOf(dados.perfil) === -1) return { erro: 'Perfil inválido.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getSheet(ABA_USUARIOS);
+    if (!sheet) return { erro: 'Aba Usuários não encontrada.' };
+    if (localizarUsuario_(sheet, email)) return { erro: 'Este e-mail já está cadastrado.' };
+    var linha = [nome, email, dados.perfil, String(dados.unidade || '').trim(), String(dados.cargo || '').trim()];
+    sheet.appendRow(linha);
+    gravarLog('ACESSO', email, '', 'incluído: ' + dados.perfil);
+    posEscritaUsuarios_();
+    return { sucesso: true, usuario: usuarioDaLinha_(linha) };
+  } finally { lock.releaseLock(); }
+}
+
+// dados = { email } — remover = revogar acesso (a linha sai da aba Usuários).
+function removerUsuario(dados) {
+  if (!ehSuperAdmin(Session.getActiveUser().getEmail())) return { erro: 'Apenas o administrador do sistema.' };
+  dados = dados || {};
+  if (ehSuperAdmin(dados.email)) return { erro: 'O administrador do sistema não pode ser removido.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet  = getSheet(ABA_USUARIOS);
+    var achado = sheet ? localizarUsuario_(sheet, dados.email) : null;
+    if (!achado) return { erro: 'Usuário não encontrado.' };
+    sheet.deleteRow(achado.linha);
+    gravarLog('ACESSO', String(achado.dados[1]), String(achado.dados[2] || ''), 'removido');
+    posEscritaUsuarios_();
+    return { sucesso: true };
+  } finally { lock.releaseLock(); }
+}
+
 function listarUsuarios() {
   return comCache(CACHE_USUARIOS_KEY, CACHE_LISTAS_SEG, function() {
     var rows = lerAba(ABA_USUARIOS);
@@ -653,7 +776,8 @@ function bootstrap() {
       email:       email,
       perfil:      perfil,
       admin:       perfil === 'Admin',
-      podeExcluir: perfil === 'Admin' || perfil === 'Gestor'
+      podeExcluir: perfil === 'Admin' || perfil === 'Gestor',
+      superAdmin:  ehSuperAdmin(email)
     },
     tarefas:   listarTarefas().tarefas,
     checklist: listarChecklist_Status().itens
