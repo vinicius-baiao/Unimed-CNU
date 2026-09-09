@@ -521,6 +521,7 @@
       #indFiltros, .home-link-row { display: none !important; }
       .ind-abas { display: none !important; }
       .ind-acoes-filtros { display: none !important; }
+      #acBarra, #acNovo { display: none !important; }
     }
     .print-info { display: none; justify-content: space-between; align-items: center; padding: 8px 20px; background: var(--verde-bg); font-size: .78rem; color: var(--text-secondary); }
 
@@ -546,6 +547,26 @@
     .home-link:hover { text-decoration: underline; }
     #indicadoresView { padding: 28px 32px 40px; max-width: 1240px; margin: 0 auto; }
     .ind-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+    /* ── Acessos (super-admin) ── */
+    #acessosView { padding: 28px 32px 40px; max-width: 1240px; margin: 0 auto; }
+    .ac-totais { grid-template-columns: repeat(3, 1fr); }
+    .ac-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .ac-barra input { flex: 1; max-width: 440px; height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--surface); color: var(--foreground); font: inherit; font-size: .875rem; }
+    .ac-novo { display: grid; grid-template-columns: 1.3fr 1.6fr 1fr 1.2fr 1.2fr auto; gap: 10px; align-items: end; padding: 14px 16px; margin-bottom: 16px; background: var(--muted-bg); border: 1px solid var(--border); border-radius: var(--radius); }
+    .ac-novo label { display: flex; flex-direction: column; gap: 4px; font-size: .7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; min-width: 0; }
+    .ac-novo input, .ac-novo select { height: 34px; padding: 0 10px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--surface); color: var(--foreground); font: inherit; font-size: .875rem; min-width: 0; }
+    .ac-novo-acoes { display: flex; gap: 8px; }
+    .ac-tabela th, .ac-tabela td { text-align: left; }
+    .ac-tabela th { cursor: default; }
+    .ac-tabela tbody tr { cursor: default; }
+    .ac-tabela select, .ac-tabela input { height: 30px; padding: 0 8px; border: 1px solid transparent; border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--foreground); font: inherit; font-size: .84rem; min-width: 150px; }
+    .ac-tabela select { border-color: var(--input); background: var(--surface); cursor: pointer; }
+    .ac-tabela select:disabled { opacity: .7; cursor: not-allowed; }
+    .ac-tabela input:hover, .ac-tabela input:focus { border-color: var(--input); background: var(--surface); outline: none; }
+    .ac-tabela select.ac-perfil-admin { color: var(--primary); font-weight: 600; }
+    .ac-tabela td:last-child { text-align: right; width: 48px; }
+    .ac-remover { width: 28px; height: 28px; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--muted-foreground); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+    .ac-remover:hover { color: var(--erro-cor); border-color: var(--erro-cor); background: var(--late-bg); }
     .ind-filtros { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; margin-bottom: 20px; }
     .ind-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; color: var(--muted-foreground); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
     .ind-filtros select, .ind-filtros input { height: 34px; padding: 0 10px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--foreground); font-size: .875rem; font-weight: 400; text-transform: none; letter-spacing: 0; min-width: 180px; }
@@ -682,6 +703,9 @@
     <a id="nav-indicadores" onclick="setModo('indicadores')" title="Indicadores" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
       <span>Indicadores</span></a>
+    <a id="nav-acessos" onclick="setModo('acessos')" title="Acessos" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Acessos</span></a>
   </nav>
   <div class="foot"><span class="dot" id="u-av">·</span><span id="u-nome"><span id="u-nome-txt">—</span><small id="u-area">Unimed CNU</small></span></div>
 </aside>
@@ -893,6 +917,37 @@
   </div>
 </div>
 
+<div id="acessosView" style="display:none">
+  <div class="ind-head">
+    <div>
+      <div class="home-section-title">Acessos</div>
+      <div class="home-subline">Quem entra no Cora e com qual papel. A lista é a aba Usuários da planilha.</div>
+    </div>
+  </div>
+  <div class="home-stat-grid ac-totais">
+    <div class="home-stat-card"><div class="stat-num" id="acTotAdmin">—</div><div class="stat-label">Admin</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="acTotGestor">—</div><div class="stat-label">Gestor</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="acTotPadrao">—</div><div class="stat-label">Usuário Padrão</div></div>
+  </div>
+  <div class="ac-barra" id="acBarra">
+    <input type="text" id="acBusca" placeholder="Buscar por nome, e-mail, unidade ou cargo…" autocomplete="off" oninput="renderAcessosTabela()">
+    <button type="button" class="btn btn-primary" id="acNovoBtn" onclick="abrirNovoUsuario()">+ Incluir usuário</button>
+  </div>
+  <form class="ac-novo" id="acNovo" style="display:none" onsubmit="salvarNovoUsuario(event)">
+    <label>Nome <input type="text" id="acNovoNome" autocomplete="off" required></label>
+    <label>E-mail <input type="email" id="acNovoEmail" autocomplete="off" placeholder="nome@unimedcnu.coop.br" required></label>
+    <label>Perfil <select id="acNovoPerfil"><option>Usuário Padrão</option><option>Gestor</option><option>Admin</option></select></label>
+    <label>Unidade <input type="text" id="acNovoUnidade" list="acUnidades" autocomplete="off"></label>
+    <label>Cargo <input type="text" id="acNovoCargo" autocomplete="off"></label>
+    <datalist id="acUnidades"></datalist>
+    <div class="ac-novo-acoes">
+      <button type="submit" class="btn btn-primary" id="acNovoSalvar">Salvar</button>
+      <button type="button" class="btn btn-ghost" onclick="fecharNovoUsuario()">Cancelar</button>
+    </div>
+  </form>
+  <div class="home-section" id="acTabela"></div>
+</div>
+
 </div><!-- /.portal-main -->
 
 <!-- Modal -->
@@ -1092,8 +1147,9 @@ var currentUser          = '';
 var currentUserIsAdmin   = false;
 var currentUserPodeExcluir = false;
 var currentUserPerfil      = '';
+var currentUserSuperAdmin = false;
 
-var modoAtual    = 'home';   // 'home' | 'tarefas' | 'indicadores'
+var modoAtual    = 'home';   // 'home' | 'tarefas' | 'indicadores' | 'acessos'
 var viewAtual    = 'kanban';
 var sortCol      = 'ID';
 var sortAsc      = true;
@@ -1263,6 +1319,8 @@ function renderUserBadge() {
   if (ar)  ar.textContent  = perfil ? perfil + ' · Unimed CNU' : 'Unimed CNU';
   var nd = document.getElementById('nav-indicadores');
   if (nd) nd.style.display = currentUserPodeExcluir ? '' : 'none';
+  var na = document.getElementById('nav-acessos');
+  if (na) na.style.display = currentUserSuperAdmin ? '' : 'none';
 }
 
 // Regra de edição: criador da tarefa OU Admin/Gestor. (Mesma lógica do modal.)
@@ -1326,6 +1384,7 @@ function carregarTudo() {
     currentUserIsAdmin     = u.admin       || false;
     currentUserPodeExcluir = u.podeExcluir || false;
     currentUserPerfil      = u.perfil      || '';
+    currentUserSuperAdmin  = u.superAdmin  || false;
     if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
 
     cklStatus = {};
@@ -1347,6 +1406,8 @@ function carregarTudo() {
       renderHome();
     } else if (modoAtual === 'indicadores') {
       renderIndicadores(); // dados novos após salvar pelo modal aberto da lista de risco
+    } else if (modoAtual === 'acessos') {
+      renderAcessos();
     } else {
       popularFiltros();
       renderView();
@@ -1507,31 +1568,193 @@ function setView(v) {
 // ── Modo Home / Tarefas ───────────────────────────────────────
 function setModo(m) {
   if (m === 'indicadores' && !currentUserPodeExcluir) m = 'home'; // guarda: só Gestor/Admin
+  if (m === 'acessos' && !currentUserSuperAdmin) m = 'home';      // guarda: só o super-admin
   modoAtual = m;
-  var isHome = m === 'home', isInd = m === 'indicadores';
+  var isHome = m === 'home', isInd = m === 'indicadores', isAc = m === 'acessos';
+  var isTarefas = !isHome && !isInd && !isAc;
   document.getElementById('homeView').style.display        = isHome ? 'block' : 'none';
-  document.getElementById('appLayout').style.display       = (isHome || isInd) ? 'none' : 'flex';
+  document.getElementById('appLayout').style.display       = isTarefas ? 'flex' : 'none';
   document.getElementById('indicadoresView').style.display = isInd ? 'block' : 'none';
+  document.getElementById('acessosView').style.display     = isAc ? 'block' : 'none';
   document.getElementById('btnInicio').style.display       = isHome ? 'none' : '';
   var vt = document.querySelector('.view-toggle');
-  if (vt) vt.style.display = (isHome || isInd) ? 'none' : '';
+  if (vt) vt.style.display = isTarefas ? '' : 'none';
   // Item ativo na rail (padrão Shell)
   var ni = document.getElementById('nav-inicio');
   var nt = document.getElementById('nav-tarefas');
   var nd = document.getElementById('nav-indicadores');
+  var na = document.getElementById('nav-acessos');
   if (ni) ni.classList.toggle('on', isHome);
-  if (nt) nt.classList.toggle('on', !isHome && !isInd);
+  if (nt) nt.classList.toggle('on', isTarefas);
   if (nd) nd.classList.toggle('on', isInd);
+  if (na) na.classList.toggle('on', isAc);
   if (isHome) {
     renderHome();
   } else if (isInd) {
     indMovimento = null; indMovimentoErro = false;
     renderIndicadores();       // primeiro render sem estagnação ("…")
     carregarMovimentoInd();    // segundo render quando a rota voltar
+  } else if (isAc) {
+    renderAcessos();
   } else {
     popularFiltros();
     renderView();
   }
+}
+
+// ── Acessos (super-admin) ─────────────────────────────────────
+// A autorização real é ehSuperAdmin() em cada rota do backend; aqui é só UI.
+var AC_PERFIS  = ['Admin', 'Gestor', 'Usuário Padrão'];
+var acSalvando = false;
+
+function acPerfilPeso(p) { var i = AC_PERFIS.indexOf(p); return i === -1 ? 9 : i; }
+function usuarioPorEmail(email) {
+  var e = String(email || '').toLowerCase();
+  return usuarios.filter(function(u) { return String(u.email).toLowerCase() === e; })[0] || null;
+}
+function nomeUsuarioAc(u) { return (u && u.nome) || nomeDeEmail(u && u.email); }
+
+function renderAcessos() {
+  var n = { 'Admin': 0, 'Gestor': 0, 'Usuário Padrão': 0 };
+  usuarios.forEach(function(u) { if (n[u.perfil] !== undefined) n[u.perfil]++; });
+  document.getElementById('acTotAdmin').textContent  = n['Admin'];
+  document.getElementById('acTotGestor').textContent = n['Gestor'];
+  document.getElementById('acTotPadrao').textContent = n['Usuário Padrão'];
+  renderAcUnidades();
+  renderAcessosTabela();
+}
+
+function renderAcUnidades() {
+  var dl = document.getElementById('acUnidades');
+  if (!dl) return;
+  var unidades = uniq(usuarios.map(function(u) { return u.unidade; })).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+  dl.innerHTML = unidades.map(function(u) { return '<option value="' + esc(u) + '"></option>'; }).join('');
+}
+
+function renderAcessosTabela() {
+  var el = document.getElementById('acTabela');
+  var termo = (document.getElementById('acBusca').value || '').trim().toLowerCase();
+  var lista = usuarios.slice();
+  if (termo) {
+    lista = lista.filter(function(u) {
+      return ((u.nome || '') + ' ' + u.email + ' ' + (u.unidade || '') + ' ' + (u.cargo || '')).toLowerCase().indexOf(termo) !== -1;
+    });
+  }
+  lista.sort(function(a, b) {
+    return (acPerfilPeso(a.perfil) - acPerfilPeso(b.perfil)) || nomeUsuarioAc(a).localeCompare(nomeUsuarioAc(b), 'pt-BR');
+  });
+  if (!lista.length) { el.innerHTML = '<div class="ind-vazio">Nenhum usuário encontrado.</div>'; return; }
+
+  var html = '<table class="ind-tabela ac-tabela"><thead><tr><th>Pessoa</th><th>Perfil</th><th>Unidade</th><th>Cargo</th><th></th></tr></thead><tbody>';
+  lista.forEach(function(u) {
+    var eu = String(u.email).toLowerCase() === String(currentUser).toLowerCase();
+    html += '<tr data-email="' + esc(u.email) + '">';
+    html += '<td><div class="ind-pessoa"><span class="avatar">' + esc(avatarInitials(u.email)) + '</span><span>' + esc(nomeUsuarioAc(u)) + '<small>' + esc(u.email) + '</small></span></div></td>';
+    html += '<td><select class="ac-perfil' + (u.perfil === 'Admin' ? ' ac-perfil-admin' : '') + '" data-campo="perfil"' + (eu ? ' disabled title="O administrador do sistema permanece Admin"' : '') + '>';
+    AC_PERFIS.forEach(function(p) { html += '<option value="' + esc(p) + '"' + (p === u.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; });
+    if (AC_PERFIS.indexOf(u.perfil) === -1) html += '<option value="' + esc(u.perfil) + '" selected>' + esc(u.perfil || '(sem perfil)') + '</option>';
+    html += '</select></td>';
+    html += '<td><input type="text" data-campo="unidade" value="' + esc(u.unidade || '') + '" placeholder="—" list="acUnidades" autocomplete="off"></td>';
+    html += '<td><input type="text" data-campo="cargo" value="' + esc(u.cargo || '') + '" placeholder="—" autocomplete="off"></td>';
+    html += '<td>' + (eu ? '' : '<button type="button" class="ac-remover" title="Remover acesso">×</button>') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+
+  Array.from(el.querySelectorAll('tbody tr')).forEach(function(tr) {
+    var email = tr.getAttribute('data-email');
+    var sel = tr.querySelector('select[data-campo]');
+    if (sel && !sel.disabled) sel.addEventListener('change', function() { salvarCampoUsuario(email, 'perfil', sel.value, sel); });
+    Array.from(tr.querySelectorAll('input[data-campo]')).forEach(function(inp) {
+      var campo = inp.getAttribute('data-campo');
+      inp.addEventListener('blur', function() { salvarCampoUsuario(email, campo, inp.value, inp); });
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter')  { e.preventDefault(); inp.blur(); }
+        if (e.key === 'Escape') { var u = usuarioPorEmail(email); inp.value = u ? (u[campo] || '') : ''; inp.blur(); }
+      });
+    });
+    var rm = tr.querySelector('.ac-remover');
+    if (rm) rm.addEventListener('click', function() { confirmarRemoverUsuario(email); });
+  });
+}
+
+// Salva um campo (perfil/unidade/cargo) de um usuário; só chama a rota se mudou.
+function salvarCampoUsuario(email, campo, valor, el) {
+  var u = usuarioPorEmail(email);
+  if (!u) return;
+  valor = String(valor || '').trim();
+  var antes = String(u[campo] || '');
+  if (valor === antes) { if (el && el.value !== valor) el.value = valor; return; }
+  var dados = { email: u.email }; dados[campo] = valor;
+  if (el) el.disabled = true;
+  chamarAPI({ acao: 'atualizarUsuario', dados: dados }, function(r) {
+    if (el) el.disabled = false;
+    if (!r || r.erro) {
+      if (el) el.value = antes;
+      toast((r && r.erro) || 'Não foi possível salvar.', true);
+      return;
+    }
+    if (r.usuario) { u.nome = r.usuario.nome; u.perfil = r.usuario.perfil; u.unidade = r.usuario.unidade; u.cargo = r.usuario.cargo; }
+    else u[campo] = valor;
+    if (campo === 'perfil') {
+      toast('Perfil de ' + nomeUsuarioAc(u) + ' alterado para ' + u.perfil + '.', false, true);
+      renderAcessos(); // reordena e atualiza os cards
+    } else {
+      toast('Dados de ' + nomeUsuarioAc(u) + ' atualizados.', false, true);
+      renderAcUnidades();
+    }
+  });
+}
+
+function abrirNovoUsuario() {
+  var f = document.getElementById('acNovo');
+  f.reset();
+  f.style.display = '';
+  document.getElementById('acNovoNome').focus();
+}
+function fecharNovoUsuario() {
+  var f = document.getElementById('acNovo');
+  f.reset();
+  f.style.display = 'none';
+}
+function salvarNovoUsuario(e) {
+  if (e) e.preventDefault();
+  if (acSalvando) return;
+  var dados = {
+    nome:    document.getElementById('acNovoNome').value.trim(),
+    email:   document.getElementById('acNovoEmail').value.trim(),
+    perfil:  document.getElementById('acNovoPerfil').value,
+    unidade: document.getElementById('acNovoUnidade').value.trim(),
+    cargo:   document.getElementById('acNovoCargo').value.trim()
+  };
+  if (!dados.nome)  { toast('Nome é obrigatório.', true); return; }
+  if (!dados.email) { toast('E-mail é obrigatório.', true); return; }
+  acSalvando = true;
+  var btn = document.getElementById('acNovoSalvar');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  chamarAPI({ acao: 'adicionarUsuario', dados: dados }, function(r) {
+    acSalvando = false; btn.disabled = false; btn.textContent = 'Salvar';
+    if (!r || r.erro) { toast((r && r.erro) || 'Não foi possível incluir.', true); return; }
+    usuarios.push(r.usuario || dados);
+    fecharNovoUsuario();
+    toast('Usuário incluído.', false, true);
+    renderAcessos();
+  });
+}
+
+function confirmarRemoverUsuario(email) {
+  var u = usuarioPorEmail(email);
+  if (!u) return;
+  abrirConfirm(nomeUsuarioAc(u), function() {
+    chamarAPI({ acao: 'removerUsuario', dados: { email: u.email } }, function(r) {
+      if (!r || r.erro) { toast((r && r.erro) || 'Não foi possível remover.', true); return; }
+      var ix = usuarios.indexOf(u);
+      if (ix !== -1) usuarios.splice(ix, 1); // mesma referência: Indicadores e combos enxergam
+      toast('Acesso de ' + nomeUsuarioAc(u) + ' removido.', false, true);
+      renderAcessos();
+    });
+  }, { prefixo: 'Remover', okLabel: 'Remover', sub: 'A pessoa perde o acesso ao Cora imediatamente. As tarefas dela continuam existindo.' });
 }
 
 // ── Indicadores (Gestor/Admin) ────────────────────────────────
@@ -3313,16 +3536,16 @@ function arquivarProjetoById(id, nome) {
     var resp;
     switch (acao) {
       case 'bootstrap': resp = {
-        usuario:   { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
+        usuario:   { email: EU, perfil: 'Admin', admin: true, podeExcluir: true, superAdmin: true },
         tarefas:   MOCK_TAREFAS,
         checklist: MOCK_CKL
       }; break;
       case 'bootstrapApoio': resp = {
-        usuarios: MOCK_USUARIOS,
+        usuarios: MOCK_USUARIOS.slice(),
         projetos: MOCK_PROJETOS
       }; break;
-      case 'getUsuario': resp = { email: EU, perfil: 'Admin', admin: true, podeExcluir: true }; break;
-      case 'listarUsuarios': resp = { usuarios: MOCK_USUARIOS }; break;
+      case 'getUsuario': resp = { email: EU, perfil: 'Admin', admin: true, podeExcluir: true, superAdmin: true }; break;
+      case 'listarUsuarios': resp = { usuarios: MOCK_USUARIOS.slice() }; break;
       case 'listarProjetos': resp = { projetos: MOCK_PROJETOS }; break;
       case 'listarTarefas': resp = { tarefas: MOCK_TAREFAS }; break;
       case 'listarChecklist_Status': resp = { itens: MOCK_CKL }; break;
@@ -3341,6 +3564,29 @@ function arquivarProjetoById(id, nome) {
       case 'criarProjeto': resp = { sucesso: true, id: 99 }; break;
       case 'adicionarInteracao': resp = { sucesso: true, id: 99 }; break;
       case 'avisarMarcadoChecklist': resp = { sucesso: true, itens: 1 }; break;
+      case 'atualizarUsuario': {
+        var mu = MOCK_USUARIOS.filter(function(u) { return u.email.toLowerCase() === String(dados.email).toLowerCase(); })[0];
+        if (!mu) { resp = { erro: 'Usuário não encontrado.' }; break; }
+        if (mu.email === EU && dados.perfil !== undefined && dados.perfil !== 'Admin') { resp = { erro: 'O administrador do sistema permanece Admin.' }; break; }
+        ['nome', 'perfil', 'unidade', 'cargo'].forEach(function(c) { if (dados[c] !== undefined) mu[c] = String(dados[c]).trim(); });
+        resp = { sucesso: true, alterados: 1, usuario: { nome: mu.nome, email: mu.email, perfil: mu.perfil, unidade: mu.unidade, cargo: mu.cargo } };
+        break;
+      }
+      case 'adicionarUsuario': {
+        if (MOCK_USUARIOS.some(function(u) { return u.email.toLowerCase() === String(dados.email).toLowerCase(); })) { resp = { erro: 'Este e-mail já está cadastrado.' }; break; }
+        var nu = { nome: dados.nome, email: dados.email, perfil: dados.perfil, unidade: dados.unidade || '', cargo: dados.cargo || '' };
+        MOCK_USUARIOS.push(nu);
+        resp = { sucesso: true, usuario: nu };
+        break;
+      }
+      case 'removerUsuario': {
+        if (dados.email === EU) { resp = { erro: 'O administrador do sistema não pode ser removido.' }; break; }
+        var ix = -1; MOCK_USUARIOS.forEach(function(u, i) { if (u.email === dados.email) ix = i; });
+        if (ix === -1) { resp = { erro: 'Usuário não encontrado.' }; break; }
+        MOCK_USUARIOS.splice(ix, 1);
+        resp = { sucesso: true };
+        break;
+      }
       default: resp = { sucesso: true };
     }
     setTimeout(function () { callback(resp); }, 40);
