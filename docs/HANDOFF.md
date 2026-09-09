@@ -36,6 +36,7 @@ tarefa, rodadas de correção nas Tasks 2 e 4, revisão final da branch sem Crit
   situação, **lista de risco** por tarefa (severidade 1–7/9, prazo relativo, "parada há", desdobramentos) cujo clique
   abre o modal da tarefa por cima da view (re-render ao fechar e após salvar), e **matriz prioridade × situação**
   clicável que filtra a lista.
+- **Verificado em produção (09/09 09:43):** `bootstrap` 80 tarefas; `indicadoresMovimento` 80 chaves, mais recente 09:26.
 - **Backend:** rota `indicadoresMovimento` (Gestor/Admin, cache 120 s no CacheService compartilhado) devolve a
   última movimentação por tarefa = maior entre criação, Interações, Log com `Campo = 'ID_Tarefa'` e conclusão de
   itens de checklist; `atualizarTarefa` passa a gravar `['ATUALIZAR','ID_Tarefa','',id]` a cada save com mudança
