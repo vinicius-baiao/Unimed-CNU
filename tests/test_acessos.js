@@ -83,15 +83,17 @@ const logsAcesso  = ctx => J(ctx._escritas.filter(e => e.aba === 'Log' && e.op =
   assert.deepStrictEqual(J(ctx4.atualizarUsuario({ email: 'ninguem@unimedcnu.coop.br', perfil: 'Gestor' })), { erro: 'Usuário não encontrado.' });
   assert.deepStrictEqual(J(ctx4.atualizarUsuario({ email: GESTOR, nome: '  ' })), { erro: 'Nome é obrigatório.' });
   assert.strictEqual(ctx4._escritas.length, 0);
-  // super-admin pode editar os próprios dados que não sejam o perfil
+  // super-admin pode editar os próprios dados que não sejam o perfil; manter Admin não dispara a guarda
   assert.strictEqual(J(ctx4.atualizarUsuario({ email: SUPER, cargo: 'Coordenador' })).alterados, 1);
+  assert.strictEqual(J(ctx4.atualizarUsuario({ email: SUPER, perfil: 'Admin' })).alterados, 0);
+  assert.deepStrictEqual(J(ctx4.atualizarUsuario()), { erro: 'Usuário não encontrado.' }, 'dados undefined');
 }
 
 // 4. adicionarUsuario
 {
   const ctx = carregar({ abas: abas(), email: SUPER });
   ctx.listarUsuarios();
-  const r = J(ctx.adicionarUsuario({ nome: ' Nova Pessoa ', email: ' nova.pessoa@unimednacional.coop.br ', perfil: 'Usuário Padrão', unidade: 'Rede' }));
+  const r = J(ctx.adicionarUsuario({ nome: ' Nova Pessoa ', email: ' Nova.Pessoa@unimednacional.coop.br ', perfil: 'Usuário Padrão', unidade: 'Rede' })); // caixa normalizada
   assert.deepStrictEqual(r, { sucesso: true, usuario: { nome: 'Nova Pessoa', email: 'nova.pessoa@unimednacional.coop.br', perfil: 'Usuário Padrão', unidade: 'Rede', cargo: '' } });
   assert.deepStrictEqual(escUsuarios(ctx), [{ aba: 'Usuários', op: 'appendRow', args: ['Nova Pessoa', 'nova.pessoa@unimednacional.coop.br', 'Usuário Padrão', 'Rede', ''] }]);
   assert.deepStrictEqual(logsAcesso(ctx), [['ACESSO', 'nova.pessoa@unimednacional.coop.br', '', 'incluído: Usuário Padrão']]);
@@ -104,6 +106,7 @@ const logsAcesso  = ctx => J(ctx._escritas.filter(e => e.aba === 'Log' && e.op =
   assert.deepStrictEqual(J(ctx2.adicionarUsuario({ nome: 'A', email: 'a@gmail.com?x=@unimedcnu.coop.br', perfil: 'Gestor' })), { erro: 'E-mail deve ser @unimedcnu.coop.br ou @unimednacional.coop.br' });
   assert.deepStrictEqual(J(ctx2.adicionarUsuario({ nome: 'A', email: '@unimedcnu.coop.br', perfil: 'Gestor' })), { erro: 'E-mail deve ser @unimedcnu.coop.br ou @unimednacional.coop.br' });
   assert.deepStrictEqual(J(ctx2.adicionarUsuario({ nome: 'A', email: 'a@unimedcnu.coop.br', perfil: 'Chefe' })), { erro: 'Perfil inválido.' });
+  assert.deepStrictEqual(J(ctx2.adicionarUsuario({ nome: 'A', email: 'a@unimedcnu.coop.br' })), { erro: 'Perfil inválido.' }, 'perfil ausente');
   assert.deepStrictEqual(J(ctx2.adicionarUsuario({ nome: 'A', email: 'GESTORA@UNIMEDCNU.COOP.BR', perfil: 'Gestor' })), { erro: 'Este e-mail já está cadastrado.' });
   assert.strictEqual(ctx2._escritas.length, 0);
 }

@@ -607,6 +607,7 @@ function adicionarUsuario(dados) {
     var sheet = getSheet(ABA_USUARIOS);
     if (!sheet) return { erro: 'Aba Usuários não encontrada.' };
     if (localizarUsuario_(sheet, email)) return { erro: 'Este e-mail já está cadastrado.' };
+    email = email.toLowerCase(); // o front compara e-mails com === em alguns pontos
     var linha = [nome, email, dados.perfil, String(dados.unidade || '').trim(), String(dados.cargo || '').trim()];
     sheet.appendRow(linha);
     gravarLog('ACESSO', email, '', 'incluído: ' + dados.perfil);

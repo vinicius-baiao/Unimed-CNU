@@ -556,9 +556,10 @@
     .ac-novo label { display: flex; flex-direction: column; gap: 4px; font-size: .7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; min-width: 0; }
     .ac-novo input, .ac-novo select { height: 34px; padding: 0 10px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--surface); color: var(--foreground); font: inherit; font-size: .875rem; min-width: 0; }
     .ac-novo-acoes { display: flex; gap: 8px; }
-    .ac-tabela th, .ac-tabela td { text-align: left; }
-    .ac-tabela th { cursor: default; }
-    .ac-tabela tbody tr { cursor: default; }
+    /* .ind-tabela.* para vencer as regras de .ind-tabela declaradas depois (mesma especificidade) */
+    .ind-tabela.ac-tabela th, .ind-tabela.ac-tabela td { text-align: left; }
+    .ind-tabela.ac-tabela th { cursor: default; }
+    .ind-tabela.ac-tabela tbody tr { cursor: default; }
     .ac-tabela select, .ac-tabela input { height: 30px; padding: 0 8px; border: 1px solid transparent; border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--foreground); font: inherit; font-size: .84rem; min-width: 150px; }
     .ac-tabela select { border-color: var(--input); background: var(--surface); cursor: pointer; }
     .ac-tabela select:disabled { opacity: .7; cursor: not-allowed; }
@@ -939,12 +940,12 @@
     <label>Perfil <select id="acNovoPerfil"><option>Usuário Padrão</option><option>Gestor</option><option>Admin</option></select></label>
     <label>Unidade <input type="text" id="acNovoUnidade" list="acUnidades" autocomplete="off"></label>
     <label>Cargo <input type="text" id="acNovoCargo" autocomplete="off"></label>
-    <datalist id="acUnidades"></datalist>
     <div class="ac-novo-acoes">
       <button type="submit" class="btn btn-primary" id="acNovoSalvar">Salvar</button>
       <button type="button" class="btn btn-ghost" onclick="fecharNovoUsuario()">Cancelar</button>
     </div>
   </form>
+  <datalist id="acUnidades"></datalist>
   <div class="home-section" id="acTabela"></div>
 </div>
 
@@ -1643,7 +1644,7 @@ function renderAcessosTabela() {
   lista.sort(function(a, b) {
     return (acPerfilPeso(a.perfil) - acPerfilPeso(b.perfil)) || nomeUsuarioAc(a).localeCompare(nomeUsuarioAc(b), 'pt-BR');
   });
-  if (!lista.length) { el.innerHTML = '<div class="ind-vazio">Nenhum usuário encontrado.</div>'; return; }
+  if (!lista.length) { el.innerHTML = '<div class="ind-vazio">' + (termo ? 'Nenhum usuário encontrado.' : 'Nenhum usuário carregado.') + '</div>'; return; }
 
   var html = '<table class="ind-tabela ac-tabela"><thead><tr><th>Pessoa</th><th>Perfil</th><th>Unidade</th><th>Cargo</th><th></th></tr></thead><tbody>';
   lista.forEach(function(u) {
