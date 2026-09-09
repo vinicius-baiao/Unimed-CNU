@@ -518,6 +518,7 @@
       .print-info { display: flex !important; }
       a { color: inherit; text-decoration: none; }
       .home-alerta { display: none !important; }
+      #indFiltros, .home-link-row { display: none !important; }
     }
     .print-info { display: none; justify-content: space-between; align-items: center; padding: 8px 20px; background: var(--verde-bg); font-size: .78rem; color: var(--text-secondary); }
 
@@ -538,6 +539,16 @@
     .home-stat-card.alert .stat-num { color: var(--erro-cor); }
     .home-stat-card.warn  .stat-num { color: var(--aviso-cor); }
     .stat-label { font-size: .74rem; color: var(--muted-foreground); margin-top: 8px; text-transform: uppercase; letter-spacing: .04em; font-weight: 500; }
+    .home-link-row { display: flex; justify-content: flex-end; margin: -20px 0 24px; }
+    .home-link { font-size: .85rem; font-weight: 600; color: var(--primary); cursor: pointer; text-decoration: none; }
+    .home-link:hover { text-decoration: underline; }
+    #indicadoresView { padding: 28px 32px 40px; max-width: 1240px; }
+    .ind-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+    .ind-filtros { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; margin-bottom: 20px; }
+    .ind-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; color: var(--muted-foreground); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .ind-filtros select, .ind-filtros input { height: 34px; padding: 0 10px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--foreground); font-size: .875rem; font-weight: 400; text-transform: none; letter-spacing: 0; min-width: 180px; }
+    .ind-filtros .ind-busca input { min-width: 260px; }
+    .ind-totais { margin-bottom: 28px; }
     .home-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
     .home-right-col { display: flex; flex-direction: column; gap: 24px; }
     .home-section-title { font-size: .7rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
@@ -596,6 +607,9 @@
     <a id="nav-tarefas" onclick="setModo('tarefas')" title="Tarefas">
       <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="10" y="3" width="5" height="12" rx="1.5"/><rect x="17" y="3" width="5" height="15" rx="1.5"/></svg>
       <span>Tarefas</span></a>
+    <a id="nav-indicadores" onclick="setModo('indicadores')" title="Indicadores" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+      <span>Indicadores</span></a>
   </nav>
   <div class="foot"><span class="dot" id="u-av">·</span><span id="u-nome"><span id="u-nome-txt">—</span><small id="u-area">Unimed CNU</small></span></div>
 </aside>
@@ -678,6 +692,7 @@
         <div class="stat-label">Atrasadas</div>
       </div>
     </div>
+    <div class="home-link-row"><a class="home-link" onclick="setModo('indicadores')">Ver indicadores →</a></div>
   </div>
 
   <!-- Grid 2 colunas -->
@@ -761,6 +776,38 @@
 
   </div><!-- /.main-content -->
 </div><!-- /.app-layout -->
+
+<!-- Indicadores (Gestor/Admin) -->
+<div id="indicadoresView" style="display:none">
+  <div class="ind-head">
+    <div>
+      <div class="home-section-title">Indicadores</div>
+      <div class="home-subline">Carga por pessoa e saúde dos projetos, com base nas tarefas ativas.</div>
+    </div>
+  </div>
+  <div class="ind-filtros" id="indFiltros">
+    <label>Unidade <select id="indUnidade" onchange="renderIndicadores()"></select></label>
+    <label>Projeto <select id="indProjeto" onchange="renderIndicadores()"></select></label>
+    <label>Próximas do prazo <select id="indJanela" onchange="renderIndicadores()">
+      <option value="7">7 dias</option><option value="14">14 dias</option><option value="30">30 dias</option>
+    </select></label>
+    <label class="ind-busca">Pessoa <input type="text" id="indBusca" placeholder="Buscar por nome, e-mail ou cargo…" autocomplete="off" oninput="renderIndicadores()"></label>
+  </div>
+  <div class="home-stat-grid ind-totais">
+    <div class="home-stat-card"><div class="stat-num" id="indTotAtivas">—</div><div class="stat-label">Ativas</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="indTotAndamento">—</div><div class="stat-label">Bloqueadas</div></div>
+    <div class="home-stat-card" id="indTotAtrasadasCard"><div class="stat-num" id="indTotAtrasadas">—</div><div class="stat-label">Atrasadas</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="indTotProximas">—</div><div class="stat-label" id="indTotProximasLabel">Próximas (7 dias)</div></div>
+  </div>
+  <div class="home-section">
+    <div class="home-section-title">Pessoas</div>
+    <div id="indPessoas"></div>
+  </div>
+  <div class="home-section">
+    <div class="home-section-title">Projetos</div>
+    <div id="indProjetos"></div>
+  </div>
+</div>
 
 </div><!-- /.portal-main -->
 
@@ -981,6 +1028,14 @@ var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
 var filtroInicialAplicado  = false;
 
+// Indicadores (Gestor/Admin)
+var indFiltroUnidade = null;   // null = ainda não inicializado (usa a unidade do usuário na 1ª render)
+var indFiltroProjeto = '';
+var indJanelaDias    = 7;
+var indBuscaTermo    = '';
+var indOrdem         = { campo: '', dir: 'desc' }; // '' = ordem natural de calcularIndicadores
+var indUltimo        = null;   // último resultado de calcularIndicadores
+
 // Abre o board já filtrado nas tarefas do próprio usuário (pedido do piloto).
 // Vale para todos os perfis: desde 08/09/2026 o Usuário Padrão também recebe
 // as tarefas dos projetos públicos (planos de ação dos painéis), então o board
@@ -1117,6 +1172,8 @@ function renderUserBadge() {
   if (av)  av.textContent  = avatarInitials(currentUser);
   if (txt) txt.textContent = nomeDeUsuario(currentUser);
   if (ar)  ar.textContent  = perfil ? perfil + ' · Unimed CNU' : 'Unimed CNU';
+  var nd = document.getElementById('nav-indicadores');
+  if (nd) nd.style.display = currentUserPodeExcluir ? '' : 'none';
 }
 
 // Regra de edição: criador da tarefa OU Admin/Gestor. (Mesma lógica do modal.)
@@ -1356,24 +1413,81 @@ function setView(v) {
 
 // ── Modo Home / Tarefas ───────────────────────────────────────
 function setModo(m) {
+  if (m === 'indicadores' && !currentUserPodeExcluir) m = 'home'; // guarda: só Gestor/Admin
   modoAtual = m;
-  var isHome = m === 'home';
-  document.getElementById('homeView').style.display   = isHome ? 'block' : 'none';
-  document.getElementById('appLayout').style.display  = isHome ? 'none'  : 'flex';
-  document.getElementById('btnInicio').style.display  = isHome ? 'none'  : '';
+  var isHome = m === 'home', isInd = m === 'indicadores';
+  document.getElementById('homeView').style.display        = isHome ? 'block' : 'none';
+  document.getElementById('appLayout').style.display       = (isHome || isInd) ? 'none' : 'flex';
+  document.getElementById('indicadoresView').style.display = isInd ? 'block' : 'none';
+  document.getElementById('btnInicio').style.display       = isHome ? 'none' : '';
   var vt = document.querySelector('.view-toggle');
-  if (vt) vt.style.display = isHome ? 'none' : '';
+  if (vt) vt.style.display = (isHome || isInd) ? 'none' : '';
   // Item ativo na rail (padrão Shell)
   var ni = document.getElementById('nav-inicio');
   var nt = document.getElementById('nav-tarefas');
+  var nd = document.getElementById('nav-indicadores');
   if (ni) ni.classList.toggle('on', isHome);
-  if (nt) nt.classList.toggle('on', !isHome);
+  if (nt) nt.classList.toggle('on', !isHome && !isInd);
+  if (nd) nd.classList.toggle('on', isInd);
   if (isHome) {
     renderHome();
+  } else if (isInd) {
+    renderIndicadores();
   } else {
     popularFiltros();
     renderView();
   }
+}
+
+// ── Indicadores (Gestor/Admin) ────────────────────────────────
+function popularFiltrosInd() {
+  var selU = document.getElementById('indUnidade'), selP = document.getElementById('indProjeto'), selJ = document.getElementById('indJanela');
+  if (indFiltroUnidade === null) {
+    var eu = usuarios.filter(function(u) { return String(u.email).toLowerCase() === String(currentUser).toLowerCase(); })[0];
+    indFiltroUnidade = (eu && eu.unidade) ? eu.unidade : '';
+  }
+  var unidades = uniq(usuarios.map(function(u) { return u.unidade; })).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+  if (indFiltroUnidade && unidades.indexOf(indFiltroUnidade) === -1) indFiltroUnidade = '';
+  var htmlU = '<option value="">Todas as unidades</option>';
+  unidades.forEach(function(u) { htmlU += '<option value="' + esc(u) + '"' + (u === indFiltroUnidade ? ' selected' : '') + '>' + esc(u) + '</option>'; });
+  selU.innerHTML = htmlU;
+
+  var nomesProj = projetos.map(function(p) { return p.nome; });
+  var orfs = uniq(tarefas.map(function(t) { return t.Projeto; })).filter(function(n) { return n && nomesProj.indexOf(n) === -1; }).sort();
+  var todos = nomesProj.concat(orfs);
+  if (indFiltroProjeto && todos.indexOf(indFiltroProjeto) === -1) indFiltroProjeto = '';
+  var htmlP = '<option value="">Todos os projetos</option>';
+  todos.forEach(function(n) { if (n) htmlP += '<option value="' + esc(n) + '"' + (n === indFiltroProjeto ? ' selected' : '') + '>' + esc(n) + '</option>'; });
+  selP.innerHTML = htmlP;
+  selJ.value = String(indJanelaDias);
+}
+
+function lerFiltrosInd() {
+  indFiltroUnidade = document.getElementById('indUnidade').value;
+  indFiltroProjeto = document.getElementById('indProjeto').value;
+  indJanelaDias    = Number(document.getElementById('indJanela').value) || 7;
+  indBuscaTermo    = document.getElementById('indBusca').value.trim().toLowerCase();
+}
+
+function renderIndicadores() {
+  if (!currentUserPodeExcluir) return;
+  var primeiraVez = indFiltroUnidade === null;
+  if (primeiraVez) popularFiltrosInd(); else { lerFiltrosInd(); popularFiltrosInd(); }
+  indUltimo = calcularIndicadores(
+    { tarefas: tarefas, cklStatus: cklStatus, usuarios: usuarios, projetos: projetos },
+    { unidade: indFiltroUnidade, projeto: indFiltroProjeto, janelaDias: indJanelaDias },
+    new Date(),
+    { parseData: parseData, dataValida: dataValida, nomeDeEmail: nomeDeEmail }
+  );
+  var t = indUltimo.totais;
+  document.getElementById('indTotAtivas').textContent    = t.ativas;
+  document.getElementById('indTotAndamento').textContent = t.bloqueadas;
+  document.getElementById('indTotAtrasadas').textContent = t.atrasadas;
+  document.getElementById('indTotProximas').textContent  = t.proximas;
+  document.getElementById('indTotProximasLabel').textContent = 'Próximas (' + indJanelaDias + ' dias)';
+  document.getElementById('indTotAtrasadasCard').className = 'home-stat-card' + (t.atrasadas > 0 ? ' alert' : '');
+  if (typeof renderIndPessoas === 'function')  renderIndPessoas(indUltimo);
+  if (typeof renderIndProjetos === 'function') renderIndProjetos(indUltimo);
 }
 
 function renderHome() {
