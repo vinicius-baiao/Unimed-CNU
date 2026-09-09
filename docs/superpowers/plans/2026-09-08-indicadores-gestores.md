@@ -48,9 +48,10 @@ const assert = require('assert'), fs = require('fs'), path = require('path'), vm
 const html = fs.readFileSync(path.join(__dirname, '..', 'tarefas-shadcn.html'), 'utf8');
 const ini = html.indexOf('/* @indicadores:inicio */'), fim = html.indexOf('/* @indicadores:fim */');
 assert.ok(ini > -1 && fim > ini, 'marcadores @indicadores não encontrados em tarefas-shadcn.html');
-const ctx = vm.createContext({});
-vm.runInContext(html.slice(ini, fim), ctx, { filename: 'indicadores.js' });
-const calcular = ctx.calcularIndicadores;
+// Roda no contexto atual (não num vm isolado): assert.deepStrictEqual compara protótipos, e um
+// contexto separado teria outro Array — os arrays devolvidos pela função falhariam a comparação.
+vm.runInThisContext(html.slice(ini, fim), { filename: 'indicadores.js' });
+const calcular = global.calcularIndicadores;
 assert.strictEqual(typeof calcular, 'function', 'calcularIndicadores deve existir no trecho marcado');
 
 // deps iguais às do front
