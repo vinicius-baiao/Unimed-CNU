@@ -113,6 +113,7 @@ function doGet(e) {
     switch (acao) {
       case 'bootstrap':              resultado = bootstrap();                   break;
       case 'bootstrapApoio':         resultado = bootstrapApoio();              break;
+      case 'indicadoresMovimento':   resultado = indicadoresMovimento();        break;
       case 'listarTarefas':          resultado = listarTarefas();               break;
       case 'criarTarefa':            resultado = criarTarefa(dados);            break;
       case 'atualizarTarefa':        resultado = atualizarTarefa(dados);        break;
@@ -666,6 +667,58 @@ function bootstrapApoio() {
   };
 }
 
+// ── Indicadores: última movimentação por tarefa ───────────────
+// Lida só pela aba Indicadores (Gestor/Admin) para a métrica "parada há N dias".
+// Maior data entre: criação da tarefa, qualquer interação, linhas do Log com
+// Campo 'ID_Tarefa' (checklist, interação, aviso e, desde esta versão, edição)
+// e conclusão de itens de checklist. Cache de 2 min; sem invalidação por escrita.
+var CACHE_MOV_KEY = 'indMovimento_v1';
+var CACHE_MOV_SEG = 120;
+
+function indicadoresMovimento() {
+  var email = Session.getActiveUser().getEmail();
+  if (!podeExcluir(email)) return { erro: 'Apenas Admin ou Gestor.' };
+  return comCache(CACHE_MOV_KEY, CACHE_MOV_SEG, montarMovimentoTarefas);
+}
+
+function montarMovimentoTarefas() {
+  var tz = Session.getScriptTimeZone();
+  var mov = {}, ativas = {};
+  function ms(v) {
+    if (!v) return 0;
+    var d = v instanceof Date ? v : new Date(v);
+    var t = d.getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  function marcar(id, v) {
+    var k = String(id == null ? '' : id), t = ms(v);
+    if (!k || !ativas[k] || !t) return;
+    if (!mov[k] || t > mov[k]) mov[k] = t;
+  }
+  var rowsT = lerAba(ABA_TAREFAS) || [];
+  for (var i = 1; i < rowsT.length; i++) {
+    var l = rowsT[i];
+    if (!l[COL.ID]) continue;
+    if (l[COL.ATIVO] === false || l[COL.ATIVO] === 'false') continue;
+    ativas[String(l[COL.ID])] = true;
+    marcar(l[COL.ID], l[COL.DATA_CRIACAO]);
+  }
+  var rowsI = lerAba(ABA_INTERACOES) || [];
+  for (var a = 1; a < rowsI.length; a++) marcar(rowsI[a][1], rowsI[a][2]);
+  var rowsL = lerAba(ABA_LOG) || [];
+  for (var b = 1; b < rowsL.length; b++) {
+    if (String(rowsL[b][4]) !== 'ID_Tarefa') continue;
+    // O id fica em Valor Novo (CHECKLIST, INTERACAO, ATUALIZAR) ou em Valor Anterior (AVISO_CHECKLIST)
+    if (ativas[String(rowsL[b][6])]) marcar(rowsL[b][6], rowsL[b][1]);
+    else if (ativas[String(rowsL[b][5])]) marcar(rowsL[b][5], rowsL[b][1]);
+  }
+  var rowsC = lerAba(ABA_CKL_STATUS) || [];
+  for (var c = 1; c < rowsC.length; c++) marcar(rowsC[c][1], rowsC[c][6]);
+  var out = {};
+  Object.keys(mov).forEach(function(k) { out[k] = Utilities.formatDate(new Date(mov[k]), tz, "yyyy-MM-dd'T'HH:mm:ss"); });
+  return { movimento: out, geradoEm: Utilities.formatDate(new Date(), tz, "yyyy-MM-dd'T'HH:mm:ss") };
+}
+
 // ── listarTarefas ─────────────────────────────────────────────
 function listarTarefas() {
   var dados  = lerAba(ABA_TAREFAS);
@@ -815,6 +868,9 @@ function atualizarTarefa(dados) {
       sheet.getRange(i + 1, colMap[campo] + 1).setValue(novo);
       logEntradas.push(['ATUALIZAR', campo, anterior, novo]);
     });
+    // Uma linha com o ID da tarefa por save (padrão de CHECKLIST/INTERACAO): permite
+    // atribuir edições à tarefa na leitura do Log (indicadoresMovimento).
+    if (logEntradas.length) logEntradas.push(['ATUALIZAR', 'ID_Tarefa', '', dados.id]);
     gravarLogs(logEntradas);
     if (logEntradas.length) {
       invalidarAba(ABA_TAREFAS); // cache desta execução ficou velho
