@@ -22,7 +22,38 @@
 - Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
-- **Publicado em 08/09 (tarde/noite):** Cora **@67** (chip de colega com busca, nomes humanizados, alerta de carga);
+
+### Último bloco — 08/09 (noite, 2ª parte): aba Indicadores para gestores — publicado @68
+
+Spec: `docs/superpowers/specs/2026-09-08-indicadores-gestores-design.md`; plano:
+`docs/superpowers/plans/2026-09-08-indicadores-gestores.md`. Executado por subagentes (implementador + revisor por
+tarefa, revisão final da branch com onda única de correções), commits `ffa2ab6..49a741e`; código só em
+`tarefas-shadcn.html`, mais o teste `tests/test_indicadores_front.js`.
+
+- **O que entrou:** item "Indicadores" na rail (só Gestor/Admin; `setModo('indicadores')` cai na Home sem permissão)
+  e link "Ver indicadores →" no painel da Home. Filtros: unidade (pré-selecionada a do usuário), projeto (com
+  órfãos), janela de próximas (7/14/30 dias), busca por nome. Quatro totais (ativas, bloqueadas, atrasadas,
+  próximas). **Pessoas:** tabela ordenável (ativas, em andamento, bloqueadas, atrasadas, próximas, itens de checklist
+  pendentes, concluídas), linha "Sem responsável", clique abre Tarefas filtrada na pessoa. **Projetos:** cards com
+  % concluído, contadores, progresso de checklist e chip público; clique abre Tarefas filtrada no projeto.
+- **Cálculo:** `calcularIndicadores(dados, filtros, hoje, deps)`, função pura entre os marcadores
+  `/* @indicadores:inicio */ … /* @indicadores:fim */`, coberta por `tests/test_indicadores_front.js` (o teste
+  extrai o trecho do HTML e roda com `vm.runInThisContext`). Decisões: totais respeitam só o filtro de projeto;
+  tarefas sem projeto viram o card "(sem projeto)", sem clique; pessoa que só tem itens de checklist e a linha
+  "Sem responsável" também não são clicáveis (a aba Tarefas não tem esses filtros).
+- **De carona:** `corDoProjeto()` passou a devolver só hex `#RRGGBB` válido (senão `#64748b`) e o modal
+  Gerenciar Projetos passou a usar essa função — fecha o risco de cor legada/importada em atributo `style`
+  (`listarProjetosDaPlanilha` no backend não aplica `corSegura`).
+- **Verificação:** funcional completa no preview (permissão, filtros, totais, tabela, cards, cliques, cor inválida,
+  "(sem projeto)", "Sem responsável", estado vazio); em produção, backend via JSONP após o deploy. **Conferir com
+  hard reload** como Gestor/Admin: item na rail, view com 79 usuários filtrável por unidade, cards Spravato/PF/GT.
+- **Parqueado (sem bloqueio):** cabeçalhos ordenáveis sem `tabindex`/`aria-sort` (dívida de a11y do app);
+  totais sem rótulo de escopo quando há filtro de unidade; teste não isola "concluída com prazo futuro"
+  (logicamente coberto); selects recriados a cada tecla da busca.
+- **Incidente de processo:** um implementador (haiku) escreveu a Task 3 num arquivo com nome errado
+  (`tarafas-shadcn.html`) e commitou; removido em `2918d6d` e a task refeita. Regra adotada nos despachos: `git status`
+  antes de editar e antes de commitar, e `git add` só do arquivo alvo.
+- **Publicado em 08/09 (tarde/noite):** Cora **@68** (aba Indicadores para gestores; @67 = chip de colega com busca, nomes humanizados, alerta de carga);
   painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48), GT Onco **@65** (v1.40).
   IDs no Cora: Spravato 5 · PF 6 · GT 7. **Etapa 3 gravada 14:51:** aba Usuários com **79** pessoas; Guilherme,
   Taiara, Carina e Fabiane = Gestor. O Cora está aberto para a equipe — falta comunicar (pendência 10).
@@ -250,10 +281,10 @@ inalterados, console sem erros.
 | 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 11.** |
 | 10 | **Comunicar a equipe** | **Já vale (Etapa 3 gravada 14:51):** Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
 | 11 | ~~**Etapa 3 — liberar os 38 da equipe**~~ **feita em 08/09 às 14:51** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
+| 12 | **`.claude/settings.local.json` passou a ser rastreado** | O commit `b54c72c` ("wip … migração de notebook", 08/09 22:25) adicionou o arquivo ao `.gitignore` **e** o commitou; o ignore não desrastreia. Decidir se faço `git rm --cached .claude/settings.local.json` (mantém o arquivo local, sai do índice) — a regra do projeto é nunca versioná-lo. |
 
 ## Backlog técnico (fase 2)
-- **Visão de gestores para indicadores** — próximo passo pedido pelo Aurélio em 08/09/2026: painel de indicadores
-  para o perfil Gestor (escopo a levantar em brainstorming: quais indicadores, por projeto/equipe/pessoa, período).
+- ~~Visão de gestores para indicadores~~ — **feita em 08/09 à noite (@68)**; ver bloco de 08/09 (noite, 2ª parte). Próximos incrementos possíveis: tendência no tempo (exige data de conclusão), rótulo de escopo nos totais com filtro de unidade, a11y dos cabeçalhos ordenáveis.
 
 > 📋 Sweep completo de performance e débito técnico em
 > [`docs/DEBITO_TECNICO.md`](DEBITO_TECNICO.md) (03/08/2026): 12 itens priorizados por
@@ -312,3 +343,5 @@ Silenciar esses avisos via config do hook depende de OK explícito do Aurélio.
 - **`clasp push` espelha tudo que não está no `.claspignore`** — em 08/09 um `.js` de teste deixado em
   `.superpowers/` subiu na @66 e definia globais no Apps Script. Ler a lista de arquivos que o push imprime **antes**
   do `clasp deploy`; qualquer diretório de trabalho novo entra no `.claspignore` primeiro.
+- **Subagente pode errar o nome do arquivo** (08/09: `tarafas-shadcn.html`). Todo despacho de implementação exige
+  `git status --short` antes de editar e antes de commitar, `Edit` (não `Write`) no arquivo alvo e `git add` só dele.
