@@ -549,6 +549,22 @@
     .ind-filtros select, .ind-filtros input { height: 34px; padding: 0 10px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--foreground); font-size: .875rem; font-weight: 400; text-transform: none; letter-spacing: 0; min-width: 180px; }
     .ind-filtros .ind-busca input { min-width: 260px; }
     .ind-totais { margin-bottom: 28px; }
+    .ind-tabela { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; font-size: .875rem; }
+    .ind-tabela th, .ind-tabela td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+    .ind-tabela th:first-child, .ind-tabela td:first-child, .ind-tabela th:nth-child(2), .ind-tabela td:nth-child(2) { text-align: left; }
+    .ind-tabela th { background: var(--muted-bg); color: var(--text-secondary); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+    .ind-tabela th.on { color: var(--primary); }
+    .ind-tabela tbody tr { cursor: pointer; }
+    .ind-tabela tbody tr:hover { background: var(--hover-bg); }
+    .ind-tabela tbody tr.sem-resp { font-style: italic; color: var(--text-secondary); cursor: default; }
+    .ind-tabela tbody tr.sem-resp:hover { background: transparent; }
+    .ind-tabela .zero { color: var(--muted-foreground); }
+    .ind-tabela .ruim { color: var(--erro-cor); font-weight: 600; }
+    .ind-tabela .aviso { color: var(--warn-ink); font-weight: 600; }
+    .ind-pessoa { display: flex; align-items: center; gap: 10px; }
+    .ind-pessoa .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-size: .68rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ind-pessoa small { display: block; color: var(--muted-foreground); font-size: .72rem; }
+    .ind-vazio { padding: 24px; text-align: center; color: var(--muted-foreground); font-size: .875rem; border: 1px dashed var(--border); border-radius: var(--radius); }
     .home-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
     .home-right-col { display: flex; flex-direction: column; gap: 24px; }
     .home-section-title { font-size: .7rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
@@ -1488,6 +1504,75 @@ function renderIndicadores() {
   document.getElementById('indTotAtrasadasCard').className = 'home-stat-card' + (t.atrasadas > 0 ? ' alert' : '');
   if (typeof renderIndPessoas === 'function')  renderIndPessoas(indUltimo);
   if (typeof renderIndProjetos === 'function') renderIndProjetos(indUltimo);
+}
+
+var IND_COLUNAS = [
+  { campo: 'nome',           rotulo: 'Pessoa' },
+  { campo: 'unidade',        rotulo: 'Unidade' },
+  { campo: 'ativas',         rotulo: 'Ativas' },
+  { campo: 'andamento',      rotulo: 'Em andamento' },
+  { campo: 'bloqueadas',     rotulo: 'Bloqueadas' },
+  { campo: 'atrasadas',      rotulo: 'Atrasadas' },
+  { campo: 'proximas',       rotulo: 'Próximas' },
+  { campo: 'itensPendentes', rotulo: 'Itens pendentes' },
+  { campo: 'concluidas',     rotulo: 'Concluídas' }
+];
+
+function ordenarInd(campo) {
+  if (indOrdem.campo === campo) indOrdem.dir = indOrdem.dir === 'desc' ? 'asc' : 'desc';
+  else indOrdem = { campo: campo, dir: (campo === 'nome' || campo === 'unidade') ? 'asc' : 'desc' };
+  if (indUltimo) renderIndPessoas(indUltimo);
+}
+
+function indCelNum(v, classeRuim) {
+  var cls = v === 0 ? 'zero' : (classeRuim || '');
+  return '<td class="' + cls + '">' + v + '</td>';
+}
+
+function renderIndPessoas(res) {
+  var el = document.getElementById('indPessoas');
+  var lista = res.pessoas.slice();
+  if (indBuscaTermo) {
+    lista = lista.filter(function(p) { return (p.nome + ' ' + p.email + ' ' + (p.cargo || '')).toLowerCase().indexOf(indBuscaTermo) !== -1; });
+  }
+  if (indOrdem.campo) {
+    var c = indOrdem.campo, dir = indOrdem.dir === 'asc' ? 1 : -1;
+    lista.sort(function(a, b) {
+      var x = a[c], y = b[c];
+      if (typeof x === 'string' || typeof y === 'string') return String(x || '').localeCompare(String(y || ''), 'pt-BR') * dir;
+      return ((x || 0) - (y || 0)) * dir || a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+  }
+  if (!lista.length && !res.semResponsavel) {
+    el.innerHTML = '<div class="ind-vazio">Nenhuma pessoa com tarefas nos filtros atuais.</div>';
+    return;
+  }
+  var html = '<table class="ind-tabela"><thead><tr>';
+  IND_COLUNAS.forEach(function(col) {
+    var on = indOrdem.campo === col.campo;
+    html += '<th class="' + (on ? 'on' : '') + '" onclick="ordenarInd(\'' + col.campo + '\')">' + col.rotulo + (on ? (indOrdem.dir === 'asc' ? ' ▲' : ' ▼') : '') + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  function linha(p, semResp) {
+    var s = '<tr class="' + (semResp ? 'sem-resp' : '') + '"' + (semResp ? '' : ' data-email="' + esc(p.email) + '"') + '>';
+    s += '<td><div class="ind-pessoa">' + (semResp ? '' : '<span class="avatar">' + esc(avatarInitials(p.email)) + '</span>')
+      + '<span>' + esc(p.nome) + (p.cargo ? '<small>' + esc(p.cargo) + '</small>' : '') + '</span></div></td>';
+    s += '<td>' + esc(p.unidade || '—') + '</td>';
+    s += indCelNum(p.ativas) + indCelNum(p.andamento) + indCelNum(p.bloqueadas, 'aviso') + indCelNum(p.atrasadas, 'ruim')
+      + indCelNum(p.proximas) + indCelNum(p.itensPendentes) + indCelNum(p.concluidas);
+    return s + '</tr>';
+  }
+  if (res.semResponsavel && !indBuscaTermo) html += linha(res.semResponsavel, true);
+  lista.forEach(function(p) { html += linha(p, false); });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+  Array.from(el.querySelectorAll('tbody tr[data-email]')).forEach(function(tr) {
+    tr.addEventListener('click', function() {
+      setFiltroProjeto(indFiltroProjeto || '');
+      setFiltroResponsavel(tr.getAttribute('data-email'));
+      setModo('tarefas');
+    });
+  });
 }
 
 function renderHome() {
