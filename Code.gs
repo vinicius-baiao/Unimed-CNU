@@ -27,23 +27,16 @@ var HTML_FILE        = 'tarefas-shadcn';
 // Além deste flag, remova/desative o gatilho no Apps Script → Gatilhos.
 var RESUMO_DIARIO_ATIVO = false;
 
-// Marcação de colegas em itens de checklist (e o e-mail de notificação).
-// Desativado por ora — o front não oferece mais a UI; marcações antigas
-// são preservadas nos dados e seguem valendo para visibilidade.
-var CHECKLIST_MARCACAO_ATIVA = false;
-
-// Piloto: restringe o acesso aos e-mails abaixo. Desligar com PILOTO_ATIVO = false.
+// Piloto: acesso restrito a quem está na aba Usuários (qualquer perfil).
+// Desde 08/09/2026 a lista fixa de e-mails saiu: manter 40+ endereços em dois
+// lugares era erro esperando para acontecer. Desligar com PILOTO_ATIVO = false
+// abre para o domínio inteiro. Remoção da aba vale após o TTL do cache de
+// perfis (5 min) ou limparCachePerfis().
 var PILOTO_ATIVO  = true;
-var EMAILS_PILOTO = [
-  'aurelio.pereira.ext@unimedcnu.coop.br',
-  'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',
-  'guilherme.silva.ext@unimedcnu.coop.br',
-  'thiago.viana.ext@unimedcnu.coop.br'
-];
 function acessoPermitido(email) {
   if (!PILOTO_ATIVO) return true;
-  if (!email) return true; // fail-open se o e-mail não resolver (evita lockout acidental)
-  return EMAILS_PILOTO.indexOf(String(email).toLowerCase()) !== -1;
+  if (!email) return false; // sem e-mail = sem identidade; doGet mostra tela de troca de conta
+  return !!getPerfil(email);
 }
 
 // Índices das colunas (base 0) na aba Tarefas
@@ -69,7 +62,23 @@ function doGet(e) {
 
   // Sem ação → serve o frontend HTML (permite embed no Google Sites)
   if (!acao) {
-    if (!acessoPermitido(Session.getActiveUser().getEmail())) {
+    var emailAcesso = Session.getActiveUser().getEmail();
+    // E-mail vazio = navegador com múltiplas contas Google (ou conta pessoal
+    // como padrão). Sem isto o app abria "anônimo": "Olá, …", sem perfil.
+    if (!emailAcesso) {
+      var urlApp = ScriptApp.getService().getUrl();
+      return HtmlService.createHtmlOutput(
+        '<div style="font-family:system-ui,Arial,sans-serif;max-width:480px;margin:64px auto;text-align:center;color:#16302E">'
+        + '<h2 style="color:#004E4C;margin:0 0 8px">Não conseguimos identificar sua conta</h2>'
+        + '<p style="color:#4A5F5C;line-height:1.5">Você provavelmente está com mais de uma conta Google aberta neste navegador. '
+        + 'Abra o portal com a sua conta <b>@unimedcnu.coop.br</b>.</p>'
+        + '<a target="_top" href="https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(urlApp) + '" '
+        + 'style="display:inline-block;margin-top:12px;background:#004E4C;color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600">Escolher conta</a>'
+        + '<p style="color:#6E807D;font-size:12px;margin-top:16px">Alternativa: janela anônima, entrando apenas com a conta corporativa.</p></div>')
+        .setTitle('Identifique sua conta — Gestão de Tarefas CNU')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+    if (!acessoPermitido(emailAcesso)) {
       return HtmlService.createHtmlOutput(
         '<div style="font-family:system-ui,Arial,sans-serif;max-width:460px;margin:64px auto;text-align:center;color:#15211f">'
         + '<h2 style="color:#004e4c;margin:0 0 8px">Acesso restrito</h2>'
@@ -78,7 +87,11 @@ function doGet(e) {
         .setTitle('Acesso restrito — Gestão de Tarefas CNU');
     }
     // Template (não arquivo estático): permite <?!= include('Estilos_Fontes') ?>
-    return HtmlService.createTemplateFromFile(HTML_FILE).evaluate()
+    // deepLink: ?projeto=<id> e ?tarefa=<id> na URL abrem o app já filtrado /
+    // com o modal aberto (botões "Abrir/Editar no Cora" dos painéis).
+    var tpl = HtmlService.createTemplateFromFile(HTML_FILE);
+    tpl.deepLink = deepLinkJson(e.parameter);
+    return tpl.evaluate()
       .setTitle('Gestão de Tarefas — Rede Ambulatorial CNU')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -86,10 +99,20 @@ function doGet(e) {
   var resultado;
   try {
     var dados = e.parameter.dados ? JSON.parse(e.parameter.dados) : {};
-    if (!acessoPermitido(Session.getActiveUser().getEmail())) {
+    var emailReq = Session.getActiveUser().getEmail();
+    if (!emailReq) {
+      resultado = { erro: 'Conta Google não identificada. Feche outras contas ou use janela anônima com a conta @unimedcnu.coop.br.' };
+    } else if (acao === 'planoAcaoProjeto') {
+      // Leitura pública por projeto (painéis Spravato / PF / GT Onco): exige só
+      // conta identificada do domínio, NÃO a allowlist do piloto. A própria
+      // rota recusa projeto que não seja ativo e público.
+      resultado = planoAcaoProjeto(dados);
+    } else if (!acessoPermitido(emailReq)) {
       resultado = { erro: 'Acesso restrito ao piloto.' };
     } else {
     switch (acao) {
+      case 'bootstrap':              resultado = bootstrap();                   break;
+      case 'bootstrapApoio':         resultado = bootstrapApoio();              break;
       case 'listarTarefas':          resultado = listarTarefas();               break;
       case 'criarTarefa':            resultado = criarTarefa(dados);            break;
       case 'atualizarTarefa':        resultado = atualizarTarefa(dados);        break;
@@ -97,6 +120,7 @@ function doGet(e) {
       case 'listarTemplates':        resultado = listarTemplates();             break;
       case 'listarChecklist_Status': resultado = listarChecklist_Status();      break;
       case 'salvarChecklist':        resultado = salvarChecklist(dados);        break;
+      case 'avisarMarcadoChecklist': resultado = avisarMarcadoChecklist(dados); break;
       case 'listarInteracoes':      resultado = listarInteracoes(dados);       break;
       case 'adicionarInteracao':    resultado = adicionarInteracao(dados);     break;
       case 'listarUsuarios':        resultado = listarUsuarios();              break;
@@ -134,20 +158,173 @@ function include(nome) {
   return HtmlService.createHtmlOutputFromFile(nome).getContent();
 }
 
+// JSON dos parâmetros de link profundo, saneados para dígitos (vai para um
+// atributo do <body>; no preview local o scriptlet fica cru e o front ignora).
+function deepLinkJson(params) {
+  params = params || {};
+  function id(v) { v = String(v == null ? '' : v); return /^\d{1,9}$/.test(v) ? v : ''; }
+  return JSON.stringify({ projeto: id(params.projeto), tarefa: id(params.tarefa) });
+}
+
+// ── planoAcaoProjeto ──────────────────────────────────────────
+// Leitura pública das tarefas de um projeto público, consumida pelos painéis
+// (Spravato, Carteira PF, GT Onco) via JSONP. Cache de 60 s por projeto,
+// invalidado pelas escritas (invalidarCachePlano). Mensagem de erro única de
+// propósito: não revela se o projeto existe.
+var CACHE_PLANO_PREFIXO = 'planoAcao_';
+var CACHE_PLANO_SEG     = 60;
+var ERRO_PLANO_INDISPONIVEL = 'Projeto não disponível.';
+
+function localizarProjetoPublico(dados) {
+  var rows = lerAba(ABA_PROJETOS) || [];
+  var porId = dados && dados.projetoId !== undefined && /^\d{1,9}$/.test(String(dados.projetoId)) ? String(dados.projetoId) : '';
+  var porNome = !porId && dados && dados.projetoNome ? String(dados.projetoNome).trim() : '';
+  if (!porId && !porNome) return null;
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[COL_PROJ.NOME]) continue;
+    if (porId && String(r[COL_PROJ.ID]) !== porId) continue;
+    if (porNome && String(r[COL_PROJ.NOME]) !== porNome) continue;
+    if (r[COL_PROJ.ATIVO] === false || r[COL_PROJ.ATIVO] === 'false') return null;
+    if (!ehVerdadeiro(r[COL_PROJ.PUBLICO])) return null;
+    return { id: Number(r[COL_PROJ.ID]), nome: String(r[COL_PROJ.NOME]), cor: corSegura(r[COL_PROJ.COR]), descricao: String(r[COL_PROJ.DESCRICAO] || '') };
+  }
+  return null;
+}
+
+function planoAcaoProjeto(dados) {
+  var projeto = localizarProjetoPublico(dados);
+  if (!projeto) return { erro: ERRO_PLANO_INDISPONIVEL };
+  return comCache(CACHE_PLANO_PREFIXO + projeto.id, CACHE_PLANO_SEG, function() {
+    return montarPlanoAcaoProjeto(projeto);
+  });
+}
+
+function montarPlanoAcaoProjeto(projeto) {
+  var tz = Session.getScriptTimeZone();
+  function dia(v) { return v ? Utilities.formatDate(new Date(v), tz, 'yyyy-MM-dd') : ''; }
+  function instante(v) { return v ? Utilities.formatDate(new Date(v), tz, "yyyy-MM-dd'T'HH:mm:ss") : ''; }
+
+  var rowsT = lerAba(ABA_TAREFAS) || [];
+  var tarefas = [], porId = {};
+  for (var i = 1; i < rowsT.length; i++) {
+    var l = rowsT[i];
+    if (!l[COL.ID]) continue;
+    if (l[COL.ATIVO] === false || l[COL.ATIVO] === 'false') continue;
+    if (String(l[COL.PROJETO] || '') !== projeto.nome) continue;
+    var t = {
+      id: Number(l[COL.ID]),
+      tarefa: String(l[COL.TAREFA] || ''),
+      status: String(l[COL.STATUS] || ''),
+      prioridade: String(l[COL.PRIORIDADE] || ''),
+      prazo: dia(l[COL.PRAZO]),
+      responsavel: String(l[COL.RESPONSAVEL] || ''),
+      observacoes: String(l[COL.OBSERVACOES] || ''),
+      ultimaAtualizacao: '',
+      checklist: { total: 0, feitos: 0, itens: [] }
+    };
+    tarefas.push(t);
+    porId[String(t.id)] = t;
+  }
+
+  var rowsC = lerAba(ABA_CKL_STATUS) || [];
+  for (var c = 1; c < rowsC.length; c++) {
+    var t2 = porId[String(rowsC[c][1])];
+    if (!t2) continue;
+    var feito = ehVerdadeiro(rowsC[c][5]);
+    t2.checklist.itens.push({ item: String(rowsC[c][3] || ''), feito: feito, responsavel: String(rowsC[c][7] || '') });
+    t2.checklist.total++;
+    if (feito) t2.checklist.feitos++;
+  }
+
+  var rowsI = lerAba(ABA_INTERACOES) || [];
+  var ultima = {};
+  for (var k = 1; k < rowsI.length; k++) {
+    var t3 = porId[String(rowsI[k][1])];
+    if (!t3 || !rowsI[k][2]) continue;
+    var ms = new Date(rowsI[k][2]).getTime();
+    if (isNaN(ms)) continue;
+    if (!ultima[t3.id] || ms > ultima[t3.id]) ultima[t3.id] = ms;
+  }
+  tarefas.forEach(function(t4) { if (ultima[t4.id]) t4.ultimaAtualizacao = instante(new Date(ultima[t4.id])); });
+
+  return {
+    projeto: projeto,
+    urlCora: ScriptApp.getService().getUrl(),
+    geradoEm: instante(new Date()),
+    tarefas: tarefas
+  };
+}
+
+// Chamar após escrever em tarefa/checklist de um projeto, ou no próprio
+// projeto. Sem efeito para projeto não público; falha de cache é silenciosa
+// (pior caso: painel atrasa 60 s).
+function invalidarCachePlano(nomeProjeto) {
+  if (!nomeProjeto) return;
+  try {
+    var rows = lerAba(ABA_PROJETOS) || [];
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][COL_PROJ.NOME]) === String(nomeProjeto)) {
+        CacheService.getScriptCache().remove(CACHE_PLANO_PREFIXO + rows[i][COL_PROJ.ID]);
+        return;
+      }
+    }
+  } catch (e) {}
+}
+
 // ── Projetos ──────────────────────────────────────────────────
-var COL_PROJ = { ID: 0, NOME: 1, DESCRICAO: 2, COR: 3, ATIVO: 4 };
+// Publico (col. F): projeto visível a todo o domínio — as tarefas dele entram
+// em idsTarefasVisiveis() para qualquer perfil e a rota planoAcaoProjeto
+// devolve o plano a quem não está na aba Usuários. Usado pelos painéis
+// (Spravato, Carteira PF, GT Onco) para o plano de ação.
+var COL_PROJ = { ID: 0, NOME: 1, DESCRICAO: 2, COR: 3, ATIVO: 4, PUBLICO: 5 };
+var HEADERS_PROJ = ['ID','Nome','Descrição','Cor','Ativo','Publico'];
 
 function getOrCreateProjetosSheet() {
   var ss    = _ss || (_ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet());
   var sheet = ss.getSheetByName(ABA_PROJETOS);
   if (!sheet) {
     sheet = ss.insertSheet(ABA_PROJETOS);
-    var hProj = ['ID','Nome','Descrição','Cor','Ativo'];
-    sheet.getRange(1, 1, 1, hProj.length).setValues([hProj]).setFontWeight('bold');
+    sheet.getRange(1, 1, 1, HEADERS_PROJ.length).setValues([HEADERS_PROJ]).setFontWeight('bold');
     sheet.setFrozenRows(1);
-    sheet.setColumnWidths(1, hProj.length, 100);
+    sheet.setColumnWidths(1, HEADERS_PROJ.length, 100);
   }
   return sheet;
+}
+
+// Células booleanas chegam como true, 'TRUE' ou 'true' conforme a origem.
+function ehVerdadeiro(v) {
+  return v === true || String(v).toLowerCase() === 'true';
+}
+
+// Migração única (08/09/2026): aba criada antes da coluna Publico ganha o
+// cabeçalho em F1 e FALSE nas linhas existentes. Idempotente — rodar no editor.
+function migrarProjetosPublico() {
+  var sheet = getOrCreateProjetosSheet();
+  if (sheet.getLastColumn() >= HEADERS_PROJ.length) { Logger.log('migrarProjetosPublico: coluna já existe.'); return; }
+  var c = COL_PROJ.PUBLICO + 1;
+  sheet.getRange(1, c).setValue('Publico');
+  var n = sheet.getLastRow() - 1;
+  if (n > 0) {
+    var falsos = [];
+    for (var i = 0; i < n; i++) falsos.push([false]);
+    sheet.getRange(2, c, n, 1).setValues(falsos);
+  }
+  invalidarAba(ABA_PROJETOS);
+  limparCacheListas();
+  Logger.log('migrarProjetosPublico: coluna criada, ' + n + ' linha(s) com FALSE.');
+}
+
+// {nome: true} dos projetos ativos e públicos. Lê pelo cache de execução.
+function projetosPublicos() {
+  var rows = lerAba(ABA_PROJETOS) || [];
+  var mapa = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][COL_PROJ.NOME]) continue;
+    if (rows[i][COL_PROJ.ATIVO] === false || rows[i][COL_PROJ.ATIVO] === 'false') continue;
+    if (ehVerdadeiro(rows[i][COL_PROJ.PUBLICO])) mapa[String(rows[i][COL_PROJ.NOME])] = true;
+  }
+  return mapa;
 }
 
 function proximoIdProjeto() {
@@ -159,8 +336,12 @@ function proximoIdProjeto() {
 }
 
 function listarProjetos() {
-  var sheet = getOrCreateProjetosSheet();
-  var rows  = sheet.getDataRange().getValues();
+  return comCache(CACHE_PROJETOS_KEY, CACHE_LISTAS_SEG, listarProjetosDaPlanilha);
+}
+
+function listarProjetosDaPlanilha() {
+  getOrCreateProjetosSheet();          // garante a aba antes de ler
+  var rows  = lerAba(ABA_PROJETOS) || [];
   var lista = [];
   for (var i = 1; i < rows.length; i++) {
     if (!rows[i][COL_PROJ.NOME]) continue;
@@ -169,7 +350,8 @@ function listarProjetos() {
       id:       rows[i][COL_PROJ.ID],
       nome:     String(rows[i][COL_PROJ.NOME]),
       descricao: String(rows[i][COL_PROJ.DESCRICAO] || ''),
-      cor:      String(rows[i][COL_PROJ.COR] || '#64748b')
+      cor:      String(rows[i][COL_PROJ.COR] || '#64748b'),
+      publico:  ehVerdadeiro(rows[i][COL_PROJ.PUBLICO])
     });
   }
   return { projetos: lista };
@@ -191,9 +373,12 @@ function criarProjeto(dados) {
 
   var sheet = getOrCreateProjetosSheet();
   var id    = proximoIdProjeto();
-  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', corSegura(dados.cor), true]);
-  gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome);
+  var publico = ehVerdadeiro(dados.publico);
+  sheet.appendRow([id, String(dados.nome).trim(), dados.descricao || '', corSegura(dados.cor), true, publico]);
+  gravarLog('CRIAR_PROJETO', 'Nome', '', dados.nome + (publico ? ' (público)' : ''));
   lock.releaseLock();
+  invalidarAba(ABA_PROJETOS);
+  limparCacheListas();
   return { sucesso: true, id: id };
 }
 
@@ -207,11 +392,16 @@ function atualizarProjeto(dados) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
     var row = rows[i].slice();
+    while (row.length < HEADERS_PROJ.length) row.push(row.length === COL_PROJ.PUBLICO ? false : '');
     if (dados.nome      !== undefined) row[COL_PROJ.NOME]     = dados.nome;
     if (dados.descricao !== undefined) row[COL_PROJ.DESCRICAO] = dados.descricao;
     if (dados.cor       !== undefined) row[COL_PROJ.COR]      = corSegura(dados.cor);
+    if (dados.publico   !== undefined) row[COL_PROJ.PUBLICO]  = ehVerdadeiro(dados.publico);
     sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
-    gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, dados.nome || '');
+    gravarLog('ATUALIZAR_PROJETO', 'ID', dados.id, (dados.nome || '') + (dados.publico !== undefined ? ' publico=' + row[COL_PROJ.PUBLICO] : ''));
+    invalidarAba(ABA_PROJETOS);
+    limparCacheListas();
+    try { CacheService.getScriptCache().remove(CACHE_PLANO_PREFIXO + dados.id); } catch (e) {}
     return { sucesso: true };
   }
   return { erro: 'Projeto não encontrado.' };
@@ -228,6 +418,9 @@ function arquivarProjeto(dados) {
     if (String(rows[i][COL_PROJ.ID]) !== String(dados.id)) continue;
     sheet.getRange(i + 1, COL_PROJ.ATIVO + 1).setValue(false);
     gravarLog('ARQUIVAR_PROJETO', 'ID', dados.id, 'inativo');
+    invalidarAba(ABA_PROJETOS);
+    limparCacheListas();
+    try { CacheService.getScriptCache().remove(CACHE_PLANO_PREFIXO + dados.id); } catch (e) {}
     return { sucesso: true };
   }
   return { erro: 'Projeto não encontrado.' };
@@ -241,28 +434,71 @@ function arquivarProjeto(dados) {
 var CACHE_PERFIS_KEY = 'perfis_v1';
 var CACHE_PERFIS_SEG = 300;
 
+// Usuários e projetos mudam raramente e pesam na carga inicial: o bootstrap
+// serializa as leituras numa execução só, e a medição de 03/08/2026 mostrou que
+// é aí que o tempo vai. Ficam em cache do script (compartilhado — não são dados
+// por usuário) e as escritas nessas abas invalidam.
+var CACHE_USUARIOS_KEY  = 'usuarios_v1';
+var CACHE_PROJETOS_KEY  = 'projetos_v1';
+var CACHE_LISTAS_SEG    = 600;
+
+// Helper: lê do cache, ou monta com fn() e grava. Falha de cache nunca impede
+// a resposta — cai para a leitura da planilha.
+function comCache(chave, segundos, fn) {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) {
+    try {
+      var raw = cache.get(chave);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+  }
+  var valor = fn();
+  if (cache) {
+    try { cache.put(chave, JSON.stringify(valor), segundos); } catch (e) {}
+  }
+  return valor;
+}
+
+function limparCacheListas() {
+  try { CacheService.getScriptCache().removeAll([CACHE_USUARIOS_KEY, CACHE_PROJETOS_KEY]); } catch (e) {}
+}
+
+// Memo por execução, por cima do CacheService: podeExcluir()/getPerfil() são
+// chamados várias vezes na mesma request e cada chamada refazia cache.get +
+// JSON.parse.
+var _perfis = null;
+
 function mapaPerfis() {
+  if (_perfis) return _perfis;
+
   var cache = CacheService.getScriptCache();
   try {
     var raw = cache.get(CACHE_PERFIS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return (_perfis = JSON.parse(raw));
   } catch (e) { /* cache indisponível: cai para a planilha */ }
 
   var mapa = {};
-  var sheet = getSheet(ABA_USUARIOS);
-  if (sheet) {
-    var rows = sheet.getDataRange().getValues();
+  var rows = lerAba(ABA_USUARIOS);
+  if (rows) {
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][1]) mapa[String(rows[i][1]).trim().toLowerCase()] = String(rows[i][2] || '');
     }
   }
   try { cache.put(CACHE_PERFIS_KEY, JSON.stringify(mapa), CACHE_PERFIS_SEG); } catch (e) {}
-  return mapa;
+  return (_perfis = mapa);
 }
 
 function getPerfil(email) {
   if (!email) return '';
   return mapaPerfis()[String(email).trim().toLowerCase()] || '';
+}
+
+// Invalida o cache de perfis — chamar após qualquer escrita na aba Usuários.
+// Também pode ser executada manualmente no editor se um perfil recém-alterado
+// na planilha não estiver valendo na hora.
+function limparCachePerfis() {
+  try { CacheService.getScriptCache().remove(CACHE_PERFIS_KEY); } catch (e) {}
 }
 
 function isAdmin(email) {
@@ -275,15 +511,16 @@ function podeExcluir(email) {
 }
 
 function listarUsuarios() {
-  var sheet = getSheet(ABA_USUARIOS);
-  if (!sheet) return { usuarios: [] };
-  var rows = sheet.getDataRange().getValues();
-  var lista = [];
-  for (var i = 1; i < rows.length; i++) {
-    if (!rows[i][0] && !rows[i][1]) continue;
-    lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]), unidade: String(rows[i][3] || ''), cargo: String(rows[i][4] || '') });
-  }
-  return { usuarios: lista };
+  return comCache(CACHE_USUARIOS_KEY, CACHE_LISTAS_SEG, function() {
+    var rows = lerAba(ABA_USUARIOS);
+    if (!rows) return { usuarios: [] };
+    var lista = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (!rows[i][0] && !rows[i][1]) continue;
+      lista.push({ nome: String(rows[i][0]), email: String(rows[i][1]), perfil: String(rows[i][2]), unidade: String(rows[i][3] || ''), cargo: String(rows[i][4] || '') });
+    }
+    return { usuarios: lista };
+  });
 }
 
 // ── Helpers de planilha ───────────────────────────────────────
@@ -296,6 +533,23 @@ function getSheet(nome) {
       : SpreadsheetApp.getActiveSpreadsheet();
   }
   return _ss.getSheetByName(nome);
+}
+
+// Cache de leitura por EXECUÇÃO (não entre execuções — cada request começa
+// com o cache vazio). Antes, uma única chamada de bootstrap/listagem lia a aba
+// Tarefas 3x e Checklist_Status 3x, porque idsTarefasVisiveis relia tudo.
+// Só usar em leitura: quem escreve deve chamar invalidarAba() depois.
+var _abas = {};
+
+function lerAba(nome) {
+  if (_abas.hasOwnProperty(nome)) return _abas[nome];
+  var sh = getSheet(nome);
+  _abas[nome] = sh ? sh.getDataRange().getValues() : null;
+  return _abas[nome];
+}
+
+function invalidarAba(nome) {
+  delete _abas[nome];
 }
 
 function proximoId() {
@@ -313,29 +567,35 @@ function gravarLog(acao, campo, anterior, novo) {
 function gravarLogs(entradas) {
   if (!entradas || !entradas.length) return;
   var log    = getSheet(ABA_LOG);
+  if (!log) return;
   var editor = Session.getActiveUser().getEmail();
   var agora  = new Date();
   // appendRow é atômico: execuções simultâneas não sobrescrevem linhas
   // umas das outras (o setValues em posição calculada sobrescrevia).
   // O ID pode duplicar sob concorrência — cosmético, sem perda de dados.
-  entradas.forEach(function(e) {
-    log.appendRow([log.getLastRow(), agora, editor, e[0], e[1], e[2], e[3]]);
+  // Por isso NÃO trocar por um setValues em bloco, mesmo sendo mais rápido.
+  // O que dá para economizar é o getLastRow() por entrada: um save de 5 campos
+  // fazia 10 chamadas de API onde 6 bastam.
+  var base = log.getLastRow();
+  entradas.forEach(function(e, i) {
+    log.appendRow([base + i, agora, editor, e[0], e[1], e[2], e[3]]);
   });
 }
 
 // ── Visibilidade por perfil ───────────────────────────────────
 // Admin/Gestor veem tudo (retorna null = sem restrição).
 // Usuário Padrão vê apenas tarefas onde: é o responsável, é o criador,
-// ou está marcado como responsável em algum item de checklist.
+// está marcado como responsável em algum item de checklist, ou a tarefa
+// pertence a um projeto público (planos de ação dos painéis).
 function idsTarefasVisiveis(email, rowsTarefas) {
   if (!email || podeExcluir(email)) return null;
   var alvo = String(email).trim().toLowerCase();
+  var publicos = projetosPublicos();
 
   // Tarefas onde o usuário está marcado em item de checklist (col. 7 = Responsavel)
   var marcado = {};
-  var shC = getSheet(ABA_CKL_STATUS);
-  if (shC) {
-    var rowsC = shC.getDataRange().getValues();
+  var rowsC = lerAba(ABA_CKL_STATUS);
+  if (rowsC) {
     for (var i = 1; i < rowsC.length; i++) {
       if (String(rowsC[i][7] || '').trim().toLowerCase() === alvo) {
         marcado[String(rowsC[i][1])] = true;
@@ -344,12 +604,13 @@ function idsTarefasVisiveis(email, rowsTarefas) {
   }
 
   var visiveis = {};
-  var rowsT = rowsTarefas || getSheet(ABA_TAREFAS).getDataRange().getValues();
+  var rowsT = rowsTarefas || lerAba(ABA_TAREFAS);
   for (var j = 1; j < rowsT.length; j++) {
     var id      = String(rowsT[j][COL.ID]);
     var resp    = String(rowsT[j][COL.RESPONSAVEL] || '').trim().toLowerCase();
     var criador = String(rowsT[j][COL.CRIADO_POR]  || '').trim().toLowerCase();
-    if (resp === alvo || criador === alvo || marcado[id]) visiveis[id] = true;
+    var projeto = String(rowsT[j][COL.PROJETO] || '');
+    if (resp === alvo || criador === alvo || marcado[id] || publicos[projeto]) visiveis[id] = true;
   }
   return visiveis;
 }
@@ -363,10 +624,52 @@ function parsePrazoLocal(val) {
   return new Date(val);
 }
 
+// ── Carga inicial: duas rotas, chamadas em paralelo pelo front ────
+// Histórico das medições (03/08/2026), porque a intuição erra aqui:
+//   6 rotas separadas .......... ~3,1 s   (6 execuções)
+//   1 rota consolidada ......... ~3,4 s   (1 execução)  ← consolidar não acelerou
+//   5 rotas em paralelo ........ ~2,3 s   (5 execuções)
+// O Apps Script atende requisições em paralelo, então o tempo de parede é o da
+// rota mais lenta — juntar tudo numa execução só serializa as leituras. Por
+// outro lado, 5 execuções gastam ~8,5 s de tempo de servidor por carga.
+// Estas duas rotas são o meio: o front dispara as duas juntas (~2,4 s, o tempo
+// da mais lenta) e paga 2 execuções.
+//
+// A divisão junta quem compartilha leitura, em vez de espalhar as abas.
+// Primeira tentativa foi separar `Tarefas` e `Checklist_Status` por serem as
+// leituras pesadas, mas isso desequilibrou: `listarChecklist_Status()` lê
+// `Tarefas` TAMBÉM (para descartar itens órfãos), então a rota de apoio fazia
+// duas leituras contra uma da crítica — medido em 2,4-3,9 s contra 1,7-1,9 s.
+// De quebra, `Tarefas` era lida nas duas rotas, desperdiçando o cache de
+// execução. Aqui as duas leituras pesadas ficam na mesma execução, onde
+// lerAba() serve `Tarefas` uma vez para as duas, e a rota de apoio fica só com
+// o que vem do CacheService.
+function bootstrap() {
+  var email  = Session.getActiveUser().getEmail();
+  var perfil = getPerfil(email);
+  return {
+    usuario: {
+      email:       email,
+      perfil:      perfil,
+      admin:       perfil === 'Admin',
+      podeExcluir: perfil === 'Admin' || perfil === 'Gestor'
+    },
+    tarefas:   listarTarefas().tarefas,
+    checklist: listarChecklist_Status().itens
+  };
+}
+
+function bootstrapApoio() {
+  return {
+    usuarios: listarUsuarios().usuarios,
+    projetos: listarProjetos().projetos
+  };
+}
+
 // ── listarTarefas ─────────────────────────────────────────────
 function listarTarefas() {
-  var sheet  = getSheet(ABA_TAREFAS);
-  var dados  = sheet.getDataRange().getValues();
+  var dados  = lerAba(ABA_TAREFAS);
+  if (!dados) return { tarefas: [] };
   var header = dados[0];
   var lista  = [];
   var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail(), dados);
@@ -441,6 +744,7 @@ function criarTarefa(dados) {
 
   gravarLog('CRIAR', 'Tarefa', '', dados.tarefa);
   lock.releaseLock();
+  invalidarCachePlano(dados.projeto);
 
   return { sucesso: true, id: id };
 }
@@ -452,7 +756,8 @@ function atualizarTarefa(dados) {
   if (erroValidacao) return { erro: erroValidacao };
 
   var sheet  = getSheet(ABA_TAREFAS);
-  var linhas = sheet.getDataRange().getValues();
+  var linhas = lerAba(ABA_TAREFAS);
+  if (!linhas) return { erro: 'Aba Tarefas não encontrada.' };
 
   // Usuário Padrão só pode alterar tarefas que enxerga (IDs são sequenciais
   // e adivinháveis; sem esta checagem a visibilidade seria contornável).
@@ -471,7 +776,11 @@ function atualizarTarefa(dados) {
     var eCriador = editor === criador;
     var admin    = podeExcluir(editorEmail); // Admin + Gestor
     // Todos podem editar; apenas o prazo é restrito ao criador ou Admin/Gestor.
-    var prazoAtualStr = linhas[i][COL.PRAZO] ? new Date(linhas[i][COL.PRAZO]).toISOString().slice(0,10) : '';
+    // Comparar no fuso do script — toISOString (UTC) desloca prazos legados
+    // gravados às 21:00 e bloqueava o save de quem nem tocou no prazo.
+    var prazoAtualStr = linhas[i][COL.PRAZO]
+      ? Utilities.formatDate(new Date(linhas[i][COL.PRAZO]), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+      : '';
     if (!admin && !eCriador && dados.prazo !== undefined && dados.prazo !== '' && dados.prazo !== prazoAtualStr) {
       return { erro: 'Apenas o criador ou um Admin/Gestor pode alterar o prazo.' };
     }
@@ -507,6 +816,11 @@ function atualizarTarefa(dados) {
       logEntradas.push(['ATUALIZAR', campo, anterior, novo]);
     });
     gravarLogs(logEntradas);
+    if (logEntradas.length) {
+      invalidarAba(ABA_TAREFAS); // cache desta execução ficou velho
+      invalidarCachePlano(linhas[i][COL.PROJETO]);
+      if (dados.projeto !== undefined && dados.projeto !== linhas[i][COL.PROJETO]) invalidarCachePlano(dados.projeto);
+    }
 
     if (dados.responsavel && dados.responsavel !== responsavelAnterior) {
       // Falha de e-mail não pode derrubar a resposta (a atualização já foi gravada)
@@ -532,7 +846,8 @@ function atualizarTarefa(dados) {
 // ── excluirTarefa (soft delete) ───────────────────────────────
 function excluirTarefa(dados) {
   var sheet    = getSheet(ABA_TAREFAS);
-  var linhas   = sheet.getDataRange().getValues();
+  var linhas   = lerAba(ABA_TAREFAS);
+  if (!linhas) return { erro: 'Aba Tarefas não encontrada.' };
   var editor   = Session.getActiveUser().getEmail();
   var encontrou = false;
   var calendarFeito = false;
@@ -560,18 +875,22 @@ function excluirTarefa(dados) {
 
     sheet.getRange(i + 1, COL.ATIVO + 1).setValue(false);
     encontrou = true;
+    invalidarCachePlano(linhas[i][COL.PROJETO]);
   }
 
   if (!encontrou) return { erro: 'Tarefa não encontrada: ' + dados.id };
+  invalidarAba(ABA_TAREFAS);
   gravarLog('EXCLUIR', 'ID', dados.id, 'inativo');
   return { sucesso: true };
 }
 
 // ── listarTemplates ───────────────────────────────────────────
+// Fora da carga inicial desde 03/08/2026: o front não consome templates (a UI
+// não existe no MVP) e a rota custava 1,9 s para devolver lista vazia.
+// Mantida disponível para quando a feature de templates existir.
 function listarTemplates() {
-  var sheet = getSheet(ABA_CHECKLISTS);
-  if (!sheet) return { templates: [] };
-  var dados = sheet.getDataRange().getValues();
+  var dados = lerAba(ABA_CHECKLISTS);
+  if (!dados) return { templates: [] };
   var mapa  = {};
 
   for (var i = 1; i < dados.length; i++) {
@@ -594,14 +913,13 @@ function listarTemplates() {
 
 // ── listarChecklist_Status ────────────────────────────────────
 function listarChecklist_Status() {
-  var sheetC = getSheet(ABA_CKL_STATUS);
-  if (!sheetC) return { itens: [] };
+  var dados = lerAba(ABA_CKL_STATUS);
+  if (!dados) return { itens: [] };
 
   // Montar conjunto de IDs de tarefas ativas para filtrar órfãos
-  var sheetT = getSheet(ABA_TAREFAS);
   var idsAtivos = {};
-  if (sheetT) {
-    var rowsT = sheetT.getDataRange().getValues();
+  var rowsT = lerAba(ABA_TAREFAS);
+  if (rowsT) {
     for (var t = 1; t < rowsT.length; t++) {
       if (rowsT[t][COL.ATIVO] !== false && rowsT[t][COL.ATIVO] !== 'false') {
         idsAtivos[String(rowsT[t][COL.ID])] = true;
@@ -609,7 +927,6 @@ function listarChecklist_Status() {
     }
   }
 
-  var dados  = sheetC.getDataRange().getValues();
   var header = dados[0];
   var lista  = [];
   var visiveis = idsTarefasVisiveis(Session.getActiveUser().getEmail());
@@ -643,6 +960,13 @@ function salvarChecklist(dados) {
   if (itensIn.length > 100) return { erro: 'Checklist excede 100 itens.' };
   for (var v = 0; v < itensIn.length; v++) {
     if (String(itensIn[v].item || '').length > 300) return { erro: 'Item de checklist excede 300 caracteres.' };
+    // O campo Responsavel concede visibilidade da tarefa (idsTarefasVisiveis),
+    // então não pode aceitar string arbitrária.
+    var rspItem = String(itensIn[v].responsavel || '').trim().toLowerCase();
+    if (rspItem) {
+      var domItemOk = DOMINIOS_PERMITIDOS.some(function(d) { return rspItem.slice(-d.length) === d; });
+      if (!domItemOk) return { erro: 'Colega marcado precisa ter e-mail @unimedcnu.coop.br ou @unimednacional.coop.br' };
+    }
   }
 
   // Lock: a gravação reescreve a aba inteira — dois salvamentos simultâneos
@@ -651,6 +975,10 @@ function salvarChecklist(dados) {
   lock.waitLock(10000);
   try {
 
+  // Leitura FRESCA de propósito, dentro do lock — NÃO trocar por lerAba().
+  // O cache da execução pode ter sido populado antes do lock (idsTarefasVisiveis
+  // lê esta aba); reescrever a aba a partir dele apagaria o que outra execução
+  // gravou nesse intervalo.
   var todas    = sheet.getDataRange().getValues();
   var header   = todas[0];
 
@@ -687,45 +1015,131 @@ function salvarChecklist(dados) {
   if (resultado.length > 0) {
     sheet.getRange(1, 1, resultado.length, numCols).setValues(resultado);
   }
+  invalidarAba(ABA_CKL_STATUS);
 
   } finally {
-    lock.releaseLock(); // solta antes das notificações (e-mail é lento)
+    lock.releaseLock(); // solta ao fim da gravação
   }
+  // Painéis leem o progresso do checklist pela rota planoAcaoProjeto
+  try {
+    var rowsTp = lerAba(ABA_TAREFAS) || [];
+    for (var p = 1; p < rowsTp.length; p++) {
+      if (String(rowsTp[p][COL.ID]) === idTarefa) { invalidarCachePlano(rowsTp[p][COL.PROJETO]); break; }
+    }
+  } catch (e) {}
 
-  // Notificar colegas marcados em itens da checklist (desativado por flag)
-  var marcados = [];
-  if (CHECKLIST_MARCACAO_ATIVA) {
-    itens.forEach(function(it) {
-      if (it.responsavel && marcados.indexOf(it.responsavel) === -1) marcados.push(it.responsavel);
-    });
-  }
-  if (marcados.length && dados.nomeTarefa) {
-    marcados.forEach(function(email) {
-      try { notificarMarcadoChecklist(email, dados.nomeTarefa, dados.idTarefa); } catch(e) { Logger.log('Email checklist erro: ' + e.message); }
-    });
-  }
-
+  // Sem notificação automática aqui, de propósito. Até 15/07/2026 este ponto
+  // notificava todos os marcados a cada salvamento, e como o save reescreve a
+  // aba inteira, quem já estava marcado era renotificado sempre. Hoje seria
+  // pior: em modo visualização o save acontece a cada clique de checkbox.
+  // O aviso é manual, por avisarMarcadoChecklist().
   gravarLog('CHECKLIST', 'ID_Tarefa', '', idTarefa);
   return { sucesso: true };
 }
 
-function notificarMarcadoChecklist(email, nomeTarefa, idTarefa) {
+// ── avisarMarcadoChecklist ────────────────────────────────────
+// Aviso manual: o front chama quando o usuário clica em "Avisar <Nome>".
+// Nada aqui confia no que vem do front — nem o nome da tarefa, que é lido da
+// planilha para o texto do e-mail não ser controlado por quem chama.
+function avisarMarcadoChecklist(dados) {
+  var idTarefa = String((dados && dados.idTarefa) || '');
+  var email    = String((dados && dados.email) || '').trim().toLowerCase();
+  if (!idTarefa || !email) return { erro: 'Tarefa e colega são obrigatórios.' };
+
+  // 1. Visibilidade: quem não enxerga a tarefa não dispara e-mail sobre ela.
+  var solicitante = Session.getActiveUser().getEmail();
+  var visiveis = idsTarefasVisiveis(solicitante);
+  if (visiveis && !visiveis[idTarefa]) {
+    return { erro: 'Sem permissão para avisar nesta tarefa.' };
+  }
+
+  // 2. Domínio permitido.
+  var dominioOk = DOMINIOS_PERMITIDOS.some(function(d) { return email.slice(-d.length) === d; });
+  if (!dominioOk) return { erro: 'E-mail fora dos domínios permitidos.' };
+
+  // 3. O colega precisa estar marcado nesta tarefa. Sem isto, a rota seria um
+  // formulário aberto para mandar e-mail em nome do sistema; só validar o
+  // domínio não basta, porque qualquer @unimedcnu passaria.
+  var rows  = lerAba(ABA_CKL_STATUS) || [];
+  var itens = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]) !== idTarefa) continue;
+    if (String(rows[i][7] || '').trim().toLowerCase() !== email) continue;
+    itens.push(String(rows[i][3]));
+  }
+  if (!itens.length) {
+    return { erro: 'Este colega não está marcado em nenhum item desta tarefa.' };
+  }
+
+  // Nome da tarefa vem da planilha, não do front. Lido antes da reserva da
+  // chave anti-repetição: se essa leitura falhar (erro transitório do Sheets),
+  // a exceção sobe antes de qualquer chave ser reservada, então não há chave
+  // presa por 60 s sem e-mail enviado.
+  var nomeTarefa = '';
+  var rowsT = lerAba(ABA_TAREFAS) || [];
+  for (var j = 1; j < rowsT.length; j++) {
+    if (String(rowsT[j][COL.ID]) === idTarefa) { nomeTarefa = String(rowsT[j][COL.TAREFA]); break; }
+  }
+
+  // Anti-repetição: cobre duplo-clique e reabertura do modal. A chave só é
+  // reservada aqui porque tudo que pode falhar antes do envio (validações,
+  // verificação de marcação, leitura do nome da tarefa) já aconteceu; a partir
+  // daqui, só resta o envio em si, protegido pelo try/catch abaixo. A chave
+  // passa a significar "envio em andamento ou concluído com sucesso": se o
+  // envio falhar, a chave é removida antes de retornar o erro, para que o
+  // usuário não fique 60 s travado em "já enviado" quando nada foi enviado.
+  var chaveCache = 'aviso_' + idTarefa + '_' + email;
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) {
+    try {
+      if (cache.get(chaveCache)) {
+        return { erro: 'Aviso já enviado agora há pouco para este colega.' };
+      }
+      cache.put(chaveCache, '1', 60);
+    } catch (e) {}
+  }
+
+  try {
+    notificarMarcadoChecklist(email, nomeTarefa, itens, solicitante);
+  } catch (e) {
+    Logger.log('avisarMarcadoChecklist erro: ' + e.message);
+    if (cache) {
+      try { cache.remove(chaveCache); } catch (eCache) {}
+    }
+    return { erro: 'Falha ao enviar o e-mail: ' + e.message };
+  }
+
+  gravarLog('AVISO_CHECKLIST', 'ID_Tarefa', idTarefa, email);
+  return { sucesso: true, itens: itens.length };
+}
+
+// Aviso manual (disparado por avisarMarcadoChecklist). `itens` é um array com
+// os textos dos itens atribuídos a este colega nesta tarefa.
+function notificarMarcadoChecklist(email, nomeTarefa, itens, quemAvisou) {
   var url  = ScriptApp.getService().getUrl();
+  var li   = '';
+  for (var i = 0; i < itens.length; i++) {
+    li += '<li style="margin-bottom:4px">' + escHtml(itens[i]) + '</li>';
+  }
+  var plural = itens.length > 1 ? 'itens' : 'item';
   var html = '<div style="font-family:Arial,sans-serif;max-width:600px;color:#212529">'
     + '<div style="background:#004e4c;padding:16px 24px;border-radius:8px 8px 0 0">'
-    + '<h2 style="color:#fff;margin:0;font-size:16px">[Tarefas CNU] Você foi marcado em uma checklist</h2>'
+    + '<h2 style="color:#fff;margin:0;font-size:16px">[Tarefas CNU] Itens de checklist atribuídos a você</h2>'
     + '<p style="color:#a8d5d4;margin:4px 0 0;font-size:12px">Unimed CNU · Rede Ambulatorial</p>'
     + '</div>'
     + '<div style="background:#fff;padding:20px 24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">'
-    + '<p style="font-size:14px;margin-top:0">Você foi designado como responsável por um item de checklist na tarefa:</p>'
+    + '<p style="font-size:14px;margin-top:0">Você ficou com ' + itens.length + ' ' + plural + ' de checklist na tarefa:</p>'
     + '<p style="font-size:15px;font-weight:600;color:#004e4c">' + escHtml(nomeTarefa) + '</p>'
+    + '<ul style="font-size:14px;padding-left:20px">' + li + '</ul>'
+    + (quemAvisou ? '<p style="font-size:12px;color:#6c757d">Atribuído por ' + escHtml(quemAvisou) + '</p>' : '')
     + '<a href="' + url + '" style="display:inline-block;background:#004e4c;color:#fff;'
     +   'padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">'
     + 'Abrir Gestão de Tarefas →</a>'
     + '<p style="font-size:11px;color:#adb5bd;margin-top:18px;padding-top:12px;border-top:1px solid #f1f1f1">'
     + 'Unimed CNU · Sistema de Gestão de Tarefas — Rede Ambulatorial</p>'
     + '</div></div>';
-  enviarEmail(email, '[Tarefas CNU] Você foi marcado em uma checklist', html);
+  enviarEmail(email, '[Tarefas CNU] Itens de checklist atribuídos a você', html);
 }
 
 // ── Helpers de segurança ──────────────────────────────────────
@@ -899,14 +1313,14 @@ function setup() {
 
   // ── Aba Projetos ─────────────────────────────────────────────
   var proj = ss.getSheetByName(ABA_PROJETOS) || ss.insertSheet(ABA_PROJETOS);
-  var hProj = ['ID', 'Nome', 'Descrição', 'Cor', 'Ativo'];
+  var hProj = HEADERS_PROJ;
   proj.getRange(1, 1, 1, hProj.length).setValues([hProj])
     .setBackground('#004e4c').setFontColor('#ffffff').setFontWeight('bold');
   proj.setFrozenRows(1);
-  proj.getRange(2, 5, 999).setDataValidation(
+  proj.getRange(2, 5, 999, 2).setDataValidation(
     SpreadsheetApp.newDataValidation()
       .requireValueInList(['TRUE','FALSE'], true).build());
-  [60, 220, 300, 90, 60].forEach(function(w, i) { proj.setColumnWidth(i + 1, w); });
+  [60, 220, 300, 90, 60, 70].forEach(function(w, i) { proj.setColumnWidth(i + 1, w); });
 
   SpreadsheetApp.flush();
   Logger.log('Setup concluído — abas: Tarefas, Log, Checklists, Checklist_Status, Interações, Usuários, Arquivo, Projetos');
@@ -987,39 +1401,19 @@ function popularUsuarios() {
     ['Vinicius Silva De Oliveira',  'viniciuss.oliveira@unimedcnu.coop.br',         'Usuário Padrão', '',                                         ''],
     ['Jacqueline Wahrhaftig',       'jacqueline.wahrhaftig.ext@unimedcnu.coop.br',   'Usuário Padrão', '',                                         ''],
     ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',     'Usuário Padrão', '',                                         ''],
-    ['Thiago Viana Santos',         'thiago.viana.ext@unimedcnu.coop.br',            'Usuário Padrão', '',                                         '']
+    ['Thiago Viana Santos',         'thiago.viana.ext@unimedcnu.coop.br',            'Usuário Padrão', '',                                         ''],
+    ['Dra. Glaucia Ruggeri',        'glaucia.ruggeri@unimedcnu.coop.br',             'Gestor',         '',                                         'Médica']
   ];
 
   usu.getRange(2, 1, usuarios.length, 5).setValues(usuarios);
   SpreadsheetApp.flush();
+  limparCachePerfis();
+  limparCacheListas();
   Logger.log('popularUsuarios: ' + usuarios.length + ' usuários inseridos.');
 }
 
-// ── adicionarUsuariosPiloto ── adiciona os 4 usuários do piloto sem apagar os demais ──
-// Idempotente: pula quem já existe (por e-mail). Rodar 1x manualmente no editor.
-function adicionarUsuariosPiloto() {
-  var sheet = getSheet(ABA_USUARIOS);
-  if (!sheet) { Logger.log('Aba Usuários não existe. Rode setup() primeiro.'); return; }
-
-  var pilotos = [
-    ['Jacqueline Wahrhaftig',           'jacqueline.wahrhaftig.ext@unimedcnu.coop.br', 'Usuário Padrão', '', ''],
-    ['Guilherme Borges Gomes Da Silva', 'guilherme.silva.ext@unimedcnu.coop.br',       'Usuário Padrão', '', ''],
-    ['Thiago Viana Santos',             'thiago.viana.ext@unimedcnu.coop.br',          'Usuário Padrão', '', '']
-  ];
-
-  var rows = sheet.getDataRange().getValues();
-  var existentes = {};
-  for (var i = 1; i < rows.length; i++) {
-    if (rows[i][1]) existentes[String(rows[i][1]).toLowerCase()] = true;
-  }
-
-  var novos = pilotos.filter(function(u) { return !existentes[u[1].toLowerCase()]; });
-  if (!novos.length) { Logger.log('adicionarUsuariosPiloto: todos já cadastrados.'); return; }
-
-  sheet.getRange(sheet.getLastRow() + 1, 1, novos.length, 5).setValues(novos);
-  SpreadsheetApp.flush();
-  Logger.log('adicionarUsuariosPiloto: ' + novos.length + ' usuário(s) adicionado(s).');
-}
+// adicionarUsuariosPiloto() saiu em 08/09/2026: substituída por importarUsuariosEquipe()
+// em ImportacaoUsuarios.gs, que também é a fonte da allowlist do piloto.
 
 // ── popularProjetos ── rodar 1x após setup() ──────────────────
 function popularProjetos() {
@@ -1027,20 +1421,21 @@ function popularProjetos() {
   if (!sheet) { Logger.log('Aba Projetos não existe. Rode setup() primeiro.'); return; }
 
   var ultima = sheet.getLastRow();
-  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, 5).clearContent();
+  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, HEADERS_PROJ.length).clearContent();
 
   var lista = [
-    [1, 'Gestão de Demandas',                               '', '#004e4c', true],
-    [2, 'Rede Higiene',                                     '', '#0052cc', true],
-    [3, 'Cuidado Transicional',                             '', '#c9a84c', true],
-    [4, 'Alto Custo',                                       '', '#e8384f', true],
-    [5, 'Demandas Linhas de Cuidados - Oportunidades',      '', '#7c3aed', true],
-    [6, 'Negociação de Rede - SSA',                         '', '#16a34a', true],
-    [7, 'Atenção à Saúde',                                  '', '#f59f00', true]
+    [1, 'Gestão de Demandas',                               '', '#004e4c', true, false],
+    [2, 'Rede Higiene',                                     '', '#0052cc', true, false],
+    [3, 'Cuidado Transicional',                             '', '#c9a84c', true, false],
+    [4, 'Alto Custo',                                       '', '#e8384f', true, false],
+    [5, 'Demandas Linhas de Cuidados - Oportunidades',      '', '#7c3aed', true, false],
+    [6, 'Negociação de Rede - SSA',                         '', '#16a34a', true, false],
+    [7, 'Atenção à Saúde',                                  '', '#f59f00', true, false]
   ];
 
-  sheet.getRange(2, 1, lista.length, 5).setValues(lista);
+  sheet.getRange(2, 1, lista.length, HEADERS_PROJ.length).setValues(lista);
   SpreadsheetApp.flush();
+  limparCacheListas();
   Logger.log('popularProjetos: ' + lista.length + ' projetos inseridos.');
 }
 
@@ -1244,69 +1639,4 @@ function arquivarTarefasAntigas() {
 
   SpreadsheetApp.flush();
   Logger.log('arquivarTarefasAntigas: ' + paraArquivar.length + ' tarefas movidas para Arquivo.');
-}
-
-// ── doPost — endpoint para integrações externas (Gem Gemini) ──
-// Aceita POST com JSON: { token, acao, dados }
-// Requer token secreto; não depende de sessão autenticada.
-// ⚠️ SEGURANÇA: o token deve viver em Script Properties (Configurações do
-// projeto → Propriedades do script → TOKEN_GEMINI). O valor hardcoded abaixo
-// é só fallback legado e DEVE ser rotacionado: este repositório é público no
-// GitHub, então o valor antigo está exposto.
-var TOKEN_GEMINI_FALLBACK = 'CNU_TAREFAS_SECRET_2026';
-
-function tokenGemini() {
-  try {
-    var p = PropertiesService.getScriptProperties().getProperty('TOKEN_GEMINI');
-    if (p) return p;
-  } catch (e) {}
-  return TOKEN_GEMINI_FALLBACK;
-}
-
-function doPost(e) {
-  var json;
-  try {
-    json = JSON.parse(e.postData.contents);
-  } catch(err) {
-    return jsonResponse({ erro: 'Payload inválido: ' + err.message });
-  }
-
-  if (!json.token || json.token !== tokenGemini()) {
-    return jsonResponse({ erro: 'Token inválido.' });
-  }
-
-  var acao = json.acao || '';
-
-  if (acao === 'criarTarefa') {
-    var dados = json.dados;
-    if (Array.isArray(dados)) {
-      if (dados.length > 30) {
-        return jsonResponse({ erro: 'Lote excede 30 tarefas.' });
-      }
-      // Criação em lote (ex: extraídas de uma ata pelo Gem)
-      var resultados = [];
-      var erros = 0;
-      for (var i = 0; i < dados.length; i++) {
-        var r = criarTarefa(dados[i]);
-        if (r.erro) erros++;
-        resultados.push(r);
-      }
-      return jsonResponse({
-        sucesso: erros === 0,
-        quantidade: dados.length,
-        erros: erros,
-        detalhes: resultados
-      });
-    } else {
-      return jsonResponse(criarTarefa(dados));
-    }
-  }
-
-  return jsonResponse({ erro: 'Ação não suportada: ' + acao });
-}
-
-function jsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
 }

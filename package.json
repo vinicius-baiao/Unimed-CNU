@@ -1,0 +1,8 @@
+{
+  "name": "cora-gestao-de-tarefas",
+  "private": true,
+  "description": "Testes Node dos .gs do Cora (sem dependências)",
+  "scripts": {
+    "test": "node tests/run.js"
+  }
+}

@@ -418,6 +418,10 @@
     .proj-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,.1); }
     .proj-list-nome { flex: 1; font-size: .875rem; font-weight: 500; }
     .proj-list-desc { font-size: .75rem; color: var(--muted-foreground); }
+    .proj-chip-publico { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--primary); background: var(--accent); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+    .proj-check { display: flex; align-items: center; gap: 8px; font-size: .82rem; color: var(--foreground); cursor: pointer; margin-top: 4px; }
+    .proj-check input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+    .proj-check small { color: var(--muted-foreground); font-size: .72rem; }
     .proj-list-actions { display: flex; gap: 6px; }
     .proj-btn-edit, .proj-btn-archive {
       padding: 4px 10px; border-radius: calc(var(--radius) - 2px); border: 1px solid var(--input);
@@ -437,20 +441,27 @@
     .ckl-section { margin-top: 4px; }
     .ckl-section > label { margin-bottom: 6px; }
     .ckl-items { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
-    .ckl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); transition: border-color .15s; }
+    .ckl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); transition: border-color .15s; position: relative; /* ancora o popover de colega */ }
     .ckl-item:hover { border-color: var(--border-hover); }
-    .ckl-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+    .ckl-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; cursor: pointer; }
+    /* Controle travado precisa parecer travado — sem isso o clique só "não funciona" */
+    .ckl-item input[type="checkbox"]:disabled, .ckl-delete:disabled { opacity: .4; cursor: not-allowed; }
     .ckl-item-text { font-size: .875rem; flex: 1; }
     .ckl-item.concluido .ckl-item-text { text-decoration: line-through; color: var(--muted-foreground); }
-    .ckl-responsavel-sel { font-size: .75rem; height: 28px; width: auto; max-width: 190px; padding: 0 8px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--text-secondary); cursor: pointer; flex-shrink: 0; }
-    .ckl-responsavel-sel:focus { outline: none; border-color: var(--ring); box-shadow: none; }
+    .ckl-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; max-width: 190px; padding: 0 10px 0 4px; border: 1px solid var(--input); border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: .75rem; cursor: pointer; flex-shrink: 0; }
+    .ckl-chip:hover { border-color: var(--border-hover); }
+    .ckl-chip:focus-visible { outline: none; border-color: var(--ring); }
+    .ckl-chip .ckl-chip-av { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: #fff; font-size: .6rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ckl-chip .ckl-chip-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ckl-chip.vazio { border-style: dashed; color: var(--muted-foreground); padding-left: 10px; }
+    #cklDropdown .combo-busca { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 4px; border: none; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--foreground); font-size: .875rem; }
+    #cklDropdown .combo-busca:focus { outline: none; box-shadow: none; }
     /* Combobox de responsável (busca) */
     .combo-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-modal); max-height: 240px; overflow-y: auto; padding: 4px; }
     .combo-opt { padding: 8px 10px; border-radius: calc(var(--radius) - 2px); font-size: .875rem; cursor: pointer; color: var(--foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .combo-opt:hover, .combo-opt.active { background: var(--hover-bg); }
     .combo-opt small { color: var(--muted-foreground); }
     .combo-empty { padding: 12px 10px; color: var(--muted-foreground); font-size: .82rem; text-align: center; }
-    .ckl-responsavel-marcado { font-size: .72rem; color: var(--primary); font-weight: 600; background: var(--verde-bg); border-radius: calc(var(--radius) - 2px); padding: 2px 7px; flex-shrink: 0; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
     .ckl-delete { background: none; border: none; cursor: pointer; color: var(--muted-foreground); font-size: 1.1rem; padding: 0 2px; line-height: 1; flex-shrink: 0; }
     .ckl-delete:hover { color: var(--destructive); }
     .ckl-add-row { display: flex; gap: 6px; margin-top: 8px; }
@@ -458,6 +469,8 @@
     .ckl-add-btn { flex-shrink: 0; font-size: 1.1rem; padding: 0 14px; }
     .ckl-progress { margin-top: 10px; font-size: .8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
     .ckl-progress .ckl-bar { flex: 1; height: 6px; }
+    .ckl-avisos { gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .ckl-aviso-btn { font-size: .78rem; height: 28px; padding: 0 10px; flex-shrink: 0; }
 
     /* ── Histórico ── */
     .hist-addform { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
@@ -504,6 +517,8 @@
       .tarefas-table thead th { background: var(--primary) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .print-info { display: flex !important; }
       a { color: inherit; text-decoration: none; }
+      .home-alerta { display: none !important; }
+      #indFiltros, .home-link-row { display: none !important; }
     }
     .print-info { display: none; justify-content: space-between; align-items: center; padding: 8px 20px; background: var(--verde-bg); font-size: .78rem; color: var(--text-secondary); }
 
@@ -524,6 +539,16 @@
     .home-stat-card.alert .stat-num { color: var(--erro-cor); }
     .home-stat-card.warn  .stat-num { color: var(--aviso-cor); }
     .stat-label { font-size: .74rem; color: var(--muted-foreground); margin-top: 8px; text-transform: uppercase; letter-spacing: .04em; font-weight: 500; }
+    .home-link-row { display: flex; justify-content: flex-end; margin: -20px 0 24px; }
+    .home-link { font-size: .85rem; font-weight: 600; color: var(--primary); cursor: pointer; text-decoration: none; }
+    .home-link:hover { text-decoration: underline; }
+    #indicadoresView { padding: 28px 32px 40px; max-width: 1240px; }
+    .ind-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+    .ind-filtros { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; margin-bottom: 20px; }
+    .ind-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; color: var(--muted-foreground); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .ind-filtros select, .ind-filtros input { height: 34px; padding: 0 10px; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--surface); color: var(--foreground); font-size: .875rem; font-weight: 400; text-transform: none; letter-spacing: 0; min-width: 180px; }
+    .ind-filtros .ind-busca input { min-width: 260px; }
+    .ind-totais { margin-bottom: 28px; }
     .home-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
     .home-right-col { display: flex; flex-direction: column; gap: 24px; }
     .home-section-title { font-size: .7rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
@@ -538,6 +563,9 @@
     .home-card-prazo.vence-hoje { background: var(--aviso-bg); color: var(--aviso-cor); }
     .home-card-prazo.atrasado   { background: var(--erro-bg); color: var(--erro-cor); }
     .home-empty { padding: 28px 16px; text-align: center; color: var(--muted-foreground); font-size: .84rem; background: var(--card); border: 1.5px dashed var(--border); border-radius: var(--radius); }
+    .home-alerta { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--erro-cor); border-radius: var(--radius); background: var(--surface); color: var(--foreground); font-size: .875rem; }
+    .home-alerta-txt strong { display: block; margin-bottom: 2px; }
+    .home-alerta-dica { margin-top: 6px; color: var(--muted-foreground); font-size: .82rem; }
     .btn-home { display: inline-flex; }
     .btn-inicio { font-size: .8rem; padding: 0 12px; height: 32px; }
 
@@ -555,7 +583,7 @@
     }
   </style>
 </head>
-<body>
+<body data-deep-link="<?= deepLink ?>">
 
 <!-- Sidebar rail (padrão Shell dos portais) -->
 <aside class="side">
@@ -579,6 +607,9 @@
     <a id="nav-tarefas" onclick="setModo('tarefas')" title="Tarefas">
       <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="10" y="3" width="5" height="12" rx="1.5"/><rect x="17" y="3" width="5" height="15" rx="1.5"/></svg>
       <span>Tarefas</span></a>
+    <a id="nav-indicadores" onclick="setModo('indicadores')" title="Indicadores" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+      <span>Indicadores</span></a>
   </nav>
   <div class="foot"><span class="dot" id="u-av">·</span><span id="u-nome"><span id="u-nome-txt">—</span><small id="u-area">Unimed CNU</small></span></div>
 </aside>
@@ -632,6 +663,15 @@
     </button>
   </div>
 
+  <div id="homeAlerta" class="home-alerta" role="alert" style="display:none">
+    <div class="home-alerta-txt">
+      <strong>Não foi possível carregar seus dados</strong>
+      <div id="homeAlertaMsg"></div>
+      <div class="home-alerta-dica">Se você usa mais de uma conta Google neste navegador, abra o app com a conta <b>@unimedcnu.coop.br</b> pelo link direto ou em janela anônima.</div>
+    </div>
+    <button type="button" class="btn btn-ghost" onclick="carregarTudo()">Tentar de novo</button>
+  </div>
+
   <!-- Painel de gestão (Admin/Gestor) -->
   <div id="homePainel" style="display:none">
     <div class="home-stat-grid">
@@ -652,6 +692,7 @@
         <div class="stat-label">Atrasadas</div>
       </div>
     </div>
+    <div class="home-link-row"><a class="home-link" onclick="setModo('indicadores')">Ver indicadores →</a></div>
   </div>
 
   <!-- Grid 2 colunas -->
@@ -736,6 +777,38 @@
   </div><!-- /.main-content -->
 </div><!-- /.app-layout -->
 
+<!-- Indicadores (Gestor/Admin) -->
+<div id="indicadoresView" style="display:none">
+  <div class="ind-head">
+    <div>
+      <div class="home-section-title">Indicadores</div>
+      <div class="home-subline">Carga por pessoa e saúde dos projetos, com base nas tarefas ativas.</div>
+    </div>
+  </div>
+  <div class="ind-filtros" id="indFiltros">
+    <label>Unidade <select id="indUnidade" onchange="renderIndicadores()"></select></label>
+    <label>Projeto <select id="indProjeto" onchange="renderIndicadores()"></select></label>
+    <label>Próximas do prazo <select id="indJanela" onchange="renderIndicadores()">
+      <option value="7">7 dias</option><option value="14">14 dias</option><option value="30">30 dias</option>
+    </select></label>
+    <label class="ind-busca">Pessoa <input type="text" id="indBusca" placeholder="Buscar por nome, e-mail ou cargo…" autocomplete="off" oninput="renderIndicadores()"></label>
+  </div>
+  <div class="home-stat-grid ind-totais">
+    <div class="home-stat-card"><div class="stat-num" id="indTotAtivas">—</div><div class="stat-label">Ativas</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="indTotAndamento">—</div><div class="stat-label">Bloqueadas</div></div>
+    <div class="home-stat-card" id="indTotAtrasadasCard"><div class="stat-num" id="indTotAtrasadas">—</div><div class="stat-label">Atrasadas</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="indTotProximas">—</div><div class="stat-label" id="indTotProximasLabel">Próximas (7 dias)</div></div>
+  </div>
+  <div class="home-section">
+    <div class="home-section-title">Pessoas</div>
+    <div id="indPessoas"></div>
+  </div>
+  <div class="home-section">
+    <div class="home-section-title">Projetos</div>
+    <div id="indProjetos"></div>
+  </div>
+</div>
+
 </div><!-- /.portal-main -->
 
 <!-- Modal -->
@@ -760,6 +833,11 @@
           <label>Cor</label>
           <div class="proj-color-palette" id="projPaleta"></div>
           <input type="hidden" id="projCor" value="#004e4c">
+        </div>
+        <div class="full">
+          <label class="proj-check"><input type="checkbox" id="projPublico">
+            <span>Visível a todo o domínio <small>· as tarefas deste projeto aparecem para qualquer pessoa da Unimed CNU, inclusive nos painéis</small></span>
+          </label>
         </div>
       </div>
       <div class="proj-form-actions">
@@ -853,10 +931,17 @@
           <div class="full ckl-section">
             <label>Checklist</label>
             <div class="ckl-items" id="cklItems"></div>
+            <div id="cklDropdownHome" style="display:none">
+              <div id="cklDropdown" class="combo-dropdown" style="display:none">
+                <input type="text" id="cklBuscaInput" class="combo-busca" placeholder="Buscar colega…" autocomplete="off">
+                <div id="cklOpcoes"></div>
+              </div>
+            </div>
             <div class="ckl-progress" id="cklProgress" style="display:none">
               <span id="cklProgText"></span>
               <div class="ckl-bar"><div class="ckl-bar-fill" id="cklProgFill"></div></div>
             </div>
+            <div class="ckl-avisos" id="cklAvisos" style="display:none"></div>
             <div class="ckl-add-row">
               <input type="text" id="cklNovoItem" placeholder="Adicionar item e pressionar Enter…"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarItemCkl();}">
@@ -868,6 +953,7 @@
 
       <div class="modal-actions" id="actFormulario">
         <button type="button" id="btnExcluir" class="btn btn-ghost" style="color:var(--erro-cor);border-color:var(--erro-cor);display:none" onclick="confirmarExcluir()">Excluir</button>
+        <button type="button" id="btnDuplicar" class="btn btn-ghost" style="display:none" onclick="duplicarTarefa()">Duplicar</button>
         <div style="flex:1"></div>
         <button type="button" id="btnFecharModal" class="btn btn-ghost" onclick="tentarFecharModal()">Fechar</button>
         <button type="button" id="btnEditar" class="btn btn-primary" style="display:none" onclick="entrarModoEdicao()">Editar</button>
@@ -912,7 +998,8 @@ var COLUNAS     = ['Backlog', 'A fazer', 'Em andamento', 'Bloqueado', 'Concluíd
 var UNIDADES    = ['Rede Ambulatorial','Atenção à Saúde','Negociação de Rede - SSA','Negociação de Rede - NNE','Operações de Rede','Qualificação','Regulamentação','NSP'];
 
 var tarefas     = [];
-var templates   = [];
+// (a variável `templates` foi removida: nada no front lia esse dado e a rota
+//  listarTemplates custava 1,9 s na carga. O endpoint segue no backend.)
 var projetos    = [];         // [{id, nome, descricao, cor}]
 var usuarios    = [];         // [{nome, email, admin}]
 var cklStatus   = {};         // {id_tarefa: [{item, ordem, concluido}]}
@@ -930,18 +1017,32 @@ var modalTabAtual = 'dados';
 var modalSnapshot    = null;
 var modalIsNova      = false;
 var modalTarefaAtual = null;
+var modalModo        = 'view';   // 'view' | 'edit' | 'create' — em view o checklist salva na hora
+var cklSalvando      = false;    // envio em curso (a aba inteira é reescrita no backend)
+var cklPendente      = false;    // clique durante o envio: reenvia ao terminar
+var cklAvisos        = {};       // email -> 'enviando' | 'enviado'; zerado ao abrir OUTRA tarefa e
+                                  // ao fechar o modal (troca visualizar/editar preserva)
+var cklAvisosTarefa  = '';       // ID da tarefa a que o registro acima pertence
 
 var filtroProjetoAtual    = '';
 var filtroResponsavelAtual = '';
 var filtroInicialAplicado  = false;
 
+// Indicadores (Gestor/Admin)
+var indFiltroUnidade = null;   // null = ainda não inicializado (usa a unidade do usuário na 1ª render)
+var indFiltroProjeto = '';
+var indJanelaDias    = 7;
+var indBuscaTermo    = '';
+var indOrdem         = { campo: '', dir: 'desc' }; // '' = ordem natural de calcularIndicadores
+var indUltimo        = null;   // último resultado de calcularIndicadores
+
 // Abre o board já filtrado nas tarefas do próprio usuário (pedido do piloto).
-// Usuário Padrão já recebe só as suas do backend; o filtro extra vale para
-// Admin/Gestor. "Limpar filtros" na sidebar remove com um clique.
+// Vale para todos os perfis: desde 08/09/2026 o Usuário Padrão também recebe
+// as tarefas dos projetos públicos (planos de ação dos painéis), então o board
+// dele deixou de ser só "as suas". "Limpar filtros" na sidebar remove com um clique.
 function aplicarFiltroInicial() {
   if (filtroInicialAplicado || !currentUser || !tarefas.length) return;
   filtroInicialAplicado = true;
-  if (!currentUserPodeExcluir) return;
   var eu = currentUser.trim().toLowerCase();
   var tem = tarefas.some(function(t) {
     return String(t['Responsável'] || '').trim().toLowerCase() === eu;
@@ -949,6 +1050,40 @@ function aplicarFiltroInicial() {
   if (!tem) return; // sem tarefas próprias: não abrir um board vazio
   filtroResponsavelAtual = currentUser;
   if (modoAtual === 'tarefas') { popularFiltros(); renderView(); }
+}
+
+// Link profundo: ?projeto=<id> filtra a visão Tarefas nesse projeto;
+// ?tarefa=<id> abre o modal da tarefa em visualização. O doGet injeta os dois
+// (saneados) em data-deep-link; no preview local o atributo fica com o
+// scriptlet cru e o JSON.parse cai no catch. Roda uma vez, na primeira carga.
+// Devolve true quando aplicou algo (aí o pré-filtro por responsável não roda).
+var deepLinkAplicado = false;
+function aplicarDeepLink() {
+  if (deepLinkAplicado) return false;
+  deepLinkAplicado = true;
+  var dl = null;
+  try { dl = JSON.parse(document.body.dataset.deepLink || ''); } catch (e) { return false; }
+  if (!dl || (!dl.projeto && !dl.tarefa)) return false;
+  var aplicou = false;
+  if (dl.projeto) {
+    var proj = projetos.filter(function(p) { return String(p.id) === String(dl.projeto); })[0];
+    if (proj) {
+      filtroInicialAplicado = true;
+      filtroProjetoAtual = proj.nome;
+      modoAtual = 'tarefas';
+      setModo('tarefas');
+      aplicou = true;
+    }
+  }
+  if (dl.tarefa) {
+    var t = tarefas.filter(function(x) { return String(x.ID) === String(dl.tarefa); })[0];
+    if (t) {
+      if (!aplicou) { filtroInicialAplicado = true; modoAtual = 'tarefas'; setModo('tarefas'); }
+      abrirModal(t, 'view');
+      aplicou = true;
+    }
+  }
+  return aplicou;
 }
 
 // ── JSONP ─────────────────────────────────────────────────────
@@ -988,29 +1123,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('printDate').textContent =
     'Gerado em ' + new Date().toLocaleString('pt-BR');
 
-  // Inicia no Home; app-layout fica oculto até o usuário navegar
+  // Inicia no Home; app-layout fica oculto até o usuário navegar.
+  // carregarTudo() traz perfil, usuários, tarefas, checklists e projetos numa
+  // única chamada — não há mais getUsuario/listarUsuarios avulsos aqui, e com
+  // isso a saudação e os nomes já vêm prontos no primeiro render.
   setModo('home');
   carregarTudo();
-
-  if (WEBAPP_URL) {
-    chamarAPI({ acao: 'getUsuario' }, function(d) {
-      currentUser            = d.email       || '';
-      currentUserIsAdmin     = d.admin       || false;
-      currentUserPodeExcluir = d.podeExcluir || false;
-      currentUserPerfil      = d.perfil      || '';
-      if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
-      renderUserBadge();
-      aplicarFiltroInicial();
-      // Atualiza saudação e painel assim que o perfil chegar
-      if (modoAtual === 'home' && tarefas.length) renderHome();
-    });
-    chamarAPI({ acao: 'listarUsuarios' }, function(d) {
-      usuarios = d.usuarios || [];
-      renderUserBadge();
-      // Re-renderiza para trocar logins de e-mail pelos nomes reais
-      if (tarefas.length) { if (modoAtual === 'home') renderHome(); else { popularFiltros(); renderView(); } }
-    });
-  }
 
   // Fechar modais com a tecla Esc
   document.addEventListener('keydown', function(e) {
@@ -1029,12 +1147,19 @@ document.addEventListener('DOMContentLoaded', function() {
     try { this.showPicker(); } catch (e) { /* iframe cross-origin: mantém comportamento nativo */ }
   });
 
-  // Fecha o dropdown de responsável ao clicar fora
+  // Fecha os dropdowns (responsável e colega do checklist) ao clicar fora
   document.addEventListener('click', function(e) {
     var wrap = document.getElementById('respWrap');
     var dd   = document.getElementById('respDropdown');
     if (wrap && dd && !wrap.contains(e.target)) dd.style.display = 'none';
+    var cdd = document.getElementById('cklDropdown');
+    if (cklComboAlvo && cdd && !cdd.contains(e.target) && !(e.target.closest && e.target.closest('.ckl-chip'))) fecharCklCombo();
   });
+  var cklBusca = document.getElementById('cklBuscaInput');
+  if (cklBusca) {
+    cklBusca.addEventListener('input',   function() { renderCklOpcoes(cklBusca.value); });
+    cklBusca.addEventListener('keydown', cklBuscaKeydown);
+  }
 });
 
 // Rodapé da rail (padrão Shell): avatar dourado de iniciais + nome + perfil
@@ -1047,6 +1172,8 @@ function renderUserBadge() {
   if (av)  av.textContent  = avatarInitials(currentUser);
   if (txt) txt.textContent = nomeDeUsuario(currentUser);
   if (ar)  ar.textContent  = perfil ? perfil + ' · Unimed CNU' : 'Unimed CNU';
+  var nd = document.getElementById('nav-indicadores');
+  if (nd) nd.style.display = currentUserPodeExcluir ? '' : 'none';
 }
 
 // Regra de edição: criador da tarefa OU Admin/Gestor. (Mesma lógica do modal.)
@@ -1069,21 +1196,64 @@ function modalTemMudancas() {
   return !!btn && btn.style.display !== 'none' && !btn.disabled;
 }
 
+function renderHomeAlerta(msg) {
+  var el = document.getElementById('homeAlerta');
+  if (!el) return;
+  document.getElementById('homeAlertaMsg').textContent = msg || '';
+  el.style.display = 'flex';
+}
+function limparHomeAlerta() {
+  var el = document.getElementById('homeAlerta');
+  if (el) el.style.display = 'none';
+}
+
+// Carga inicial: duas chamadas em paralelo, render só quando as duas voltam.
+// Medido em 03/08/2026: 6 rotas separadas ~3,1 s; tudo numa rota só ~3,4 s
+// (consolidar serializa as leituras e não acelerou); 5 rotas em paralelo ~2,3 s.
+// O Apps Script atende em paralelo, então o custo é o da rota mais lenta —
+// duas rotas equilibradas dão a latência do paralelo com 2 execuções em vez
+// de 5. Esperar as duas mantém o render único, com nome e perfil já prontos.
 function carregarTudo() {
+  limparHomeAlerta();
   document.getElementById('board').innerHTML = '<div id="loading">Carregando tarefas…</div>';
 
-  // Dispara as 4 chamadas em paralelo; renderiza quando todas retornarem
-  var pendente = 4;
-  var p = { tarefas: null, templates: null, ckl: null, projetos: null };
+  var pendentes = 2;
+  var d1 = null, d2 = null, erroCritico = null, erroApoio = null;
 
-  function tentar() {
-    pendente--;
-    if (pendente > 0) return;
-    tarefas   = p.tarefas;
-    templates = p.templates;
-    cklStatus = p.ckl;
-    projetos  = p.projetos;
-    aplicarFiltroInicial();
+  function aplicar() {
+    if (--pendentes > 0) return;
+
+    if (erroCritico) {
+      document.getElementById('board').innerHTML =
+        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(erroCritico) + '</div>';
+      renderHomeAlerta(erroCritico); // o app abre na Home: o erro precisa aparecer lá
+      toast(erroCritico, true);
+      return;
+    }
+
+    tarefas = (d1 && d1.tarefas) || [];
+    var u = (d1 && d1.usuario) || {};
+    currentUser            = u.email       || '';
+    currentUserIsAdmin     = u.admin       || false;
+    currentUserPodeExcluir = u.podeExcluir || false;
+    currentUserPerfil      = u.perfil      || '';
+    if (currentUserPodeExcluir) document.body.classList.add('pode-excluir');
+
+    cklStatus = {};
+    ((d1 && d1.checklist) || []).forEach(function(l) {
+      var tid = String(l.ID_Tarefa);
+      if (!cklStatus[tid]) cklStatus[tid] = [];
+      cklStatus[tid].push(l);
+    });
+
+    // Dados de apoio: se falharem, a tela ainda abre — sem nomes resolvidos e
+    // sem lista de projetos, mas com tarefas e checklists, que é o que importa.
+    projetos = (d2 && d2.projetos) || [];
+    usuarios = (d2 && d2.usuarios) || [];
+    if (erroApoio) toast('Alguns dados não carregaram: ' + erroApoio, true);
+
+    renderUserBadge();
+    if (!aplicarDeepLink()) aplicarFiltroInicial();
     if (modoAtual === 'home') {
       renderHome();
     } else {
@@ -1092,40 +1262,13 @@ function carregarTudo() {
     }
   }
 
-  chamarAPI({ acao: 'listarTarefas' }, function(data) {
-    if (data.erro) {
-      document.getElementById('board').innerHTML =
-        '<div id="loading" style="color:var(--erro-cor)">Erro ao carregar tarefas: ' + esc(data.erro) + '</div>';
-      return;
-    }
-    p.tarefas = data.tarefas || [];
-    tentar();
+  chamarAPI({ acao: 'bootstrap' }, function(d) {
+    if (d.erro) erroCritico = d.erro; else d1 = d;
+    aplicar();
   });
-
-  if (templates.length) {
-    p.templates = templates;
-    tentar();
-  } else {
-    chamarAPI({ acao: 'listarTemplates' }, function(d2) {
-      p.templates = d2.templates || [];
-      tentar();
-    });
-  }
-
-  chamarAPI({ acao: 'listarChecklist_Status' }, function(d3) {
-    var linhas = d3.itens || [];
-    p.ckl = {};
-    linhas.forEach(function(l) {
-      var tid = String(l.ID_Tarefa);
-      if (!p.ckl[tid]) p.ckl[tid] = [];
-      p.ckl[tid].push(l);
-    });
-    tentar();
-  });
-
-  chamarAPI({ acao: 'listarProjetos' }, function(d4) {
-    p.projetos = d4.projetos || [];
-    tentar();
+  chamarAPI({ acao: 'bootstrapApoio' }, function(d) {
+    if (d.erro) erroApoio = d.erro; else d2 = d;
+    aplicar();
   });
 }
 
@@ -1270,24 +1413,81 @@ function setView(v) {
 
 // ── Modo Home / Tarefas ───────────────────────────────────────
 function setModo(m) {
+  if (m === 'indicadores' && !currentUserPodeExcluir) m = 'home'; // guarda: só Gestor/Admin
   modoAtual = m;
-  var isHome = m === 'home';
-  document.getElementById('homeView').style.display   = isHome ? 'block' : 'none';
-  document.getElementById('appLayout').style.display  = isHome ? 'none'  : 'flex';
-  document.getElementById('btnInicio').style.display  = isHome ? 'none'  : '';
+  var isHome = m === 'home', isInd = m === 'indicadores';
+  document.getElementById('homeView').style.display        = isHome ? 'block' : 'none';
+  document.getElementById('appLayout').style.display       = (isHome || isInd) ? 'none' : 'flex';
+  document.getElementById('indicadoresView').style.display = isInd ? 'block' : 'none';
+  document.getElementById('btnInicio').style.display       = isHome ? 'none' : '';
   var vt = document.querySelector('.view-toggle');
-  if (vt) vt.style.display = isHome ? 'none' : '';
+  if (vt) vt.style.display = (isHome || isInd) ? 'none' : '';
   // Item ativo na rail (padrão Shell)
   var ni = document.getElementById('nav-inicio');
   var nt = document.getElementById('nav-tarefas');
+  var nd = document.getElementById('nav-indicadores');
   if (ni) ni.classList.toggle('on', isHome);
-  if (nt) nt.classList.toggle('on', !isHome);
+  if (nt) nt.classList.toggle('on', !isHome && !isInd);
+  if (nd) nd.classList.toggle('on', isInd);
   if (isHome) {
     renderHome();
+  } else if (isInd) {
+    renderIndicadores();
   } else {
     popularFiltros();
     renderView();
   }
+}
+
+// ── Indicadores (Gestor/Admin) ────────────────────────────────
+function popularFiltrosInd() {
+  var selU = document.getElementById('indUnidade'), selP = document.getElementById('indProjeto'), selJ = document.getElementById('indJanela');
+  if (indFiltroUnidade === null) {
+    var eu = usuarios.filter(function(u) { return String(u.email).toLowerCase() === String(currentUser).toLowerCase(); })[0];
+    indFiltroUnidade = (eu && eu.unidade) ? eu.unidade : '';
+  }
+  var unidades = uniq(usuarios.map(function(u) { return u.unidade; })).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+  if (indFiltroUnidade && unidades.indexOf(indFiltroUnidade) === -1) indFiltroUnidade = '';
+  var htmlU = '<option value="">Todas as unidades</option>';
+  unidades.forEach(function(u) { htmlU += '<option value="' + esc(u) + '"' + (u === indFiltroUnidade ? ' selected' : '') + '>' + esc(u) + '</option>'; });
+  selU.innerHTML = htmlU;
+
+  var nomesProj = projetos.map(function(p) { return p.nome; });
+  var orfs = uniq(tarefas.map(function(t) { return t.Projeto; })).filter(function(n) { return n && nomesProj.indexOf(n) === -1; }).sort();
+  var todos = nomesProj.concat(orfs);
+  if (indFiltroProjeto && todos.indexOf(indFiltroProjeto) === -1) indFiltroProjeto = '';
+  var htmlP = '<option value="">Todos os projetos</option>';
+  todos.forEach(function(n) { if (n) htmlP += '<option value="' + esc(n) + '"' + (n === indFiltroProjeto ? ' selected' : '') + '>' + esc(n) + '</option>'; });
+  selP.innerHTML = htmlP;
+  selJ.value = String(indJanelaDias);
+}
+
+function lerFiltrosInd() {
+  indFiltroUnidade = document.getElementById('indUnidade').value;
+  indFiltroProjeto = document.getElementById('indProjeto').value;
+  indJanelaDias    = Number(document.getElementById('indJanela').value) || 7;
+  indBuscaTermo    = document.getElementById('indBusca').value.trim().toLowerCase();
+}
+
+function renderIndicadores() {
+  if (!currentUserPodeExcluir) return;
+  var primeiraVez = indFiltroUnidade === null;
+  if (primeiraVez) popularFiltrosInd(); else { lerFiltrosInd(); popularFiltrosInd(); }
+  indUltimo = calcularIndicadores(
+    { tarefas: tarefas, cklStatus: cklStatus, usuarios: usuarios, projetos: projetos },
+    { unidade: indFiltroUnidade, projeto: indFiltroProjeto, janelaDias: indJanelaDias },
+    new Date(),
+    { parseData: parseData, dataValida: dataValida, nomeDeEmail: nomeDeEmail }
+  );
+  var t = indUltimo.totais;
+  document.getElementById('indTotAtivas').textContent    = t.ativas;
+  document.getElementById('indTotAndamento').textContent = t.bloqueadas;
+  document.getElementById('indTotAtrasadas').textContent = t.atrasadas;
+  document.getElementById('indTotProximas').textContent  = t.proximas;
+  document.getElementById('indTotProximasLabel').textContent = 'Próximas (' + indJanelaDias + ' dias)';
+  document.getElementById('indTotAtrasadasCard').className = 'home-stat-card' + (t.atrasadas > 0 ? ' alert' : '');
+  if (typeof renderIndPessoas === 'function')  renderIndPessoas(indUltimo);
+  if (typeof renderIndProjetos === 'function') renderIndProjetos(indUltimo);
 }
 
 function renderHome() {
@@ -1642,22 +1842,36 @@ function setRespValor(email) {
   document.getElementById('campoRespInput').value = email ? nomeDeUsuario(email) : '';
 }
 
-function renderRespDropdown(termo) {
+// Lista de usuários para os combos com busca (campo Responsável e chip do
+// checklist). "— Nenhum —" primeiro; `extras` inclui e-mails fora da aba
+// Usuários (marcação legada) para a opção não sumir.
+function montarOpcoesUsuarios(termo, emailAtual, extras, textoVazio) {
   termo = (termo || '').toLowerCase().trim();
-  var dd    = document.getElementById('respDropdown');
-  var atual = document.getElementById('campoResponsavel').value;
+  emailAtual = String(emailAtual || '').toLowerCase();
   var lista = usuariosOrdenados().filter(function(u) {
     if (!u.email) return false;
     if (!termo) return true;
     return (u.nome + ' ' + u.email + ' ' + (u.cargo || '')).toLowerCase().indexOf(termo) !== -1;
   });
-  var html = '<div class="combo-opt' + (!atual ? ' active' : '') + '" data-email="">— Nenhum —</div>';
+  (extras || []).forEach(function(x) {
+    if (!x || !x.email) return;
+    var ja = lista.some(function(u) { return String(u.email).toLowerCase() === String(x.email).toLowerCase(); });
+    if (!ja && (!termo || (x.nome + ' ' + x.email).toLowerCase().indexOf(termo) !== -1)) lista.push({ email: x.email, nome: x.nome, cargo: '' });
+  });
+  var html = '<div class="combo-opt' + (!emailAtual ? ' active' : '') + '" data-email="">— Nenhum —</div>';
   lista.forEach(function(u) {
-    html += '<div class="combo-opt' + (u.email === atual ? ' active' : '') + '" data-email="' + esc(u.email) + '">'
+    var ativo = String(u.email).toLowerCase() === emailAtual;
+    html += '<div class="combo-opt' + (ativo ? ' active' : '') + '" data-email="' + esc(u.email) + '">'
       + esc(u.nome) + (u.cargo ? ' <small>· ' + esc(u.cargo) + '</small>' : '') + '</div>';
   });
-  if (!lista.length && termo) html += '<div class="combo-empty">Nenhum responsável encontrado</div>';
-  dd.innerHTML = html;
+  if (!lista.length && termo) html += '<div class="combo-empty">' + (textoVazio || 'Nenhum colega encontrado') + '</div>';
+  return html;
+}
+
+function renderRespDropdown(termo) {
+  var dd    = document.getElementById('respDropdown');
+  var atual = document.getElementById('campoResponsavel').value;
+  dd.innerHTML = montarOpcoesUsuarios(termo, atual, [], 'Nenhum responsável encontrado');
   Array.from(dd.querySelectorAll('.combo-opt')).forEach(function(el) {
     el.addEventListener('mousedown', function(e) {
       e.preventDefault(); // evita perder o foco antes do clique
@@ -1765,6 +1979,7 @@ function verificarMudancasModal() {
 function abrirModal(tarefa, modo) {
   if (modo === undefined) modo = tarefa ? 'view' : 'create';
   var modoEdicao = (modo !== 'view');
+  modalModo = modo;
   modalTarefaAtual = tarefa || null;
   modalTabAtual = 'dados';
   setModalTab('dados');
@@ -1799,11 +2014,19 @@ function abrirModal(tarefa, modo) {
 
   // Botão excluir: visível só em modo edição, para criador/Admin/Gestor
   document.getElementById('btnExcluir').style.display = (modoEdicao && tarefa && (podeTudo || currentUserPodeExcluir)) ? '' : 'none';
+  // Duplicar: qualquer usuário, em tarefa existente (copia dados + checklist zerada)
+  document.getElementById('btnDuplicar').style.display = (modoEdicao && tarefa) ? '' : 'none';
 
   // Checklist
+  fecharCklCombo();
   var itensEl = document.getElementById('cklItems');
   itensEl.innerHTML = '';
   document.getElementById('cklNovoItem').value = '';
+  // O feedback de aviso pertence à tarefa aberta, não à chamada de abrirModal:
+  // entrarModoEdicao() reabre o modal na MESMA tarefa sem fechá-lo, e ali o
+  // estado precisa sobreviver, senão o botão volta clicável e reenvia o e-mail.
+  var idModal = tarefa ? String(tarefa.ID) : '';
+  if (idModal !== cklAvisosTarefa) { cklAvisos = {}; cklAvisosTarefa = idModal; }
   if (tarefa) {
     var ckl = (cklStatus[String(tarefa.ID)] || []).slice()
       .sort(function(a, b) { return (a.Ordem || 0) - (b.Ordem || 0); });
@@ -1817,9 +2040,11 @@ function abrirModal(tarefa, modo) {
   var addRow = document.querySelector('.ckl-add-row');
   if (addRow) addRow.style.display = modoEdicao ? '' : 'none';
 
-  // Em visualização: desabilita todos os controles dos itens de checklist
+  // Em visualização, checkbox e chip de colega continuam ativos: marcar item
+  // e atribuir são execução da tarefa, não edição de cadastro, e salvam na hora
+  // (ver salvarCklImediato). Só excluir item fica travado.
   if (!modoEdicao) {
-    itensEl.querySelectorAll('input, select, button').forEach(function(el) { el.disabled = true; });
+    itensEl.querySelectorAll('.ckl-delete').forEach(function(el) { el.disabled = true; });
   }
 
   // Botão Fechar/Cancelar: em edição/criação deixa claro que descarta
@@ -1866,7 +2091,40 @@ function entrarModoEdicao() {
   abrirModal(modalTarefaAtual, 'edit');
 }
 
-function fecharModal()      { document.getElementById('overlay').classList.remove('open'); }
+// Duplica a tarefa aberta: mesmos dados, checklist copiada desmarcada,
+// prazo vazio e status "A fazer". Atende à esteira de criação de materiais
+// (reuso do checklist sem redigitar).
+function duplicarTarefa() {
+  var btn = document.getElementById('btnDuplicar');
+  btn.disabled = true; btn.textContent = 'Duplicando…';
+  var dados = {
+    tarefa:      'Cópia de ' + document.getElementById('campoTarefa').value,
+    projeto:     document.getElementById('campoProjeto').value,
+    responsavel: document.getElementById('campoResponsavel').value,
+    prazo:       '',
+    status:      'A fazer',
+    prioridade:  document.getElementById('campoPrioridade').value,
+    observacoes: document.getElementById('campoObservacoes').value
+  };
+  var itens = [];
+  document.querySelectorAll('#cklItems .ckl-item').forEach(function(el, idx) {
+    itens.push({ item: el.querySelector('.ckl-item-text').textContent, ordem: idx + 1, concluido: false, responsavel: '' });
+  });
+  chamarAPI({ acao: 'criarTarefa', dados: dados }, function(r) {
+    btn.disabled = false; btn.textContent = 'Duplicar';
+    if (r.erro) { toast('Erro: ' + r.erro, true); return; }
+    function fim() { fecharModal(); toast('✓ Tarefa duplicada.', false, true); carregarTudo(); }
+    if (!itens.length) { fim(); return; }
+    chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: String(r.id), itens: itens } }, fim);
+  });
+}
+
+function fecharModal()      {
+  fecharCklCombo();
+  document.getElementById('overlay').classList.remove('open');
+  cklAvisos = {};
+  cklAvisosTarefa = '';
+}
 
 // Fechar/Cancelar com guarda: se houver alterações não salvas, confirma o descarte.
 function tentarFecharModal() {
@@ -1903,6 +2161,10 @@ function salvarTarefa(e) {
     observacoes: document.getElementById('campoObservacoes').value
   };
 
+  // Campo de prazo travado (sem permissão): não enviar — o valor exibido pode
+  // divergir do armazenado (prazos legados) e o backend bloquearia o save todo.
+  if (document.getElementById('campoPrazo').disabled) delete dados.prazo;
+
   var acao = id ? 'atualizarTarefa' : 'criarTarefa';
   if (id) dados.id = id;
 
@@ -1931,13 +2193,98 @@ function salvarTarefa(e) {
   });
 }
 
+var cklComboAlvo = null; // .ckl-item com o popover de colega aberto (ou null)
+
+// Chip do item: iniciais + primeiro nome de quem está marcado, ou "+ colega".
+function renderCklChip(div) {
+  var chip = div.querySelector('.ckl-chip');
+  if (!chip) return;
+  var email = div.dataset.responsavel || '';
+  chip.innerHTML = '';
+  if (email) {
+    var nome = nomeDeUsuario(email);
+    var av = document.createElement('span'); av.className = 'ckl-chip-av'; av.textContent = avatarInitials(email);
+    var nm = document.createElement('span'); nm.className = 'ckl-chip-nome'; nm.textContent = nome.split(' ')[0];
+    chip.appendChild(av); chip.appendChild(nm);
+    chip.classList.remove('vazio');
+    chip.title = nome;
+  } else {
+    var vazio = document.createElement('span'); vazio.className = 'ckl-chip-nome'; vazio.textContent = '+ colega';
+    chip.appendChild(vazio);
+    chip.classList.add('vazio');
+    chip.title = 'Atribuir este item a um colega';
+  }
+}
+
+function renderCklOpcoes(termo) {
+  if (!cklComboAlvo) return;
+  var atual  = cklComboAlvo.dataset.responsavel || '';
+  var extras = [];
+  if (atual && !usuarios.some(function(u) { return String(u.email).toLowerCase() === atual.toLowerCase(); })) {
+    extras.push({ email: atual, nome: nomeDeUsuario(atual) });
+  }
+  var box = document.getElementById('cklOpcoes');
+  box.innerHTML = montarOpcoesUsuarios(termo, atual, extras);
+  Array.from(box.querySelectorAll('.combo-opt')).forEach(function(el) {
+    el.addEventListener('mousedown', function(e) {
+      e.preventDefault(); // não perde o foco do input antes do clique
+      selecionarCklColega(el.getAttribute('data-email'));
+    });
+  });
+}
+
+function abrirCklCombo(div) {
+  if (cklComboAlvo === div) { fecharCklCombo(); return; } // clicar de novo fecha
+  fecharCklCombo();
+  cklComboAlvo = div;
+  var dd = document.getElementById('cklDropdown');
+  div.appendChild(dd); // .ckl-item é position:relative → o CSS de .combo-dropdown posiciona
+  var input = document.getElementById('cklBuscaInput');
+  input.value = '';
+  renderCklOpcoes('');
+  dd.style.display = 'block';
+  input.focus();
+}
+
+function fecharCklCombo() {
+  var dd = document.getElementById('cklDropdown');
+  if (!dd) return;
+  dd.style.display = 'none';
+  var home = document.getElementById('cklDropdownHome');
+  if (home && dd.parentNode !== home) home.appendChild(dd); // sai do item antes que ele seja removido/recriado
+  cklComboAlvo = null;
+}
+
+function selecionarCklColega(email) {
+  var div = cklComboAlvo;
+  fecharCklCombo();
+  if (!div) return;
+  div.dataset.responsavel = email || '';
+  renderCklChip(div);
+  renderAvisosCkl();
+  if (modalModo === 'view') salvarCklImediato();
+  else verificarMudancasModal();
+}
+
+function cklBuscaKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    var opts = document.querySelectorAll('#cklOpcoes .combo-opt');
+    for (var i = 0; i < opts.length; i++) {
+      if (opts[i].getAttribute('data-email')) { selecionarCklColega(opts[i].getAttribute('data-email')); return; }
+    }
+  } else if (e.key === 'Escape') {
+    e.stopPropagation(); // fecha só o popover, não o modal
+    fecharCklCombo();
+  }
+}
+
 // ── Checklist ─────────────────────────────────────────────────
 function criarItemCkl(texto, ordem, concluido, responsavel) {
   var div = document.createElement('div');
   div.className     = 'ckl-item' + (concluido ? ' concluido' : '');
   div.dataset.ordem = ordem;
-  // Marcação de colegas desabilitada por ora: preserva o valor existente
-  // (usado pela regra de visibilidade), mas sem UI para criar/alterar.
+  // Fonte de verdade da marcação: o popover de colega (selecionarCklColega) escreve aqui e serializarCkl lê daqui.
   div.dataset.responsavel = responsavel || '';
 
   var chk = document.createElement('input');
@@ -1946,7 +2293,8 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   chk.addEventListener('change', function() {
     div.classList.toggle('concluido', chk.checked);
     atualizarProgressoCkl();
-    verificarMudancasModal();
+    if (modalModo === 'view') salvarCklImediato();
+    else verificarMudancasModal();
   });
 
   var span = document.createElement('span');
@@ -1958,21 +2306,26 @@ function criarItemCkl(texto, ordem, concluido, responsavel) {
   del.className = 'ckl-delete';
   del.textContent = '×';
   del.addEventListener('click', function() {
+    fecharCklCombo();
     div.remove();
     atualizarProgressoCkl();
     verificarMudancasModal();
   });
 
+  // Chip de colega: abre o popover de busca compartilhado. Ativo também em
+  // visualização — atribuir é execução, como marcar o checkbox.
+  var chip = document.createElement('button');
+  chip.type      = 'button';
+  chip.className = 'ckl-chip';
+  chip.addEventListener('click', function(e) {
+    abrirCklCombo(div);
+  });
+
   div.appendChild(chk);
   div.appendChild(span);
-  if (responsavel) {
-    var chip = document.createElement('span');
-    chip.className   = 'ckl-responsavel-marcado';
-    chip.title       = responsavel;
-    chip.textContent = nomeDeUsuario(responsavel);
-    div.appendChild(chip);
-  }
+  div.appendChild(chip);
   div.appendChild(del);
+  renderCklChip(div);
   return div;
 }
 
@@ -1990,6 +2343,7 @@ function adicionarItemCkl() {
 }
 
 function atualizarProgressoCkl() {
+  renderAvisosCkl();
   var itens  = document.querySelectorAll('#cklItems .ckl-item');
   var progEl = document.getElementById('cklProgress');
   if (!itens.length) { progEl.style.display = 'none'; return; }
@@ -2001,6 +2355,107 @@ function atualizarProgressoCkl() {
   var fill = document.getElementById('cklProgFill');
   fill.style.width = pct + '%';
   fill.className   = 'ckl-bar-fill' + (done === itens.length ? ' completo' : '');
+}
+
+// Espelha no estado local o que está no DOM, para os cards e a Lista
+// refletirem o novo progresso sem recarregar tudo do backend.
+function sincronizarCklLocal(idTarefa) {
+  var arr = [];
+  document.querySelectorAll('#cklItems .ckl-item').forEach(function(el, idx) {
+    arr.push({
+      ID_Tarefa:    idTarefa,
+      Item:         el.querySelector('.ckl-item-text').textContent,
+      Ordem:        idx + 1,
+      'Concluído':  el.querySelector('input[type="checkbox"]').checked,
+      Responsavel:  el.dataset.responsavel || ''
+    });
+  });
+  cklStatus[String(idTarefa)] = arr;
+}
+
+// Um botão por colega marcado na checklist. O aviso é sempre manual: até
+// 15/07/2026 o backend notificava a cada salvamento e virava spam.
+function renderAvisosCkl() {
+  var wrap = document.getElementById('cklAvisos');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Tarefa nova ainda não tem ID: não há o que avisar.
+  if (!modalTarefaAtual) { wrap.style.display = 'none'; return; }
+
+  // Em edição a marcação ainda não está na planilha e a rota (que valida contra
+  // ela) recusaria; avisar é ação de visualização, depois de salvar.
+  if (modalModo !== 'view') { wrap.style.display = 'none'; return; }
+
+  var emails = [];
+  document.querySelectorAll('#cklItems .ckl-item').forEach(function(el) {
+    var e = el.dataset.responsavel;
+    if (e && emails.indexOf(e) === -1) emails.push(e);
+  });
+  if (!emails.length) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'flex';
+  emails.forEach(function(email) {
+    var b = document.createElement('button');
+    b.type      = 'button';
+    b.className = 'btn btn-ghost ckl-aviso-btn';
+    var estado = cklAvisos[email];
+    if (estado === 'enviado') {
+      b.textContent = 'Aviso enviado ✓';
+      b.disabled    = true;
+    } else if (estado === 'enviando') {
+      b.textContent = 'Enviando…';
+      b.disabled    = true;
+    } else {
+      b.textContent = 'Avisar ' + nomeDeUsuario(email).split(' ')[0];
+    }
+    b.title     = 'Enviar e-mail para ' + email + ' com os itens atribuídos a ele nesta tarefa';
+    b.addEventListener('click', function() { avisarColega(email, b); });
+    wrap.appendChild(b);
+  });
+}
+
+function avisarColega(email, btn) {
+  cklAvisos[email] = 'enviando';
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  chamarAPI({ acao: 'avisarMarcadoChecklist', dados: { idTarefa: String(modalTarefaAtual.ID), email: email } }, function(d) {
+    if (d.erro) {
+      delete cklAvisos[email];
+      renderAvisosCkl();
+      toast('Erro: ' + d.erro, true);
+      return;
+    }
+    cklAvisos[email] = 'enviado';
+    renderAvisosCkl();
+    toast('Aviso enviado para ' + nomeDeUsuario(email) + '.', false, true);
+  });
+}
+
+// Marcar item em modo visualização salva na hora, sem passar por Editar/Salvar.
+// O backend reescreve a aba inteira, então um envio por vez: cliques durante o
+// envio ficam pendentes e disparam um reenvio com o estado final do DOM.
+function salvarCklImediato() {
+  var t = modalTarefaAtual;
+  if (!t) return;
+  if (cklSalvando) { cklPendente = true; return; }
+  cklSalvando = true;
+
+  var idTarefa = String(t.ID);
+  salvarCkl(idTarefa, t.Tarefa, function(data) {
+    cklSalvando = false;
+    if (cklPendente) { cklPendente = false; salvarCklImediato(); return; }
+    if (data && data.erro) {
+      // Gravação recusada (ex.: sem visibilidade): volta o checkbox ao estado
+      // do servidor. O aviso do erro já foi exibido por salvarCkl.
+      if (document.getElementById('overlay').classList.contains('open')) abrirModal(t, 'view');
+      return;
+    }
+    sincronizarCklLocal(idTarefa);
+    renderHome();
+    renderView();
+    toast('Checklist atualizada.');
+  });
 }
 
 function salvarCkl(idTarefa, nomeTarefa, callback) {
@@ -2017,7 +2472,7 @@ function salvarCkl(idTarefa, nomeTarefa, callback) {
   });
   chamarAPI({ acao: 'salvarChecklist', dados: { idTarefa: idTarefa, nomeTarefa: nomeTarefa, itens: items } }, function(data) {
     if (data.erro) toast('Aviso checklist: ' + data.erro, true);
-    callback();
+    callback(data);
   });
 }
 
@@ -2046,7 +2501,7 @@ function renderInteracoes(idTarefa) {
       + '<div class="hist-meta">'
       + '<span class="hist-tipo hist-' + tipoClass(i.Tipo) + '">' + esc(i.Tipo || '') + '</span>'
       + '<span class="hist-data">' + esc(dtStr) + '</span>'
-      + '<span class="hist-editor">' + esc(nomeDeEmail(i.Editor || '')) + '</span>'
+      + '<span class="hist-editor">' + esc(nomeDeUsuario(i.Editor || '')) + '</span>'
       + '</div>'
       + '<div class="hist-conteudo">' + esc(i['Conteúdo'] || '') + '</div>'
       + '</div>';
@@ -2096,6 +2551,89 @@ function esc(str) {
 }
 // Datas "YYYY-MM-DD" são interpretadas como LOCAIS (new Date() trataria como
 // UTC e voltaria 1 dia no fuso de Brasília). Timestamps completos passam direto.
+
+/* @indicadores:inicio */
+// Indicadores para gestores (carga por pessoa e saúde dos projetos). Função PURA:
+// sem DOM nem globais — recebe dados, filtros, a data de hoje e as dependências
+// (parseData, dataValida, nomeDeEmail). Coberta por tests/test_indicadores_front.js,
+// que extrai este trecho pelos marcadores. Mantenha tudo entre os marcadores.
+function calcularIndicadores(dados, filtros, hoje, deps) {
+  filtros = filtros || {};
+  var janela = Number(filtros.janelaDias) || 7;
+  var dia0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  var limite = new Date(dia0); limite.setDate(dia0.getDate() + janela);
+  var tarefas = (dados.tarefas || []).filter(function(t) {
+    return !filtros.projeto || String(t.Projeto || '') === filtros.projeto;
+  });
+  var ckl = dados.cklStatus || {}, usuarios = dados.usuarios || [], projetos = dados.projetos || [];
+
+  function low(v) { return String(v || '').trim().toLowerCase(); }
+  function classificar(t) {
+    var ativa = t.Status !== 'Concluído';
+    var c = { ativa: ativa, andamento: ativa && t.Status === 'Em andamento', bloqueada: ativa && t.Status === 'Bloqueado', atrasada: false, proxima: false };
+    if (ativa && deps.dataValida(t.Prazo)) {
+      var d = deps.parseData(t.Prazo); d = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      c.atrasada = d < dia0;
+      c.proxima  = d >= dia0 && d <= limite;
+    }
+    return c;
+  }
+  var porEmail = {};
+  usuarios.forEach(function(u) { if (u && u.email) porEmail[low(u.email)] = u; });
+  function novaPessoa(email) {
+    var u = porEmail[low(email)];
+    return { email: email, nome: (u && u.nome) ? u.nome : deps.nomeDeEmail(email), cargo: (u && u.cargo) || '', unidade: (u && u.unidade) || '',
+      ativas: 0, andamento: 0, bloqueadas: 0, atrasadas: 0, proximas: 0, itensPendentes: 0, concluidas: 0 };
+  }
+  function somar(alvo, c) {
+    if (c.ativa) { alvo.ativas++; if (c.andamento) alvo.andamento++; if (c.bloqueada) alvo.bloqueadas++; if (c.atrasada) alvo.atrasadas++; if (c.proxima) alvo.proximas++; }
+    else alvo.concluidas++;
+  }
+  var pessoas = {}, semResp = null, totais = { ativas: 0, atrasadas: 0, bloqueadas: 0, proximas: 0 }, projMap = {};
+  function proj(nome) {
+    if (!projMap[nome]) {
+      var p = null;
+      for (var i = 0; i < projetos.length; i++) { if (String(projetos[i].nome) === nome) { p = projetos[i]; break; } }
+      projMap[nome] = { nome: nome, cor: (p && p.cor) || '#64748b', publico: !!(p && p.publico), total: 0, concluidas: 0, pct: 0,
+        andamento: 0, bloqueadas: 0, atrasadas: 0, proximas: 0, cklTotal: 0, cklFeitos: 0 };
+    }
+    return projMap[nome];
+  }
+  // Projetos cadastrados aparecem mesmo sem tarefa (zeros), respeitando o filtro de projeto
+  projetos.forEach(function(p) { if (p && p.nome && (!filtros.projeto || String(p.nome) === filtros.projeto)) proj(String(p.nome)); });
+
+  tarefas.forEach(function(t) {
+    var c = classificar(t), email = String(t['Responsável'] || '').trim();
+    if (email) { var k = low(email); if (!pessoas[k]) pessoas[k] = novaPessoa(email); somar(pessoas[k], c); }
+    else if (c.ativa) {
+      if (!semResp) semResp = { email: '', nome: 'Sem responsável', cargo: '', unidade: '', ativas: 0, andamento: 0, bloqueadas: 0, atrasadas: 0, proximas: 0, itensPendentes: 0, concluidas: 0 };
+      somar(semResp, c);
+    }
+    var pr = proj(String(t.Projeto || '') || '(sem projeto)');
+    pr.total++;
+    if (c.ativa) {
+      if (c.andamento) pr.andamento++; if (c.bloqueada) pr.bloqueadas++; if (c.atrasada) pr.atrasadas++; if (c.proxima) pr.proximas++;
+      totais.ativas++; if (c.atrasada) totais.atrasadas++; if (c.bloqueada) totais.bloqueadas++; if (c.proxima) totais.proximas++;
+      (ckl[String(t.ID)] || []).forEach(function(i) {
+        var feito = i['Concluído'] === true || i['Concluído'] === 'true' || i['Concluído'] === 'TRUE';
+        pr.cklTotal++; if (feito) pr.cklFeitos++;
+        var r = String(i.Responsavel || '').trim();
+        if (r && !feito) { var kr = low(r); if (!pessoas[kr]) pessoas[kr] = novaPessoa(r); pessoas[kr].itensPendentes++; }
+      });
+    } else {
+      pr.concluidas++;
+    }
+  });
+
+  var listaP = Object.keys(pessoas).map(function(k) { return pessoas[k]; });
+  if (filtros.unidade) { listaP = listaP.filter(function(p) { return p.unidade === filtros.unidade; }); semResp = null; }
+  listaP.sort(function(a, b) { return (b.atrasadas - a.atrasadas) || (b.ativas - a.ativas) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  var listaProj = Object.keys(projMap).map(function(k) { var p = projMap[k]; p.pct = p.total ? Math.round(p.concluidas * 100 / p.total) : 0; return p; });
+  listaProj.sort(function(a, b) { return (b.atrasadas - a.atrasadas) || (b.bloqueadas - a.bloqueadas) || (a.pct - b.pct) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  return { pessoas: listaP, semResponsavel: semResp, projetos: listaProj, totais: totais };
+}
+/* @indicadores:fim */
+
 function parseData(val) {
   if (val instanceof Date) return val;
   var m = String(val || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -2117,8 +2655,15 @@ function isoDate(val) {
 function formatarData(val) {
   return dataValida(val) ? parseData(val).toLocaleDateString('pt-BR') : '';
 }
+// Fallback quando o e-mail não está na aba Usuários: humaniza a parte local.
+// "fabiane.minozzo" → "Fabiane Minozzo"; "guilherme.amorim.ext" → "Guilherme Amorim".
 function nomeDeEmail(email) {
-  return email ? email.split('@')[0] : '';
+  var local = String(email || '').split('@')[0];
+  if (!local) return '';
+  return local.split(/[._-]+/)
+    .filter(function(p) { return p && p.toLowerCase() !== 'ext'; })
+    .map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); })
+    .join(' ');
 }
 function nomeDeUsuario(email) {
   if (!email) return '';
@@ -2204,6 +2749,7 @@ function renderListaProjetos() {
       +   '<div class="proj-list-nome">' + esc(p.nome) + '</div>'
       +   (p.descricao ? '<div class="proj-list-desc">' + esc(p.descricao) + '</div>' : '')
       + '</div>'
+      + (p.publico ? '<span class="proj-chip-publico" title="Visível a todo o domínio">público</span>' : '')
       + '<div class="proj-list-actions">'
       +   '<button class="proj-btn-archive" onclick="arquivarProjetoById(' + Number(p.id) + ',\'' + esc(p.nome).replace(/'/g,"\\'") + '\')">Arquivar</button>'
       + '</div>'
@@ -2216,16 +2762,18 @@ function salvarNovoProjeto() {
   if (!nome) { toast('Informe o nome do projeto.', true); return; }
   var desc = document.getElementById('projDesc').value.trim();
   var cor  = document.getElementById('projCor').value || PALETA_CORES[0];
+  var publico = !!document.getElementById('projPublico').checked;
 
   var btn = document.querySelector('#projModal .btn-primary');
   btn.disabled = true; btn.textContent = 'Salvando…';
 
-  chamarAPI({ acao: 'criarProjeto', dados: { nome: nome, descricao: desc, cor: cor } }, function(data) {
+  chamarAPI({ acao: 'criarProjeto', dados: { nome: nome, descricao: desc, cor: cor, publico: publico } }, function(data) {
     btn.disabled = false; btn.textContent = 'Criar Projeto';
     if (data.erro) { toast('Erro: ' + data.erro, true); return; }
-    projetos.push({ id: data.id, nome: nome, descricao: desc, cor: cor });
+    projetos.push({ id: data.id, nome: nome, descricao: desc, cor: cor, publico: publico });
     document.getElementById('projNome').value = '';
     document.getElementById('projDesc').value = '';
+    document.getElementById('projPublico').checked = false;
     renderListaProjetos();
     popularFiltros();
     fecharGerenciarProjetos();
@@ -2248,17 +2796,22 @@ function arquivarProjetoById(id, nome) {
 <script>
 /* ─── MOCK de dados — ativo apenas em localhost (preview). ───
    Intercepta chamarAPI() e devolve dados de exemplo, para avaliar o
-   tema shadcn com a tela populada, sem depender do backend. */
+   tema shadcn com a tela populada, sem depender do backend.
+   Os nomes e e-mails são FICTÍCIOS de propósito: este bloco viaja no HTML
+   servido em produção (não executa fora de localhost, mas é legível no
+   código-fonte da página), então não carrega dado de colega real.
+   Para simular outro perfil, ajuste currentUser / currentUserPodeExcluir no
+   console antes de abrir o modal. */
 (function () {
   if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
 
-  var EU = 'aurelio.pereira.ext@unimedcnu.coop.br';
+  var EU = 'ana.souza@exemplo.test';
   var MOCK_USUARIOS = [
-    { nome: 'Aurélio Corujeira', email: EU, perfil: 'Admin', unidade: 'Rede Ambulatorial, Atenção à Saúde', cargo: 'Designer' },
-    { nome: 'Vinicius Baião', email: 'vinicius.baiao@unimedcnu.coop.br', perfil: 'Admin', unidade: 'Rede Ambulatorial', cargo: 'Especialista' },
-    { nome: 'Carolina Hashimoto', email: 'carolina.lopes@unimedcnu.coop.br', perfil: 'Gestor', unidade: 'Negociação de Rede - SSA', cargo: 'Coordenadora de Rede' },
-    { nome: 'Eduardo Caporicci', email: 'eduardo.caporicci@unimedcnu.coop.br', perfil: 'Gestor', unidade: 'Operações de Rede', cargo: 'Gerente' },
-    { nome: 'Flavia Coelho', email: 'flavia.coelho@unimedcnu.coop.br', perfil: 'Usuário Padrão', unidade: 'Negociação de Rede - SSA', cargo: 'Executivo de Relacionamento PL' }
+    { nome: 'Ana Souza',      email: EU,                       perfil: 'Admin',          unidade: 'Rede Ambulatorial', cargo: 'Designer' },
+    { nome: 'Bruno Martins',  email: 'bruno.martins@exemplo.test', perfil: 'Admin',          unidade: 'Rede Ambulatorial', cargo: 'Especialista' },
+    { nome: 'Clara Ribeiro',  email: 'clara.ribeiro@exemplo.test', perfil: 'Gestor',         unidade: 'Negociação de Rede', cargo: 'Coordenadora de Rede' },
+    { nome: 'Diego Almeida',  email: 'diego.almeida@exemplo.test', perfil: 'Gestor',         unidade: 'Operações de Rede',  cargo: 'Gerente' },
+    { nome: 'Elisa Nogueira', email: 'elisa.nogueira@exemplo.test', perfil: 'Usuário Padrão', unidade: 'Negociação de Rede', cargo: 'Executiva de Relacionamento' }
   ];
   var MOCK_PROJETOS = [
     { id: 1, nome: 'Gestão de Demandas', descricao: '', cor: '#004e4c' },
@@ -2267,7 +2820,8 @@ function arquivarProjetoById(id, nome) {
     { id: 4, nome: 'Alto Custo', descricao: '', cor: '#e11d48' },
     { id: 5, nome: 'Demandas Linhas de Cuidados - Oportunidades', descricao: '', cor: '#7c3aed' },
     { id: 6, nome: 'Negociação de Rede - SSA', descricao: '', cor: '#16a34a' },
-    { id: 7, nome: 'Atenção à Saúde', descricao: '', cor: '#f59f00' }
+    { id: 7, nome: 'Atenção à Saúde', descricao: '', cor: '#f59f00' },
+    { id: 8, nome: 'GT Onco', descricao: 'Plano de ação do GT (público)', cor: '#7c3aed', publico: true }
   ];
   function T(id, tarefa, projeto, resp, prazo, status, prioridade, obs) {
     return { ID: id, Tarefa: tarefa, Projeto: projeto, 'Responsável': resp, Prazo: prazo,
@@ -2276,13 +2830,13 @@ function arquivarProjetoById(id, nome) {
   }
   var MOCK_TAREFAS = [
     T(1, 'Banco de dados x P. Status', 'Gestão de Demandas', EU, '', 'Backlog', 'Média', 'De/Para de atualização semanal.'),
-    T(2, 'Envio de senhas / Acompanhamento de P.S e Internação', 'Gestão de Demandas', 'vinicius.baiao@unimedcnu.coop.br', '2026-07-01', 'A fazer', 'Alta', ''),
+    T(2, 'Envio de senhas / Acompanhamento de P.S e Internação', 'Gestão de Demandas', 'bruno.martins@exemplo.test', '2026-07-01', 'A fazer', 'Alta', ''),
     T(3, 'Reclamações da Dr. Online', 'Alto Custo', EU, '2026-07-06', 'A fazer', 'Crítica', 'Reclamações de 4 canais.'),
-    T(4, 'Atualização de Status do Plano', 'Cuidado Transicional', 'carolina.lopes@unimedcnu.coop.br', '2026-07-09', 'Em andamento', 'Alta', ''),
+    T(4, 'Atualização de Status do Plano', 'Cuidado Transicional', 'clara.ribeiro@exemplo.test', '2026-07-09', 'Em andamento', 'Alta', ''),
     T(5, 'Operação e Input de Informações', 'Rede Higiene', EU, '2026-07-20', 'Em andamento', 'Média', ''),
-    T(6, 'Busca de Telefones/E-mail Manuais', 'Atenção à Saúde', 'eduardo.caporicci@unimedcnu.coop.br', '2026-07-08', 'Bloqueado', 'Alta', 'Aguardando acesso ao Databricks.'),
+    T(6, 'Busca de Telefones/E-mail Manuais', 'Atenção à Saúde', 'diego.almeida@exemplo.test', '2026-07-08', 'Bloqueado', 'Alta', 'Aguardando acesso ao Databricks.'),
     T(7, 'ATA x Planilha Operação e Clínica', 'Gestão de Demandas', EU, '2026-06-30', 'Concluído', 'Baixa', ''),
-    T(8, 'Envio de vidas para captação', 'Negociação de Rede - SSA', 'flavia.coelho@unimedcnu.coop.br', '', 'A fazer', 'Baixa', ''),
+    T(8, 'Envio de vidas para captação', 'Negociação de Rede - SSA', 'elisa.nogueira@exemplo.test', '', 'A fazer', 'Baixa', ''),
     T(9, 'Identificar Padrão de Hiperutilização de PA Virtual', 'Gestão de Demandas', EU, '2026-07-11', 'A fazer', 'Média', '')
   ];
   function CKL(id, idt, item, ordem, ok, resp) {
@@ -2291,14 +2845,14 @@ function arquivarProjetoById(id, nome) {
   var MOCK_CKL = [
     CKL(1, 3, 'Levantar canais de origem', 1, true, EU),
     CKL(2, 3, 'Consolidar planilha única', 2, false, ''),
-    CKL(3, 3, 'Definir plano de ação', 3, false, 'vinicius.baiao@unimedcnu.coop.br'),
+    CKL(3, 3, 'Definir plano de ação', 3, false, 'bruno.martins@exemplo.test'),
     CKL(4, 4, 'Mapear fonte TOP Saúde', 1, true, ''),
     CKL(5, 4, 'Testar envio automático', 2, true, '')
   ];
   var MOCK_INT = {
     '2': [
       { ID: 2, ID_Tarefa: 2, 'Data/Hora': '2026-07-03T14:20:00', Editor: EU, Tipo: 'Tentativa de contato', 'Conteúdo': 'Liguei para o prestador, sem retorno.' },
-      { ID: 1, ID_Tarefa: 2, 'Data/Hora': '2026-07-01T09:10:00', Editor: 'vinicius.baiao@unimedcnu.coop.br', Tipo: 'Comentário', 'Conteúdo': 'Priorizar antes do fechamento do mês.' }
+      { ID: 1, ID_Tarefa: 2, 'Data/Hora': '2026-07-01T09:10:00', Editor: 'bruno.martins@exemplo.test', Tipo: 'Comentário', 'Conteúdo': 'Priorizar antes do fechamento do mês.' }
     ]
   };
 
@@ -2306,6 +2860,15 @@ function arquivarProjetoById(id, nome) {
     var acao = params.acao, dados = params.dados || {};
     var resp;
     switch (acao) {
+      case 'bootstrap': resp = {
+        usuario:   { email: EU, perfil: 'Admin', admin: true, podeExcluir: true },
+        tarefas:   MOCK_TAREFAS,
+        checklist: MOCK_CKL
+      }; break;
+      case 'bootstrapApoio': resp = {
+        usuarios: MOCK_USUARIOS,
+        projetos: MOCK_PROJETOS
+      }; break;
       case 'getUsuario': resp = { email: EU, perfil: 'Admin', admin: true, podeExcluir: true }; break;
       case 'listarUsuarios': resp = { usuarios: MOCK_USUARIOS }; break;
       case 'listarProjetos': resp = { projetos: MOCK_PROJETOS }; break;
@@ -2316,6 +2879,7 @@ function arquivarProjetoById(id, nome) {
       case 'criarTarefa': resp = { sucesso: true, id: 99 }; break;
       case 'criarProjeto': resp = { sucesso: true, id: 99 }; break;
       case 'adicionarInteracao': resp = { sucesso: true, id: 99 }; break;
+      case 'avisarMarcadoChecklist': resp = { sucesso: true, itens: 1 }; break;
       default: resp = { sucesso: true };
     }
     setTimeout(function () { callback(resp); }, 40);
