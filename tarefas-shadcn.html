@@ -568,6 +568,8 @@
     .ind-proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
     .ind-proj { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--border-hover); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; box-shadow: var(--shadow-sm); }
     .ind-proj:hover { border-color: var(--border-hover); background: var(--hover-bg); }
+    .ind-proj.sem-clique { cursor: default; }
+    .ind-proj.sem-clique:hover { background: var(--card); }
     .ind-proj-titulo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; margin-bottom: 8px; }
     .ind-proj-titulo span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ind-barra { height: 6px; border-radius: 3px; background: var(--muted); overflow: hidden; margin: 6px 0 10px; }
@@ -1328,7 +1330,9 @@ function limparFiltros() {
 
 function corDoProjeto(nome) {
   var proj = projetos.filter(function(p) { return p.nome === nome; })[0];
-  return proj ? proj.cor : '#64748b';
+  var cor  = proj ? String(proj.cor || '') : '';
+  // Só hex #RRGGBB entra em atributos style; qualquer outra coisa (cor legada/importada) cai no cinza padrão.
+  return /^#[0-9a-fA-F]{6}$/.test(cor) ? cor : '#64748b';
 }
 
 function popularSelectProjetos(nomeAtual) {
@@ -1591,7 +1595,8 @@ function renderIndProjetos(res) {
   if (!res.projetos.length) { el.innerHTML = '<div class="ind-vazio">Nenhum projeto nos filtros atuais.</div>'; return; }
   var html = '<div class="ind-proj-grid">';
   res.projetos.forEach(function(p) {
-    html += '<div class="ind-proj" data-nome="' + esc(p.nome) + '" style="border-left-color:' + corDoProjeto(p.nome) + '">'
+    var semClique = p.nome === '(sem projeto)';
+    html += '<div class="ind-proj' + (semClique ? ' sem-clique' : '') + '" data-nome="' + esc(p.nome) + '" style="border-left-color:' + corDoProjeto(p.nome) + '">'
       + '<div class="ind-proj-titulo"><span title="' + esc(p.nome) + '">' + esc(p.nome) + '</span>'
       + (p.publico ? '<span class="proj-chip-publico" title="Visível a todo o domínio">público</span>' : '') + '</div>'
       + '<div class="ind-proj-pct">' + p.concluidas + ' de ' + p.total + ' concluída' + (p.total === 1 ? '' : 's') + ' · ' + p.pct + '%</div>'
@@ -1607,6 +1612,7 @@ function renderIndProjetos(res) {
   html += '</div>';
   el.innerHTML = html;
   Array.from(el.querySelectorAll('.ind-proj')).forEach(function(card) {
+    if (card.classList.contains('sem-clique')) return;
     card.addEventListener('click', function() {
       setFiltroResponsavel('');
       setFiltroProjeto(card.getAttribute('data-nome'));
