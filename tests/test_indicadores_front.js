@@ -180,3 +180,76 @@ const por = (lista, nome) => lista.filter(x => x.nome === nome)[0];
   assert.deepStrictEqual(rc.alertas, []);
   assert.strictEqual(rc.acoes[0].severidade, 9);
 }
+
+// ───────────── Bloco 3: severidades isoladas, desempates da ordenação, movimento malformado e prazo ─────────────
+{
+  const porId = (lista, id) => lista.filter(a => a.id === id)[0];
+  const tarefas4 = [
+    T(21, 'P1', ANA, '2026-10-15', 'A fazer'), // só parada (19 d) — sem atrasada/bloqueada/crítica
+    T(22, 'P1', '',  '2026-10-15', 'A fazer'), // só semResponsavel — sem atrasada
+    T(23, 'P1', ANA, '2026-09-01', 'A fazer'), // atrasada 7 d, parada 2 d (< paradaDias)
+    T(24, 'P1', BRU, '2026-09-03', 'A fazer'), // atrasada 5 d, parada 9 d
+    T(25, 'P1', ANA, '2026-09-03', 'A fazer'), // atrasada 5 d, parada 19 d
+    T(26, 'P1', BRU, '2026-09-03', 'A fazer'), // atrasada 5 d, parada 19 d — empata com 25, desempata por id
+    T(27, 'P1', ANA, '2026-10-20', 'A fazer'), // movimento '' → diasParada null
+    T(28, 'P1', ANA, '2026-10-20', 'A fazer'), // movimento inválido → diasParada null
+    T(29, 'P1', ANA, '2026-10-20', 'A fazer')  // movimento futuro → diasParada 0
+  ];
+  const movimento4 = {
+    '21': '2026-08-20T10:00:00', '22': '2026-09-07T10:00:00',
+    '23': '2026-09-06T10:00:00', '24': '2026-08-30T10:00:00',
+    '25': '2026-08-20T10:00:00', '26': '2026-08-20T10:00:00',
+    '27': '', '28': 'não-é-data', '29': '2026-09-20T10:00:00'
+  };
+  const dados4 = { tarefas: tarefas4, cklStatus: {}, usuarios, projetos, movimento: movimento4 };
+  const F4 = { unidade: '', projeto: '', janelaDias: 7, paradaDias: 7 };
+  const r = calcular(dados4, F4, HOJE, deps);
+
+  // ordem completa: severidade asc; empate → diasAtraso desc; empate → diasParada desc; empate → id asc
+  assert.deepStrictEqual(r.acoes.map(a => a.id), [23, 25, 26, 24, 21, 22, 27, 28, 29],
+    'severidade 2 (23,25,26,24) < 4 (21) < 6 (22) < 9 (27,28,29); dentro do sev 2, desempates em cascata');
+
+  // achado 1a: severidade 4 (parada) nunca era exercitada isolada, sem atrasada/bloqueada/crítica
+  const a21 = porId(r.acoes, 21);
+  assert.deepStrictEqual(
+    { sev: a21.severidade, atraso: a21.diasAtraso, parada: a21.diasParada, paraPrazo: a21.diasParaPrazo, prazo: a21.prazo, flags: a21.flags },
+    {
+      sev: 4, atraso: 0, parada: 19, paraPrazo: 37, prazo: '2026-10-15',
+      flags: { atrasadaCritica: false, atrasada: false, bloqueada: false, parada: true, vence: false, semResponsavel: false, semPrazo: false }
+    }
+  );
+
+  // achado 1b: severidade 6 (semResponsavel) nunca era exercitada isolada, sem atrasada
+  const a22 = porId(r.acoes, 22);
+  assert.deepStrictEqual(
+    { sev: a22.severidade, parada: a22.diasParada, flags: a22.flags },
+    {
+      sev: 6, parada: 1,
+      flags: { atrasadaCritica: false, atrasada: false, bloqueada: false, parada: false, vence: false, semResponsavel: true, semPrazo: false }
+    }
+  );
+
+  // achado 2: desempate por diasAtraso desc (23: 7 d > 24/25/26: 5 d), com severidade 2 igual;
+  // 24 mostra que a cascata dá precedência a "atrasada" sobre "parada" mesmo com flags.parada true
+  const a23 = porId(r.acoes, 23), a24 = porId(r.acoes, 24);
+  assert.deepStrictEqual({ sev: a23.severidade, atraso: a23.diasAtraso, parada: a23.diasParada, flagParada: a23.flags.parada },
+    { sev: 2, atraso: 7, parada: 2, flagParada: false });
+  assert.deepStrictEqual({ sev: a24.severidade, atraso: a24.diasAtraso, parada: a24.diasParada, flagParada: a24.flags.parada },
+    { sev: 2, atraso: 5, parada: 9, flagParada: true });
+
+  // achado 2: diasAtraso empata (25 e 26 = 5 d, igual a 24) → desempate por diasParada desc (19 d > 9 d de 24);
+  // 25 e 26 empatam também em diasParada (19 d) → desempate final por id asc (confirmado pela ordem completa acima)
+  const a25 = porId(r.acoes, 25), a26 = porId(r.acoes, 26);
+  assert.deepStrictEqual({ sev: a25.severidade, atraso: a25.diasAtraso, parada: a25.diasParada }, { sev: 2, atraso: 5, parada: 19 });
+  assert.deepStrictEqual({ sev: a26.severidade, atraso: a26.diasAtraso, parada: a26.diasParada }, { sev: 2, atraso: 5, parada: 19 });
+
+  // achado 3: movimento malformado (string vazia / data inválida) → diasParada null, nunca NaN; movimento futuro → diasParada 0
+  const a27 = porId(r.acoes, 27), a28 = porId(r.acoes, 28), a29 = porId(r.acoes, 29);
+  assert.deepStrictEqual({ parada: a27.diasParada, mov: a27.ultimaMov, flagParada: a27.flags.parada }, { parada: null, mov: null, flagParada: false }, 'movimento "" tratado como ausente');
+  assert.deepStrictEqual({ parada: a28.diasParada, mov: a28.ultimaMov, flagParada: a28.flags.parada }, { parada: null, mov: 'não-é-data', flagParada: false }, 'movimento com data inválida não vira NaN');
+  assert.deepStrictEqual({ parada: a29.diasParada, mov: a29.ultimaMov, flagParada: a29.flags.parada }, { parada: 0, mov: '2026-09-20T10:00:00', flagParada: false }, 'movimento futuro satura em 0, não fica negativo');
+
+  // achado 4: campo Acao.prazo nunca era asserido
+  assert.strictEqual(a21.prazo, '2026-10-15');
+  assert.strictEqual(a29.prazo, '2026-10-20');
+}
