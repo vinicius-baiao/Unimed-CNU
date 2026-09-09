@@ -1345,6 +1345,8 @@ function carregarTudo() {
     if (!aplicarDeepLink()) aplicarFiltroInicial();
     if (modoAtual === 'home') {
       renderHome();
+    } else if (modoAtual === 'indicadores') {
+      renderIndicadores(); // dados novos após salvar pelo modal aberto da lista de risco
     } else {
       popularFiltros();
       renderView();
@@ -1728,7 +1730,9 @@ function renderIndLista(res) {
     html += '<button type="button" class="ind-chip' + (on ? ' on' : '') + '" data-k="' + c.k + '">' + c.rotulo + '<span class="n">' + n + '</span></button>';
   });
   if (f.prioridade || f.projeto) {
-    html += '<button type="button" class="ind-chip on" data-k="__limpar">' + esc(f.prioridade ? (f.prioridade + ' · ' + f.coluna) : ('Projeto: ' + f.projeto)) + ' ✕</button>';
+    var rotuloFlag = { atrasadaCritica: 'Crítica/alta atrasada', atrasada: 'Atrasadas', bloqueada: 'Bloqueadas', parada: 'Paradas', vence: 'Vencem', semResponsavel: 'Sem responsável', semPrazo: 'Sem prazo' };
+    var rotuloLimpar = f.prioridade ? (f.prioridade + ' · ' + f.coluna) : ((f.flag && rotuloFlag[f.flag] ? rotuloFlag[f.flag] + ' · ' : '') + 'Projeto: ' + f.projeto);
+    html += '<button type="button" class="ind-chip on" data-k="__limpar">' + esc(rotuloLimpar) + ' ✕</button>';
   }
   html += '</div>';
 
