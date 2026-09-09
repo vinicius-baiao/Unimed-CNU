@@ -17,3 +17,19 @@ Thumbs.db
 
 # Dados pessoais da equipe (nome, e-mail, cargo) — nunca versionar
 Equipe*.xlsx
+
+# --- migração para GitHub 2026-09-08 (adicionado automaticamente) ---
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.claude/settings.local.json
+.claude/worktrees/
+.clasprc.json
+.env
+.env.*
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
