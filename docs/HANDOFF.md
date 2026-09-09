@@ -23,6 +23,35 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
+### Último bloco — 09/09: Indicadores — monitoramento de ações — publicado @69
+
+Spec: `docs/superpowers/specs/2026-09-09-indicadores-monitoramento-acoes-design.md`; plano:
+`docs/superpowers/plans/2026-09-09-indicadores-monitoramento-acoes.md`. Subagentes (implementador + revisor por
+tarefa, rodadas de correção nas Tasks 2 e 4, revisão final da branch sem Critical/Important), commits
+`b742443..26621f4`. Front e backend na mesma versão.
+
+- **O que entrou:** seletor "Parada há" (7/14/30); bloco **"Para agir hoje"** com até 5 frases clicáveis geradas
+  por regras (críticas/altas atrasadas por projeto, paradas, sem responsável, pessoa que concentra atrasadas,
+  vencem na janela); **abas internas** Ações / Pessoas / Projetos (abre em Ações); aba **Ações** com chips por
+  situação, **lista de risco** por tarefa (severidade 1–7/9, prazo relativo, "parada há", desdobramentos) cujo clique
+  abre o modal da tarefa por cima da view (re-render ao fechar e após salvar), e **matriz prioridade × situação**
+  clicável que filtra a lista.
+- **Backend:** rota `indicadoresMovimento` (Gestor/Admin, cache 120 s no CacheService compartilhado) devolve a
+  última movimentação por tarefa = maior entre criação, Interações, Log com `Campo = 'ID_Tarefa'` e conclusão de
+  itens de checklist; `atualizarTarefa` passa a gravar `['ATUALIZAR','ID_Tarefa','',id]` a cada save com mudança
+  (edições anteriores à @69 não têm ID no Log — estagnação delas cai nas outras fontes).
+- **Cálculo:** `calcularIndicadores` (pura, marcadores) ganhou `acoes`, `matriz` e `alertas` (`partes` escapadas no
+  render); testes em `tests/test_indicadores_front.js` (3 blocos) e `tests/test_indicadores_rota.js` (novo).
+- **Decisões:** totais e alertas respeitam o filtro de projeto (regra 4 usa Pessoas filtradas por unidade);
+  tarefas sem projeto e sem responsável não são clicáveis onde o filtro de Tarefas não existe; ordenação fixa da
+  lista de risco (sem cabeçalhos clicáveis).
+- **Parqueado (revisão final):** cursor pointer nos cabeçalhos da lista de Ações; teclado nas linhas/células/frases
+  clicáveis (dívida de a11y do app); `rotuloFlag` duplica `IND_CHIPS`; fixture de Prazo como string vs ISO real;
+  sem timeout próprio em `carregarMovimentoInd`; teste de cache fraco na rota.
+- **Incidente de processo:** o `clasp push` recusou ("A file with this name already exists") porque a sessão paralela
+  do Aurélio criou um worktree em `.claude/worktrees/…` dentro do repo e o clasp passou a ver duplicatas. A recusa
+  evitou subir código de outra sessão. `.claspignore` agora tem `.claude/**`.
+
 ### Último bloco — 08/09 (noite, 2ª parte): aba Indicadores para gestores — publicado @68
 
 Spec: `docs/superpowers/specs/2026-09-08-indicadores-gestores-design.md`; plano:
@@ -53,7 +82,7 @@ tarefa, revisão final da branch com onda única de correções), commits `ffa2a
 - **Incidente de processo:** um implementador (haiku) escreveu a Task 3 num arquivo com nome errado
   (`tarafas-shadcn.html`) e commitou; removido em `2918d6d` e a task refeita. Regra adotada nos despachos: `git status`
   antes de editar e antes de commitar, e `git add` só do arquivo alvo.
-- **Publicado em 08/09 (tarde/noite):** Cora **@68** (aba Indicadores para gestores; @67 = chip de colega com busca, nomes humanizados, alerta de carga);
+- **Publicado:** Cora **@69** (09/09: monitoramento de ações — Para agir hoje, lista de risco, estagnação, matriz; @68 = aba Indicadores; @67 = chip de colega com busca, nomes humanizados, alerta de carga);
   painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48), GT Onco **@65** (v1.40).
   IDs no Cora: Spravato 5 · PF 6 · GT 7. **Etapa 3 gravada 14:51:** aba Usuários com **79** pessoas; Guilherme,
   Taiara, Carina e Fabiane = Gestor. O Cora está aberto para a equipe — falta comunicar (pendência 10).
@@ -345,3 +374,5 @@ Silenciar esses avisos via config do hook depende de OK explícito do Aurélio.
   do `clasp deploy`; qualquer diretório de trabalho novo entra no `.claspignore` primeiro.
 - **Subagente pode errar o nome do arquivo** (08/09: `tarafas-shadcn.html`). Todo despacho de implementação exige
   `git status --short` antes de editar e antes de commitar, `Edit` (não `Write`) no arquivo alvo e `git add` só dele.
+- **Worktree de outra sessão dentro do repo quebra o `clasp push`** (09/09): `.claude/worktrees/<nome>/` replica os
+  arquivos e a API recusa por nome duplicado. `.claspignore` ignora `.claude/**`; conferir sempre a lista do push.

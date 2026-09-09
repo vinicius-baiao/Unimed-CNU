@@ -52,6 +52,7 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 | `listarInteracoes` | `listarInteracoes(dados)` | Histórico de interações de uma tarefa |
 | `adicionarInteracao` | `adicionarInteracao(dados)` | Adiciona comentário/interação |
 | `listarProjetos` / `criarProjeto` / `atualizarProjeto` / `arquivarProjeto` | idem | CRUD de projetos (Admin/Gestor). Aceitam `publico` (coluna F da aba Projetos) |
+| `indicadoresMovimento` | `indicadoresMovimento()` | **Gestor/Admin.** Última movimentação por tarefa (criação, Interações, Log `ID_Tarefa`, itens concluídos) para a métrica "parada há N dias" da aba Indicadores. Cache 120 s |
 | `planoAcaoProjeto` | `planoAcaoProjeto(dados)` | **Leitura pública** das tarefas de um projeto público (`projetoId` ou `projetoNome`), com checklist e última interação. Passa **por fora da allowlist** do piloto; consumida pelos painéis Spravato / PF / GT Onco. Cache 60 s |
 | `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) |
 
