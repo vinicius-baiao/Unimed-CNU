@@ -54,7 +54,8 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 | `listarProjetos` / `criarProjeto` / `atualizarProjeto` / `arquivarProjeto` | idem | CRUD de projetos (Admin/Gestor). Aceitam `publico` (coluna F da aba Projetos) |
 | `indicadoresMovimento` | `indicadoresMovimento()` | **Gestor/Admin.** Última movimentação por tarefa (criação, Interações, Log `ID_Tarefa`, itens concluídos) para a métrica "parada há N dias" da aba Indicadores. Cache 120 s |
 | `planoAcaoProjeto` | `planoAcaoProjeto(dados)` | **Leitura pública** das tarefas de um projeto público (`projetoId` ou `projetoNome`), com checklist e última interação. Passa **por fora da allowlist** do piloto; consumida pelos painéis Spravato / PF / GT Onco. Cache 60 s |
-| `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) |
+| `atualizarUsuario` / `adicionarUsuario` / `removerUsuario` | idem | **Só super-admin** (`SUPER_ADMINS` no `Code.gs`, hoje só o Aurélio). Editam a aba `Usuários` (perfil/nome/unidade/cargo, incluir com domínio validado, remover linha) — ou seja, concedem e revogam acesso. Log `ACESSO`; invalidam `perfis_v1`/`usuarios_v1` |
+| `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) + `perfil`, `admin`, `podeExcluir`, `superAdmin` |
 
 Funções **sem rota** (rodam por trigger/manual): `setup()` (cria abas e validações, rodar 1x),
 `relatorioDiario()` (e-mail HTML de resumo), `lembretesDiarios()` (lembrete D-1),
@@ -66,6 +67,9 @@ Funções **sem rota** (rodam por trigger/manual): `setup()` (cria abas e valida
 `data-deep-link` no `<body>`; o front filtra o projeto ou abre o modal.
 
 **Allowlist do piloto** (`PILOTO_ATIVO`): é a aba `Usuários`. Não existe mais lista no código.
+A aba **Acessos** do front (só super-admin) é a interface para essa aba: incluir = dar acesso, remover = revogar.
+**Super-admin** não é perfil da planilha — é a constante `SUPER_ADMINS` no código, justamente para ninguém se
+promover pela tela; `bootstrap().usuario.superAdmin` liga o item de rail.
 
 ## Esquema da aba Tarefas (ordem fixa — `Code.gs` usa índices)
 

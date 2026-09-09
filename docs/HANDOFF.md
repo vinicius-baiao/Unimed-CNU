@@ -9,7 +9,7 @@
 
 - Branch de trabalho: **`mvp-shadcn-piloto`** (PR #3 aberto contra `main`, ainda não mergeado).
 - (Manhã) Publicado em 08/09/2026 via `clasp deploy -i` (nova versão na implantação existente):
-  Cora **@65**; Spravato **v4.74** (@251 e @252, as duas implantações existentes); Carteira PF
+  Cora **@65** (hoje **@70**); Spravato **v4.74** (@251 e @252, as duas implantações existentes); Carteira PF
   **v8.47** (@77); GT Onco **v1.39** (@64). Os três painéis já leem do Cora; até a importação
   rodar, a seção deles mostra "Nenhuma ação cadastrada" (projeto ainda não existe) ou o erro
   "Projeto não disponível" — esperado. **Superado à tarde: importação feita, painéis republicados — ver bullet abaixo e o bloco de 08/09 (tarde).**
@@ -22,6 +22,36 @@
 - Testes: `npm test` (Node, sem dependências) — rodar antes de todo `clasp push`.
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
+
+### Último bloco — 09/09 (manhã): aba Acessos para o super-admin — publicado @70
+
+Pedido do Aurélio: "tela de gerenciamento de acessos visível somente para mim, para definir os papéis com mais
+facilidade; siga tudo sozinho sem perguntas". Spec: `docs/superpowers/specs/2026-09-09-gerenciamento-de-acessos-design.md`;
+plano: `docs/superpowers/plans/2026-09-09-gerenciamento-de-acessos.md`. Dois implementadores em paralelo (backend e
+front), revisão final (opus) com uma correção Important (CSS) + 4 Minor aplicadas; commits `320e137..41355ba`.
+**Decisões tomadas sem consulta — revisar no primeiro uso.**
+
+- **Super-admin** = constante `SUPER_ADMINS` no `Code.gs` (hoje só `aurelio.pereira.ext@`), checada por `ehSuperAdmin`.
+  Não é perfil da planilha, de propósito: ninguém se promove pela tela. `bootstrap().usuario.superAdmin` e `getUsuario`
+  passam a devolver o flag; o front guarda em `currentUserSuperAdmin`.
+- **Rotas** (todas só super-admin, com lock, Log `ACESSO` e invalidação de `perfis_v1`/`usuarios_v1` + memo `_perfis`):
+  `atualizarUsuario {email, perfil?|nome?|unidade?|cargo?}` grava só o que mudou (`alterados: n`);
+  `adicionarUsuario {nome, email, perfil, unidade?, cargo?}` valida domínio (sufixo real + um único `@`), perfil e
+  duplicidade case-insensitive, grava o e-mail em minúsculas; `removerUsuario {email}` apaga a linha (revoga acesso na
+  hora). Guardas: o super-admin não pode ser rebaixado nem removido. Testes: `tests/test_acessos.js` (9 arquivos verdes).
+- **Front:** item "Acessos" na rail (cadeado, só super-admin), view `#acessosView`: cards Admin/Gestor/Padrão, busca,
+  botão "+ Incluir usuário" com formulário inline (datalist de unidades), tabela com `<select>` de perfil (salva ao
+  mudar), unidade/cargo editáveis (salvam no blur/Enter; Esc restaura), `×` com confirmação ("Remover"). A própria linha
+  do super-admin fica travada. Após cada escrita, muta o array global `usuarios` e re-renderiza (sem recarregar).
+  Mock do preview cobre as três rotas (`superAdmin: true`).
+- **Parqueado (revisão final, Minor/Nit):** re-render após trocar perfil descarta edições não salvas em outras linhas;
+  corrida entre dois campos da mesma linha pode deixar a linha local desatualizada até o reload; a checagem de domínio
+  antiga em `validarTarefa` e afins segue mais frouxa que `dominioPermitido` (consolidar depois); controles da tabela
+  saem na impressão; `eu` na tabela compara com `currentUser`, não com "é super-admin" (igual enquanto houver um só).
+- **Verificado em produção (09/09 10:12, @70):** `getUsuario` e `bootstrap` devolvem `superAdmin: true` para o
+  Aurélio; `bootstrap` 80 tarefas; `listarUsuarios` 79 pessoas; a rail já mostra "Acessos" após hard reload. Os
+  cliques dentro do iframe do Web App não registram pela automação do Chrome (nem em Indicadores), então **a primeira
+  abertura real da aba e um teste de trocar um perfil ficam com o Aurélio** — ver pendência 13.
 
 ### Último bloco — 09/09: Indicadores — monitoramento de ações — publicado @69
 
@@ -311,6 +341,7 @@ inalterados, console sem erros.
 | 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 11.** |
 | 10 | **Comunicar a equipe** | **Já vale (Etapa 3 gravada 14:51):** Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
 | 11 | ~~**Etapa 3 — liberar os 38 da equipe**~~ **feita em 08/09 às 14:51** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
+| 13 | **Testar a aba Acessos (@70)** | Abrir o Cora com Ctrl+Shift+R, entrar em Acessos, trocar o perfil de alguém e voltar, editar uma unidade, incluir e remover um usuário de teste. Ajustes de UX decididos sem consulta podem ser revistos. Para um segundo super-admin, acrescentar o e-mail em `SUPER_ADMINS` (`Code.gs`) e publicar. |
 | 12 | **`.claude/settings.local.json` passou a ser rastreado** | O commit `b54c72c` ("wip … migração de notebook", 08/09 22:25) adicionou o arquivo ao `.gitignore` **e** o commitou; o ignore não desrastreia. Decidir se faço `git rm --cached .claude/settings.local.json` (mantém o arquivo local, sai do índice) — a regra do projeto é nunca versioná-lo. |
 
 ## Backlog técnico (fase 2)
