@@ -2694,19 +2694,25 @@ function esc(str) {
 function calcularIndicadores(dados, filtros, hoje, deps) {
   filtros = filtros || {};
   var janela = Number(filtros.janelaDias) || 7;
+  var paradaDias = Number(filtros.paradaDias) || 7;
   var dia0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   var limite = new Date(dia0); limite.setDate(dia0.getDate() + janela);
   var tarefas = (dados.tarefas || []).filter(function(t) {
     return !filtros.projeto || String(t.Projeto || '') === filtros.projeto;
   });
   var ckl = dados.cklStatus || {}, usuarios = dados.usuarios || [], projetos = dados.projetos || [];
+  var movimento = dados.movimento || null;
 
   function low(v) { return String(v || '').trim().toLowerCase(); }
+  function soDia(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function diasEntre(a, b) { return Math.round((b - a) / 86400000); }
+  function feitoItem(i) { return i['Concluído'] === true || i['Concluído'] === 'true' || i['Concluído'] === 'TRUE'; }
   function classificar(t) {
     var ativa = t.Status !== 'Concluído';
-    var c = { ativa: ativa, andamento: ativa && t.Status === 'Em andamento', bloqueada: ativa && t.Status === 'Bloqueado', atrasada: false, proxima: false };
+    var c = { ativa: ativa, andamento: ativa && t.Status === 'Em andamento', bloqueada: ativa && t.Status === 'Bloqueado', atrasada: false, proxima: false, prazoDia: null };
     if (ativa && deps.dataValida(t.Prazo)) {
-      var d = deps.parseData(t.Prazo); d = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      var d = soDia(deps.parseData(t.Prazo));
+      c.prazoDia = d;
       c.atrasada = d < dia0;
       c.proxima  = d >= dia0 && d <= limite;
     }
@@ -2714,9 +2720,10 @@ function calcularIndicadores(dados, filtros, hoje, deps) {
   }
   var porEmail = {};
   usuarios.forEach(function(u) { if (u && u.email) porEmail[low(u.email)] = u; });
+  function nomeDe(email) { var u = porEmail[low(email)]; return (u && u.nome) ? u.nome : deps.nomeDeEmail(email); }
   function novaPessoa(email) {
     var u = porEmail[low(email)];
-    return { email: email, nome: (u && u.nome) ? u.nome : deps.nomeDeEmail(email), cargo: (u && u.cargo) || '', unidade: (u && u.unidade) || '',
+    return { email: email, nome: nomeDe(email), cargo: (u && u.cargo) || '', unidade: (u && u.unidade) || '',
       ativas: 0, andamento: 0, bloqueadas: 0, atrasadas: 0, proximas: 0, itensPendentes: 0, concluidas: 0 };
   }
   function somar(alvo, c) {
@@ -2736,6 +2743,7 @@ function calcularIndicadores(dados, filtros, hoje, deps) {
   // Projetos cadastrados aparecem mesmo sem tarefa (zeros), respeitando o filtro de projeto
   projetos.forEach(function(p) { if (p && p.nome && (!filtros.projeto || String(p.nome) === filtros.projeto)) proj(String(p.nome)); });
 
+  var acoes = [];
   tarefas.forEach(function(t) {
     var c = classificar(t), email = String(t['Responsável'] || '').trim();
     if (email) { var k = low(email); if (!pessoas[k]) pessoas[k] = novaPessoa(email); somar(pessoas[k], c); }
@@ -2743,20 +2751,47 @@ function calcularIndicadores(dados, filtros, hoje, deps) {
       if (!semResp) semResp = { email: '', nome: 'Sem responsável', cargo: '', unidade: '', ativas: 0, andamento: 0, bloqueadas: 0, atrasadas: 0, proximas: 0, itensPendentes: 0, concluidas: 0 };
       somar(semResp, c);
     }
-    var pr = proj(String(t.Projeto || '') || '(sem projeto)');
+    var nomeProj = String(t.Projeto || '') || '(sem projeto)';
+    var pr = proj(nomeProj);
     pr.total++;
-    if (c.ativa) {
-      if (c.andamento) pr.andamento++; if (c.bloqueada) pr.bloqueadas++; if (c.atrasada) pr.atrasadas++; if (c.proxima) pr.proximas++;
-      totais.ativas++; if (c.atrasada) totais.atrasadas++; if (c.bloqueada) totais.bloqueadas++; if (c.proxima) totais.proximas++;
-      (ckl[String(t.ID)] || []).forEach(function(i) {
-        var feito = i['Concluído'] === true || i['Concluído'] === 'true' || i['Concluído'] === 'TRUE';
-        pr.cklTotal++; if (feito) pr.cklFeitos++;
-        var r = String(i.Responsavel || '').trim();
-        if (r && !feito) { var kr = low(r); if (!pessoas[kr]) pessoas[kr] = novaPessoa(r); pessoas[kr].itensPendentes++; }
-      });
-    } else {
-      pr.concluidas++;
+    if (!c.ativa) { pr.concluidas++; return; }
+
+    if (c.andamento) pr.andamento++; if (c.bloqueada) pr.bloqueadas++; if (c.atrasada) pr.atrasadas++; if (c.proxima) pr.proximas++;
+    totais.ativas++; if (c.atrasada) totais.atrasadas++; if (c.bloqueada) totais.bloqueadas++; if (c.proxima) totais.proximas++;
+    var itens = ckl[String(t.ID)] || [], feitos = 0;
+    itens.forEach(function(i) {
+      var feito = feitoItem(i);
+      pr.cklTotal++; if (feito) { pr.cklFeitos++; feitos++; }
+      var r = String(i.Responsavel || '').trim();
+      if (r && !feito) { var kr = low(r); if (!pessoas[kr]) pessoas[kr] = novaPessoa(r); pessoas[kr].itensPendentes++; }
+    });
+
+    // ── Ação (lista de risco) ──
+    var diasAtraso = c.atrasada ? diasEntre(c.prazoDia, dia0) : 0;
+    var diasParaPrazo = (c.prazoDia && !c.atrasada) ? diasEntre(dia0, c.prazoDia) : null;
+    var ultimaMov = (movimento && movimento[String(t.ID)]) ? String(movimento[String(t.ID)]) : null;
+    var diasParada = null;
+    if (ultimaMov) {
+      var m = deps.parseData(ultimaMov.slice(0, 10));
+      if (!isNaN(m.getTime())) diasParada = Math.max(0, diasEntre(soDia(m), dia0));
     }
+    var prio = String(t.Prioridade || '') || 'Média';
+    var flags = {
+      atrasadaCritica: c.atrasada && (prio === 'Crítica' || prio === 'Alta'),
+      atrasada: c.atrasada,
+      bloqueada: c.bloqueada,
+      parada: diasParada !== null && diasParada >= paradaDias,
+      vence: c.proxima,
+      semResponsavel: !email,
+      semPrazo: !c.prazoDia
+    };
+    var sev = flags.atrasadaCritica ? 1 : flags.atrasada ? 2 : flags.bloqueada ? 3 : flags.parada ? 4 : flags.vence ? 5 : flags.semResponsavel ? 6 : flags.semPrazo ? 7 : 9;
+    var linhaM = ['Crítica', 'Alta', 'Média', 'Baixa'].indexOf(prio) >= 0 ? prio : 'Média';
+    var colunaM = flags.atrasada ? 'Atrasada' : c.bloqueada ? 'Bloqueada' : c.andamento ? 'Em andamento' : 'A fazer';
+    acoes.push({ id: t.ID, tarefa: String(t.Tarefa || ''), projeto: nomeProj, cor: pr.cor, responsavel: email,
+      responsavelNome: email ? nomeDe(email) : '', prioridade: prio, status: String(t.Status || ''), prazo: c.prazoDia ? t.Prazo : '',
+      diasAtraso: diasAtraso, diasParaPrazo: diasParaPrazo, ultimaMov: ultimaMov, diasParada: diasParada,
+      cklTotal: itens.length, cklFeitos: feitos, flags: flags, severidade: sev, matrizLinha: linhaM, matrizColuna: colunaM });
   });
 
   var listaP = Object.keys(pessoas).map(function(k) { return pessoas[k]; });
@@ -2764,7 +2799,37 @@ function calcularIndicadores(dados, filtros, hoje, deps) {
   listaP.sort(function(a, b) { return (b.atrasadas - a.atrasadas) || (b.ativas - a.ativas) || a.nome.localeCompare(b.nome, 'pt-BR'); });
   var listaProj = Object.keys(projMap).map(function(k) { var p = projMap[k]; p.pct = p.total ? Math.round(p.concluidas * 100 / p.total) : 0; return p; });
   listaProj.sort(function(a, b) { return (b.atrasadas - a.atrasadas) || (b.bloqueadas - a.bloqueadas) || (a.pct - b.pct) || a.nome.localeCompare(b.nome, 'pt-BR'); });
-  return { pessoas: listaP, semResponsavel: semResp, projetos: listaProj, totais: totais };
+
+  acoes.sort(function(a, b) { return (a.severidade - b.severidade) || (b.diasAtraso - a.diasAtraso) || ((b.diasParada || 0) - (a.diasParada || 0)) || (Number(a.id) - Number(b.id)); });
+
+  // ── Matriz prioridade × situação ──
+  var linhasM = ['Crítica', 'Alta', 'Média', 'Baixa'], colunasM = ['Atrasada', 'Bloqueada', 'Em andamento', 'A fazer'], celulas = {};
+  linhasM.forEach(function(l) { celulas[l] = {}; colunasM.forEach(function(cn) { celulas[l][cn] = 0; }); });
+  acoes.forEach(function(a) { celulas[a.matrizLinha][a.matrizColuna]++; });
+  var matriz = { linhas: linhasM, colunas: colunasM, celulas: celulas, total: acoes.length };
+
+  // ── "Para agir hoje" ──
+  function alerta(partes, aba, filtro) { return { partes: partes, aba: aba, filtro: filtro }; }
+  function forte(t) { return { texto: String(t), forte: true }; }
+  function texto(t) { return { texto: t, forte: false }; }
+  var alertas = [];
+  var porProj = {};
+  acoes.forEach(function(a) { if (a.flags.atrasadaCritica) porProj[a.projeto] = (porProj[a.projeto] || 0) + 1; });
+  Object.keys(porProj).sort(function(x, y) { return (porProj[y] - porProj[x]) || x.localeCompare(y, 'pt-BR'); }).slice(0, 3).forEach(function(p) {
+    var n = porProj[p];
+    alertas.push(alerta([forte(n), texto(n === 1 ? ' ação crítica/alta atrasada em ' : ' ações críticas/altas atrasadas em '), forte(p)], 'acoes', { flag: 'atrasadaCritica', projeto: p }));
+  });
+  var nParada = acoes.filter(function(a) { return a.flags.parada; }).length;
+  if (nParada) alertas.push(alerta([forte(nParada), texto(nParada === 1 ? ' ação sem movimento há ' : ' ações sem movimento há '), forte(paradaDias), texto(' dias ou mais')], 'acoes', { flag: 'parada' }));
+  var nSemResp = acoes.filter(function(a) { return a.flags.semResponsavel; }).length;
+  if (nSemResp) alertas.push(alerta([forte(nSemResp), texto(nSemResp === 1 ? ' ação sem responsável' : ' ações sem responsável')], 'acoes', { flag: 'semResponsavel' }));
+  var top = listaP.length ? listaP[0] : null; // listaP já vem ordenada por atrasadas desc
+  if (top && top.atrasadas >= 2) alertas.push(alerta([forte(top.nome), texto(' concentra '), forte(top.atrasadas), texto(' ações atrasadas')], 'pessoas', { pessoa: top.email }));
+  var nVence = acoes.filter(function(a) { return a.flags.vence; }).length;
+  if (nVence) alertas.push(alerta([forte(nVence), texto(nVence === 1 ? ' ação vence nos próximos ' : ' ações vencem nos próximos '), forte(janela), texto(' dias')], 'acoes', { flag: 'vence' }));
+  alertas = alertas.slice(0, 5);
+
+  return { pessoas: listaP, semResponsavel: semResp, projetos: listaProj, totais: totais, acoes: acoes, matriz: matriz, alertas: alertas };
 }
 /* @indicadores:fim */
 

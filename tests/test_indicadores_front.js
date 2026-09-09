@@ -99,3 +99,84 @@ const por = (lista, nome) => lista.filter(x => x.nome === nome)[0];
   assert.strictEqual(por(r.pessoas, 'Bruno Lima').proximas, 1);
   assert.strictEqual(r.totais.proximas, 2);
 }
+
+// ───────────── Bloco 2: ações, matriz e alertas (monitoramento) ─────────────
+{
+  const txt = a => a.partes.map(p => p.texto).join('');
+  const tarefas2 = tarefas.map(t => Object.assign({}, t));
+  tarefas2[0].Prioridade = 'Crítica';                 // t1: atrasada + crítica
+  const movimento = { '1': '2026-08-25T10:00:00', '2': '2026-09-07T09:00:00', '5': '2026-08-30T08:00:00', '6': '2026-09-08T08:00:00' }; // t3 sem movimento
+  const dados2 = { tarefas: tarefas2, cklStatus, usuarios, projetos, movimento };
+  const F = { unidade: '', projeto: '', janelaDias: 7, paradaDias: 7 };
+
+  const r = calcular(dados2, F, HOJE, deps);
+  assert.deepStrictEqual(r.acoes.map(a => a.id), [1, 5, 3, 2, 6], 'ordem: sev asc, diasAtraso desc');
+  const a1 = r.acoes[0], a5 = r.acoes[1], a3 = r.acoes[2], a2 = r.acoes[3], a6 = r.acoes[4];
+  assert.deepStrictEqual({ sev: a1.severidade, atraso: a1.diasAtraso, parada: a1.diasParada, flags: a1.flags, nome: a1.responsavelNome, cor: a1.cor, ckl: [a1.cklFeitos, a1.cklTotal] },
+    { sev: 1, atraso: 7, parada: 14, flags: { atrasadaCritica: true, atrasada: true, bloqueada: false, parada: true, vence: false, semResponsavel: false, semPrazo: false }, nome: 'Ana Souza', cor: '#111111', ckl: [1, 2] });
+  assert.deepStrictEqual({ sev: a5.severidade, atraso: a5.diasAtraso, parada: a5.diasParada, semResp: a5.flags.semResponsavel, nome: a5.responsavelNome }, { sev: 2, atraso: 3, parada: 9, semResp: true, nome: '' });
+  assert.deepStrictEqual({ sev: a3.severidade, parada: a3.diasParada, mov: a3.ultimaMov, paraPrazo: a3.diasParaPrazo }, { sev: 3, parada: null, mov: null, paraPrazo: 22 }, 'sem movimento conhecido → diasParada null');
+  assert.deepStrictEqual({ sev: a2.severidade, vence: a2.flags.vence, paraPrazo: a2.diasParaPrazo, parada: a2.diasParada }, { sev: 5, vence: true, paraPrazo: 2, parada: 1 });
+  assert.deepStrictEqual({ sev: a6.severidade, semPrazo: a6.flags.semPrazo, paraPrazo: a6.diasParaPrazo, nome: a6.responsavelNome, atraso: a6.diasAtraso }, { sev: 7, semPrazo: true, paraPrazo: null, nome: 'Zeca Ninguem', atraso: 0 });
+  assert.ok(!r.acoes.some(a => a.id === 4), 'concluída não entra em acoes');
+
+  // matriz
+  assert.deepStrictEqual(r.matriz.linhas, ['Crítica', 'Alta', 'Média', 'Baixa']);
+  assert.deepStrictEqual(r.matriz.colunas, ['Atrasada', 'Bloqueada', 'Em andamento', 'A fazer']);
+  assert.deepStrictEqual(r.matriz.celulas['Crítica'], { 'Atrasada': 1, 'Bloqueada': 0, 'Em andamento': 0, 'A fazer': 0 });
+  assert.deepStrictEqual(r.matriz.celulas['Média'],   { 'Atrasada': 1, 'Bloqueada': 1, 'Em andamento': 0, 'A fazer': 2 }, 'atrasada tem precedência sobre status; Backlog conta como A fazer');
+  assert.strictEqual(r.matriz.total, 5);
+  assert.deepStrictEqual([a1.matrizLinha, a1.matrizColuna, a3.matrizColuna, a6.matrizColuna], ['Crítica', 'Atrasada', 'Bloqueada', 'A fazer']);
+
+  // alertas (regra 4 não dispara: Ana tem 1 atrasada)
+  assert.deepStrictEqual(r.alertas.map(txt), [
+    '1 ação crítica/alta atrasada em P1',
+    '2 ações sem movimento há 7 dias ou mais',
+    '1 ação sem responsável',
+    '1 ação vence nos próximos 7 dias'
+  ]);
+  assert.deepStrictEqual(r.alertas[0].filtro, { flag: 'atrasadaCritica', projeto: 'P1' });
+  assert.deepStrictEqual([r.alertas[1].filtro, r.alertas[2].filtro, r.alertas[3].filtro], [{ flag: 'parada' }, { flag: 'semResponsavel' }, { flag: 'vence' }]);
+  assert.ok(r.alertas.every(a => a.aba === 'acoes'));
+  assert.deepStrictEqual(r.alertas[0].partes.map(p => p.forte), [true, false, true], 'número e projeto em destaque');
+
+  // sem mapa de movimento: nenhuma parada, diasParada null, alerta de estagnação ausente
+  const r0 = calcular({ tarefas: tarefas2, cklStatus, usuarios, projetos, movimento: null }, F, HOJE, deps);
+  assert.ok(r0.acoes.every(a => a.diasParada === null && !a.flags.parada));
+  assert.deepStrictEqual(r0.alertas.map(txt), ['1 ação crítica/alta atrasada em P1', '1 ação sem responsável', '1 ação vence nos próximos 7 dias']);
+
+  // paradaDias maior: só t1 (14 d) fica parada
+  const r30 = calcular(dados2, Object.assign({}, F, { paradaDias: 10 }), HOJE, deps);
+  assert.deepStrictEqual(r30.acoes.filter(a => a.flags.parada).map(a => a.id), [1]);
+  assert.strictEqual(txt(r30.alertas[1]), '1 ação sem movimento há 10 dias ou mais');
+
+  // filtro de projeto restringe acoes/matriz/alertas; filtro de unidade não afeta acoes
+  const rp = calcular(dados2, Object.assign({}, F, { projeto: 'P1' }), HOJE, deps);
+  assert.deepStrictEqual(rp.acoes.map(a => a.id), [1, 3, 2]);
+  assert.strictEqual(rp.matriz.total, 3);
+  assert.deepStrictEqual(rp.alertas.map(txt), ['1 ação crítica/alta atrasada em P1', '1 ação sem movimento há 7 dias ou mais', '1 ação vence nos próximos 7 dias']);
+  const ru = calcular(dados2, Object.assign({}, F, { unidade: 'Onco' }), HOJE, deps);
+  assert.strictEqual(ru.acoes.length, 5);
+
+  // regra 4: pessoa que concentra ≥ 2 atrasadas (sobre pessoas já filtradas por unidade)
+  const tarefas3 = tarefas2.concat([T(7, 'P1', ANA, '2026-09-02', 'A fazer')]);
+  const r4 = calcular({ tarefas: tarefas3, cklStatus, usuarios, projetos, movimento }, F, HOJE, deps);
+  const a4 = r4.alertas.filter(a => a.aba === 'pessoas')[0];
+  assert.ok(a4, 'alerta de pessoa presente');
+  assert.strictEqual(txt(a4), 'Ana Souza concentra 2 ações atrasadas');
+  assert.deepStrictEqual(a4.filtro, { pessoa: ANA });
+  const r4u = calcular({ tarefas: tarefas3, cklStatus, usuarios, projetos, movimento }, Object.assign({}, F, { unidade: 'Onco' }), HOJE, deps);
+  assert.ok(!r4u.alertas.some(a => a.aba === 'pessoas'), 'Ana é de Rede: com filtro Onco a regra 4 não dispara');
+
+  // limite: no máximo 5 alertas e no máximo 3 da regra 1
+  const muitos = tarefas2.concat([T(8, 'P2', ANA, '2026-09-01', 'A fazer'), T(9, 'P3', ANA, '2026-09-01', 'A fazer'), T(10, 'P4', ANA, '2026-09-01', 'A fazer')].map(t => Object.assign(t, { Prioridade: 'Alta' })));
+  const rm = calcular({ tarefas: muitos, cklStatus, usuarios, projetos, movimento }, F, HOJE, deps);
+  assert.strictEqual(rm.alertas.length, 5);
+  assert.strictEqual(rm.alertas.filter(a => a.filtro && a.filtro.flag === 'atrasadaCritica').length, 3);
+
+  // sem nada a apontar: lista vazia
+  const calmo = [T(11, 'P1', ANA, '2026-12-01', 'Em andamento')];
+  const rc = calcular({ tarefas: calmo, cklStatus: {}, usuarios, projetos, movimento: { '11': '2026-09-08T08:00:00' } }, F, HOJE, deps);
+  assert.deepStrictEqual(rc.alertas, []);
+  assert.strictEqual(rc.acoes[0].severidade, 9);
+}
