@@ -5,95 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestão de Tarefas — Unimed CNU</title>
   <?!= include('Estilos_Fontes') ?>
+  <?!= include('Tokens') ?>
   <style>
     /* ═══════════════════════════════════════════════════════════
        DESIGN SYSTEM UNIMED CNU — tokens canônicos (starter-kit).
        NÃO alterar valores aqui: mudança de token é decisão do DS.
        ═══════════════════════════════════════════════════════════ */
-    :root {
-      /* ── shadcn: superfícies e texto ── */
-      --background:        #F8F7F4;   /* creme — canvas de todos os portais */
-      --surface:           #FFFFFF;
-      --card:              #FFFFFF;
-      --card-foreground:   #16302E;
-      --popover:           #FFFFFF;
-      --popover-foreground:#16302E;
-      --foreground:        #16302E;   /* ink */
-      --muted-bg:          #EFECE4;
-      --muted:             #EFECE4;
-      --muted-foreground:  #6E807D;
-
-      /* ── shadcn: marca e ação ── */
-      --primary:           #004E4C;
-      --primary-hover:     #03605D;
-      --primary-foreground:#FFFFFF;
-      --secondary:         #EFECE4;
-      --secondary-foreground:#16302E;
-      --accent:            #C9A84C;   /* dourado (DS) — NÃO é hover neutro */
-      --accent-bg:         #FAF4E6;
-      --accent-foreground: #2A2205;
-      --hover-bg:          #EFECE4;   /* hover neutro de itens/botões ghost */
-      --destructive:       #C4402E;
-      --destructive-foreground:#FFFFFF;
-
-      /* ── shadcn: bordas, foco, raio ── */
-      --border:            #E7E3DB;
-      --border-hover:      #D9D3C7;
-      --input:             #E7E3DB;
-      --ring:              #004E4C;
-      --radius:            10px;
-
-      /* ── acentos de marca ── */
-      --verde:        #00995D;        /* verde Unimed oficial (positivo) */
-      --verde-claro:  #0A6B45;
-      --verde-bg:     #E4F3EC;
-      --dourado:      #C9A84C;
-      --dourado-hover:#B8963F;
-      --dourado-bg:   #FAF4E6;
-
-      /* ── semânticos de estado (prazo/status) ── */
-      --ok:   #00995D; --ok-bg:   #E4F3EC; --ok-ink:   #0A6B45;
-      --warn: #E4761B; --warn-bg: #FBEEDF; --warn-ink: #8A4406;
-      --late: #C4402E; --late-bg: #F8E4E0; --late-ink: #8F2417;
-
-      /* ── compat. com nomes legados usados no markup ── */
-      --bg-app:       var(--background);
-      --bg-card:      var(--card);
-      --bg-toolbar:   var(--surface);
-      --text-primary:   var(--foreground);
-      --text-secondary: #4A5F5C;
-      --text-muted:     var(--muted-foreground);
-      --cinza-50:  #EFECE4; --cinza-100: #E7E3DB; --cinza-200: #D9D3C7;
-      --cinza-400: #9AA8A5; --cinza-700: #4A5F5C; --cinza-900: #16302E;
-      --erro-bg:  var(--late-bg);  --erro-cor: var(--late);
-      --aviso-bg: var(--warn-bg);  --aviso-cor: var(--warn-ink);
-      --info-bg:  var(--dourado-bg); --info-cor: #8A6D1F;
-
-      /* ── Status (Kanban) — paleta da marca, sem azuis ── */
-      --col-backlog:   #6E807D;
-      --col-afazer:    #4A5F5C;
-      --col-andamento: #C9A84C;
-      --col-bloqueado: #C4402E;
-      --col-concluido: #00995D;
-
-      /* ── sidebar (rail escura do Shell) ── */
-      --sidebar:            #004E4C;
-      --sidebar-foreground: #B9CAC7;
-      --sidebar-active:     #FFFFFF;
-      --sidebar-label:      #6E938F;
-      --sidebar-muted:      #7C918E;
-
-      /* ── sombras ── */
-      --shadow-sm:  0 1px 2px 0 rgba(0,0,0,.05);
-      --shadow:     0 1px 3px 0 rgba(0,30,28,.08);
-      --shadow-hover: 0 6px 18px rgba(0,40,38,.07);
-      --shadow-modal: 0 24px 70px rgba(0,30,28,.35);
-      --shadow-lg:  var(--shadow-modal);
-
-      /* ── tipografia ── Inter = UI; Slab SÓ na assinatura */
-      --font:  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      --serif: 'Unimed Slab', Georgia, 'Times New Roman', serif;
-    }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
