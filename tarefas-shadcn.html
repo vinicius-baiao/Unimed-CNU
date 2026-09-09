@@ -542,7 +542,7 @@
     .home-link-row { display: flex; justify-content: flex-end; margin: -20px 0 24px; }
     .home-link { font-size: .85rem; font-weight: 600; color: var(--primary); cursor: pointer; text-decoration: none; }
     .home-link:hover { text-decoration: underline; }
-    #indicadoresView { padding: 28px 32px 40px; max-width: 1240px; }
+    #indicadoresView { padding: 28px 32px 40px; max-width: 1240px; margin: 0 auto; }
     .ind-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
     .ind-filtros { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; margin-bottom: 20px; }
     .ind-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; color: var(--muted-foreground); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
@@ -558,6 +558,8 @@
     .ind-tabela tbody tr:hover { background: var(--hover-bg); }
     .ind-tabela tbody tr.sem-resp { font-style: italic; color: var(--text-secondary); cursor: default; }
     .ind-tabela tbody tr.sem-resp:hover { background: transparent; }
+    .ind-tabela tbody tr.sem-clique { cursor: default; }
+    .ind-tabela tbody tr.sem-clique:hover { background: transparent; }
     .ind-tabela .zero { color: var(--muted-foreground); }
     .ind-tabela .ruim { color: var(--erro-cor); font-weight: 600; }
     .ind-tabela .aviso { color: var(--warn-ink); font-weight: 600; }
@@ -824,7 +826,7 @@
   </div>
   <div class="home-stat-grid ind-totais">
     <div class="home-stat-card"><div class="stat-num" id="indTotAtivas">—</div><div class="stat-label">Ativas</div></div>
-    <div class="home-stat-card"><div class="stat-num" id="indTotAndamento">—</div><div class="stat-label">Bloqueadas</div></div>
+    <div class="home-stat-card"><div class="stat-num" id="indTotBloqueadas">—</div><div class="stat-label">Bloqueadas</div></div>
     <div class="home-stat-card" id="indTotAtrasadasCard"><div class="stat-num" id="indTotAtrasadas">—</div><div class="stat-label">Atrasadas</div></div>
     <div class="home-stat-card"><div class="stat-num" id="indTotProximas">—</div><div class="stat-label" id="indTotProximasLabel">Próximas (7 dias)</div></div>
   </div>
@@ -1038,7 +1040,7 @@ var currentUserIsAdmin   = false;
 var currentUserPodeExcluir = false;
 var currentUserPerfil      = '';
 
-var modoAtual    = 'home';   // 'home' | 'tarefas'
+var modoAtual    = 'home';   // 'home' | 'tarefas' | 'indicadores'
 var viewAtual    = 'kanban';
 var sortCol      = 'ID';
 var sortAsc      = true;
@@ -1512,13 +1514,13 @@ function renderIndicadores() {
   );
   var t = indUltimo.totais;
   document.getElementById('indTotAtivas').textContent    = t.ativas;
-  document.getElementById('indTotAndamento').textContent = t.bloqueadas;
+  document.getElementById('indTotBloqueadas').textContent = t.bloqueadas;
   document.getElementById('indTotAtrasadas').textContent = t.atrasadas;
   document.getElementById('indTotProximas').textContent  = t.proximas;
   document.getElementById('indTotProximasLabel').textContent = 'Próximas (' + indJanelaDias + ' dias)';
   document.getElementById('indTotAtrasadasCard').className = 'home-stat-card' + (t.atrasadas > 0 ? ' alert' : '');
-  if (typeof renderIndPessoas === 'function')  renderIndPessoas(indUltimo);
-  if (typeof renderIndProjetos === 'function') renderIndProjetos(indUltimo);
+  renderIndPessoas(indUltimo);
+  renderIndProjetos(indUltimo);
 }
 
 var IND_COLUNAS = [
@@ -1558,7 +1560,7 @@ function renderIndPessoas(res) {
       return ((x || 0) - (y || 0)) * dir || a.nome.localeCompare(b.nome, 'pt-BR');
     });
   }
-  if (!lista.length && !res.semResponsavel) {
+  if (!lista.length && !(res.semResponsavel && !indBuscaTermo)) {
     el.innerHTML = '<div class="ind-vazio">Nenhuma pessoa com tarefas nos filtros atuais.</div>';
     return;
   }
@@ -1569,7 +1571,8 @@ function renderIndPessoas(res) {
   });
   html += '</tr></thead><tbody>';
   function linha(p, semResp) {
-    var s = '<tr class="' + (semResp ? 'sem-resp' : '') + '"' + (semResp ? '' : ' data-email="' + esc(p.email) + '"') + '>';
+    var clicavel = !semResp && (p.ativas + p.concluidas) > 0;
+    var s = '<tr class="' + (semResp ? 'sem-resp' : (clicavel ? '' : 'sem-clique')) + '"' + (clicavel ? ' data-email="' + esc(p.email) + '"' : '') + '>';
     s += '<td><div class="ind-pessoa">' + (semResp ? '' : '<span class="avatar">' + esc(avatarInitials(p.email)) + '</span>')
       + '<span>' + esc(p.nome) + (p.cargo ? '<small>' + esc(p.cargo) + '</small>' : '') + '</span></div></td>';
     s += '<td>' + esc(p.unidade || '—') + '</td>';
@@ -2875,7 +2878,7 @@ function renderListaProjetos() {
   }
   el.innerHTML = projetos.map(function(p) {
     return '<div class="proj-list-item">'
-      + '<div class="proj-color-dot" style="background:' + p.cor + '"></div>'
+      + '<div class="proj-color-dot" style="background:' + corDoProjeto(p.nome) + '"></div>'
       + '<div style="flex:1;min-width:0">'
       +   '<div class="proj-list-nome">' + esc(p.nome) + '</div>'
       +   (p.descricao ? '<div class="proj-list-desc">' + esc(p.descricao) + '</div>' : '')
