@@ -33,7 +33,7 @@ Só `tarefas-shadcn.html` muda (markup + CSS + JS), mais um teste Node novo em `
 Função **pura** (sem DOM, sem globais), definida no `<script>` principal entre marcadores
 `/* @indicadores:inicio */` e `/* @indicadores:fim */` para o teste Node extrair.
 
-Entrada: `dados = {tarefas, cklStatus, usuarios}` — `tarefas` (objetos como vêm do `bootstrap`, campos `ID`,
+Entrada: `dados = {tarefas, cklStatus, usuarios, projetos}` — `tarefas` (objetos como vêm do `bootstrap`, campos `ID`,
 `Projeto`, `Responsável`, `Prazo`, `Status`, `Prioridade`), `cklStatus` (`{idTarefa: [{Responsavel,
 'Concluído', …}]}`), `usuarios` (`{nome, email, perfil, unidade, cargo}`); `filtros = {unidade, projeto,
 janelaDias}` (strings vazias = sem filtro); `hoje` (`Date`, injetado para o teste ser determinístico);
