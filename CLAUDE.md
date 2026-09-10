@@ -101,6 +101,11 @@ promover pela tela; `bootstrap().usuario.superAdmin` liga o item de rail.
 npx serve -p 3000 .     # preview local da UI (config em .claude/launch.json)
 ```
 
+⚠️ **Preview local e tokens:** desde a modernização visual (09/09), os tokens de cor/escala do Cora vêm de
+`Tokens.html` via `<?!= include('Tokens') ?>` (diretiva do Apps Script). O `npx serve` **não resolve** esse
+include, então a UI fica **sem estilo** no localhost. Para ver estilizado, gere um HTML com os includes
+(`Estilos_Fontes` + `Tokens`) embutidos e sirva esse arquivo. Em produção o include resolve normalmente.
+
 ℹ️ No preview local o frontend cai num **mock embutido** (bloco no fim de `tarefas-shadcn.html`,
 que sobrescreve `chamarAPI`): tarefas, usuários, projetos e checklists de exemplo, sem backend.
 Serve para reproduzir bugs de UI simulando outro perfil — basta ajustar `currentUser` /

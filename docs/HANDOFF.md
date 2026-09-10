@@ -23,6 +23,42 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
+### Último bloco — 09/09 (tarde): modernização visual — Tokens.html do DS + piloto no Cora — publicado @71
+
+Pedido do Aurélio: analisar o painel Spravato, rever o design system e "modernizar o visual" das ferramentas
+(seguem sendo ferramentas — sem hero/efeitos nesta rodada). Abordagem: consolidar em escalas; piloto vivo: Cora.
+Spec: `docs/superpowers/specs/2026-09-09-modernizacao-visual-design-system-design.md`; plano:
+`docs/superpowers/plans/2026-09-09-modernizacao-visual-design-system.md`. Execução por subagentes
+(implementador + revisor por tarefa; 1 fix round na Task 4 e na Task 5; revisão final opus "pronto para publicar").
+Commits Cora `e7941d9..0c5b12b`; DS (repo `UNIMED - Design System`) `a006eb1..d058ba2`.
+
+- **`Tokens.html` canônico** nasce no DS (`starter-kit/Tokens.html`, 123 tokens): paleta atual **mais escalas**
+  nomeadas — tipografia `--fs-eyebrow:12`…`--fs-display:28` (piso 12px), raio `--radius-sm/lg/pill`, três
+  elevações `--elev-rest/hover/modal`, espaço `--sp-1..8`, motion `--motion-fast/med` + `--ease` (hover nunca
+  com `scale`), `--focus-ring`, `--accent-ink` único dourado-sobre-claro, e `@media (prefers-reduced-motion)`.
+  Distribuído por **cópia byte-idêntica** por portal, como `Estilos_Fontes`.
+- **Cora adotou** (`tarefas-shadcn.html`): passou a incluir `<?!= include('Tokens') ?>` e perdeu o `:root` local;
+  todo `font-size` < 12px subiu para `var(--fs-eyebrow)`; sombras colapsadas nas três elevações; `scale` de hover
+  removido; foco visível tokenizado. Trouxe do Spravato: stat card com barra por **significado** (via `:has(#id)`),
+  `#indFiltros` sticky translúcida, cabeçalhos de seção com tokens, `.tarefas-table` alinhada à `.ind-tabela`.
+  **Sem mudança de layout, fluxo, texto ou dado.** Teste novo `tests/test_tokens.js` (4 invariantes); `npm test`
+  = 10 verdes. O push do Cora agora lista **8 arquivos** (os 7 + `Tokens.html`).
+- **DS**: doutrina (`CLAUDE.md` §1 "Escalas", §2 "mínimo 12px", §7 include), `README`/`starter-kit/LEIA-ME`
+  (tabela + passo de criação), e `guia-referencia-visual.html` (nova seção "Escalas").
+- **Verificado em produção (09/09, @71):** `bootstrap` `superAdmin:true`, 81 tarefas; a Home renderiza com as
+  barras semânticas dos stat cards e as divisórias "MINHAS TAREFAS"/"ATRASADAS" em eyebrow de 12px; tokens
+  resolvem pelo include. (A primeira captura veio em branco por timeout transitório do render do iframe; reload resolveu.)
+- **Armadilha nova (dev):** o preview local por `npx serve -p 3000 .` **não resolve** o `<?!= include('Tokens') ?>`
+  (é diretiva do Apps Script), então a UI renderiza **sem tokens** (crua) no localhost. Para ver estilizado, gerar
+  um preview com os includes embutidos (resolver `Estilos_Fontes`+`Tokens` num HTML e servir esse). Em produção
+  (Apps Script) o include resolve normalmente.
+- **Parqueado (revisão final, não bloqueia):** `#indFiltros top:56px` sem token `--topbar-h` (topbar ~57px);
+  `.tarefas-table` usa `--muted-foreground/--muted-bg` vs `.ind-tabela` `--text-secondary/--hover-bg` (aproximada);
+  `tr:focus-visible` sem `tabindex` (código morto até as linhas ganharem foco de teclado); §5 do CLAUDE.md do DS
+  ainda descreve componentes legados a 11px (migra quando o starter-kit for atualizado).
+- **Pendência:** PF, GT e Spravato adotam o `Tokens.html` (trocar o `:root` pelo include) no próximo deploy de
+  cada um — fora desta rodada; o `Tokens.html` já está pronto no DS para copiar.
+
 ### Último bloco — 09/09 (manhã): aba Acessos para o super-admin — publicado @70
 
 Pedido do Aurélio: "tela de gerenciamento de acessos visível somente para mim, para definir os papéis com mais
