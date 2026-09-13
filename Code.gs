@@ -88,7 +88,7 @@ function doGet(e) {
     }
     // Template (não arquivo estático): permite <?!= include('Estilos_Fontes') ?>
     // deepLink: ?projeto=<id> e ?tarefa=<id> na URL abrem o app já filtrado /
-    // com o modal aberto (botões "Abrir/Editar no Cora" dos painéis).
+    // com o modal aberto (botões "Abrir/Editar no Iris" dos painéis).
     var tpl = HtmlService.createTemplateFromFile(HTML_FILE);
     tpl.deepLink = deepLinkJson(e.parameter);
     return tpl.evaluate()
