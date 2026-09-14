@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "tarefas-shadcn.html"
+        ],
+        "createdAt": "2026-08-05T13:05:56.782Z",
+        "reason": "Barra de 4px e exigencia do Design System e codifica status da tarefa; confirmado pelo Aurelio"
+      },
+      {
+        "rule": "em-dash-overuse",
+        "value": "*",
+        "files": [
+          "tarefas-shadcn.html"
+        ],
+        "createdAt": "2026-08-05T13:06:03.645Z",
+        "reason": "Travessoes estao em comentarios de codigo e placeholders de UI, nao em prosa de interface"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "tarefas-shadcn.html"
+        ],
+        "createdAt": "2026-08-05T13:06:30.607Z",
+        "reason": "L109 e a rail do Shell do starter kit (position:fixed, copia verbatim). L309 (.ckl-bar-fill animando width) e divida real e segue registrada em docs/DEBITO_TECNICO.md para migrar a transform:scaleX"
+      }
+    ]
+  }
+}

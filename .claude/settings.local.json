@@ -10,7 +10,25 @@
       "PowerShell(python -c \"import openpyxl; print\\('ok'\\)\")",
       "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; python \"C:/Users/Aurélio/Downloads/build_db.py\")",
       "mcp__visualize__read_me",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git commit -m 'config: adiciona SHEET_ID da planilha base de dados *)",
+      "Bash(Select-String -Path \"C:\\\\Users\\\\Aurélio\\\\UNIMED - Gestão de Projetos\\\\tarefas.html\" -Pattern \"Salvar\")",
+      "Bash(Select-Object -First 20)",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\Aurélio\\\\UNIMED - Gestão de Projetos\\\\tarefas.html\" -Pattern \"drag\" | ForEach-Object { \"$\\($_.LineNumber\\): $\\($_.Line.Trim\\(\\)\\)\" })",
+      "WebFetch(domain:elements.ai-sdk.dev)",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "Bash(gh pr *)",
+      "Bash(python -c ' *)",
+      "mcp__388687dd-345d-430b-8bf4-2a88ec95b215__read_file_content",
+      "PowerShell(gh --version 2>&1)",
+      "Bash(npx clasp *)"
     ]
   }
 }

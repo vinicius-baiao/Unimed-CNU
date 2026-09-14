@@ -1,0 +1,109 @@
+<!-- ============================================================
+  Tokens.html — tokens canônicos do Design System Unimed CNU.
+  Distribuição por CÓPIA byte-idêntica em cada portal (como Estilos_Fontes),
+  incluído no <head> LOGO APÓS Estilos_Fontes e ANTES de ChartJs:
+      <?!= include('Estilos_Fontes') ?>
+      <?!= include('Tokens') ?>
+      <?!= include('ChartJs') ?>
+  Nenhum portal define :root próprio: consome tudo daqui via var(--...).
+  Fonte da verdade: este arquivo no repo do Design System.
+============================================================ -->
+<style>
+:root{
+  /* ── shadcn: superfícies e texto ── */
+  --background:#F8F7F4;            /* creme — canvas de todos os portais */
+  --card:#FFFFFF; --surface:#FFFFFF; --popover:#FFFFFF;
+  --card-foreground:#16302E; --popover-foreground:#16302E;
+  --foreground:#16302E;           /* ink */
+  --muted-bg:#EFECE4;             /* superfície neutra (segmented, trilhos) */
+  --muted:#EFECE4;                /* alias de superfície neutra (= --muted-bg).
+                                     Nota: supera o legado do Shell (--muted =
+                                     texto); texto muted usa --muted-foreground. */
+  --surface-2:#F1EFE9;            /* creme neutro: cabeçalho de tabela, notas */
+  --muted-foreground:#6E807D;
+  --text-secondary:#4A5F5C;
+
+  /* ── shadcn: marca e ação ── */
+  --primary:#004E4C; --primary-hover:#03605D; --primary-foreground:#FFFFFF;
+  --secondary:#EFECE4; --secondary-foreground:#16302E;
+  --accent:#C9A84C;               /* dourado (assinatura) — não é hover neutro */
+  --accent-bg:#FAF4E6; --accent-foreground:#2A2205;
+  --accent-ink:#7A5F16;           /* ÚNICO texto dourado sobre fundo claro */
+  --accent-active:var(--accent-bg);
+  --hover-bg:#EFECE4;             /* hover neutro de itens/botões ghost */
+  --destructive:#C4402E; --destructive-foreground:#FFFFFF;
+
+  /* ── shadcn: bordas, foco, raio ── */
+  --border:#E7E3DB; --border-hover:#D9D3C7; --input:#E7E3DB;
+  --ring:#004E4C;
+
+  /* ── acentos de marca Unimed CNU ── */
+  --verde:#00995D; --verde-claro:#0A6B45; --verde-bg:#E4F3EC;
+  --dourado:#C9A84C; --dourado-hover:#B8963F; --dourado-bg:#FAF4E6;
+  --lima:#B1D34B; --laranja:#F47920;
+  --roxo:#6B4FA0; --roxo-bg:#F1ECF6;
+  --teal:#3B5D59; --teal-bg:#E7EEEC;
+  --grade:#F1EFE9;                /* grade de gráfico (Chart.js DS) */
+
+  /* ── semânticos de estado (prazo/status) ── */
+  --ok:#00995D;   --ok-bg:#E4F3EC;   --ok-ink:#0A6B45;
+  --warn:#E4761B; --warn-bg:#FBEEDF; --warn-ink:#8A4406;
+  --late:#C4402E; --late-bg:#F8E4E0; --late-ink:#8F2417;
+
+  /* ── Status (Kanban do Iris) — paleta da marca, sem azuis ── */
+  --col-backlog:#6E807D; --col-afazer:#4A5F5C; --col-andamento:#C9A84C;
+  --col-bloqueado:#C4402E; --col-concluido:#00995D;
+
+  /* ── sidebar (rail escura do Shell) ── */
+  --sidebar:#004E4C; --sidebar-foreground:#B9CAC7; --sidebar-active:#FFFFFF;
+  --sidebar-label:#6E938F; --sidebar-muted:#7C918E;
+
+  /* ══ ESCALAS (modernização 09/2026) ══ */
+  /* Tipografia — 12px é o mínimo absoluto */
+  --fs-eyebrow:12px;   /* labels caixa-alta, eyebrows, meta, célula densa */
+  --fs-sm:13px;        /* texto de apoio */
+  --fs-base:14px;      /* corpo */
+  --fs-lg:16px;        /* subtítulo, número de card pequeno */
+  --fs-title:20px;     /* título de view/seção */
+  --fs-display:28px;   /* número de stat */
+  --fw-normal:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+  --lh-tight:1.2; --lh-base:1.5;
+  /* Raio */
+  --radius-sm:6px; --radius:10px; --radius-lg:14px; --radius-pill:999px;
+  /* Elevação — três níveis */
+  --elev-rest:0 1px 2px 0 rgba(0,0,0,.05);
+  --elev-hover:0 6px 18px rgba(0,40,38,.07);
+  --elev-modal:0 24px 70px rgba(0,30,28,.28);
+  /* Espaço — múltiplos de 4 */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+  /* Motion — uma curva, dois tempos; hover nunca com scale */
+  --motion-fast:150ms; --motion-med:250ms; --ease:cubic-bezier(.4,0,.2,1);
+  /* Foco — anel verde sobre halo do fundo */
+  --focus-ring:0 0 0 2px var(--background),0 0 0 4px var(--ring);
+
+  /* ── sombras (aliases das elevações — compat com markup existente) ── */
+  --shadow-sm:var(--elev-rest);
+  --shadow:0 1px 3px 0 rgba(0,30,28,.08);
+  --shadow-hover:var(--elev-hover);
+  --shadow-modal:var(--elev-modal);
+  --shadow-lg:var(--elev-modal);
+
+  /* ── tipografia (famílias) ── Inter = UI; Slab SÓ na assinatura ── */
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --serif:'Unimed Slab',Georgia,'Times New Roman',serif;
+
+  /* ── compat — nomes legados; NÃO usar em código novo ── */
+  --bg-app:var(--background); --bg-card:var(--card); --bg-toolbar:var(--surface);
+  --canvas:var(--background); --ink:var(--foreground); --hair:var(--border);
+  --green-deep:var(--primary); --green-deep-2:var(--primary-hover); --gold:var(--dourado);
+  --text-primary:var(--foreground); --text-muted:var(--muted-foreground);
+  --cinza-50:#EFECE4; --cinza-100:#E7E3DB; --cinza-200:#D9D3C7;
+  --cinza-400:#9AA8A5; --cinza-700:#4A5F5C; --cinza-900:#16302E;
+  --erro-bg:var(--late-bg); --erro-cor:var(--late);
+  --aviso-bg:var(--warn-bg); --aviso-cor:var(--warn-ink);
+  --info-bg:var(--dourado-bg); --info-cor:#8A6D1F;
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --motion-fast:0ms; --motion-med:0ms; }
+}
+</style>

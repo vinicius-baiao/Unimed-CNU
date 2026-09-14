@@ -2,6 +2,11 @@
 
 > Carregado automaticamente pelo Claude Code no início de cada sessão neste diretório.
 > Ponto de partida para entender o projeto e continuar de onde paramos.
+>
+> 👉 **Estado atual, pendências e backlog: [`docs/HANDOFF.md`](docs/HANDOFF.md)** — ler
+> sempre no início da sessão e atualizar ao fim de cada bloco de trabalho.
+> ⚠️ Este CLAUDE.md descreve o layout clássico (`tarefas.html`); o frontend em produção
+> hoje é **`tarefas-shadcn.html`** (ver `README.md`).
 
 ## O que é este projeto
 
@@ -35,19 +40,36 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 
 | Ação | Função | Papel |
 |---|---|---|
+| `bootstrap` | `bootstrap()` | **Carga inicial**: perfil + tarefas + checklists + projetos + usuários numa execução só (o front usa apenas esta rota ao abrir) |
 | `listarTarefas` | `listarTarefas()` | Lista tarefas ativas (ignora `Ativo = false`) |
 | `criarTarefa` | `criarTarefa(dados)` | Cria + notifica responsável + cria evento no Calendar |
 | `atualizarTarefa` | `atualizarTarefa(dados)` | Edita campos; regras de permissão (ver abaixo) |
 | `excluirTarefa` | `excluirTarefa(dados)` | **Soft delete** (seta `Ativo = false`) |
-| `listarTemplates` | `listarTemplates()` | Templates de checklist agrupados por `ID_Template` |
+| `listarTemplates` | `listarTemplates()` | Templates de checklist agrupados por `ID_Template` (⚠️ fora da carga inicial: o front não consome) |
 | `listarChecklist_Status` | `listarChecklist_Status()` | Estado dos itens de checklist por tarefa |
 | `salvarChecklist` | `salvarChecklist(dados)` | Substitui (remove + regrava) os itens de uma tarefa |
+| `avisarMarcadoChecklist` | `avisarMarcadoChecklist(dados)` | Envia e-mail manual ao colega marcado, com os itens dele naquela tarefa (valida visibilidade, domínio e se ele está marcado) |
 | `listarInteracoes` | `listarInteracoes(dados)` | Histórico de interações de uma tarefa |
 | `adicionarInteracao` | `adicionarInteracao(dados)` | Adiciona comentário/interação |
-| `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) |
+| `listarProjetos` / `criarProjeto` / `atualizarProjeto` / `arquivarProjeto` | idem | CRUD de projetos (Admin/Gestor). Aceitam `publico` (coluna F da aba Projetos) |
+| `indicadoresMovimento` | `indicadoresMovimento()` | **Gestor/Admin.** Última movimentação por tarefa (criação, Interações, Log `ID_Tarefa`, itens concluídos) para a métrica "parada há N dias" da aba Indicadores. Cache 120 s |
+| `planoAcaoProjeto` | `planoAcaoProjeto(dados)` | **Leitura pública** das tarefas de um projeto público (`projetoId` ou `projetoNome`), com checklist e última interação. Passa **por fora da allowlist** do piloto; consumida pelos painéis Spravato / PF / GT Onco. Cache 60 s |
+| `atualizarUsuario` / `adicionarUsuario` / `removerUsuario` | idem | **Só super-admin** (`SUPER_ADMINS` no `Code.gs`, hoje só o Aurélio). Editam a aba `Usuários` (perfil/nome/unidade/cargo, incluir com domínio validado, remover linha) — ou seja, concedem e revogam acesso. Log `ACESSO`; invalidam `perfis_v1`/`usuarios_v1` |
+| `getUsuario` | — | Retorna e-mail do usuário logado (`Session.getActiveUser`) + `perfil`, `admin`, `podeExcluir`, `superAdmin` |
 
 Funções **sem rota** (rodam por trigger/manual): `setup()` (cria abas e validações, rodar 1x),
-`relatorioDiario()` (e-mail HTML de resumo), `lembretesDiarios()` (lembrete D-1).
+`relatorioDiario()` (e-mail HTML de resumo), `lembretesDiarios()` (lembrete D-1),
+`migrarProjetosPublico()` (coluna F em planilha antiga), e as importações manuais de
+`ImportacaoUsuarios.gs` (`remapearEmailUsuario`, `importarUsuariosEquipe`) e
+`ImportacaoPlanos.gs` (`importarPlanosDeAcao`) — todas com modo de simulação.
+
+**Link profundo:** o `doGet` sem `acao` aceita `?projeto=<id>` e `?tarefa=<id>` e injeta em
+`data-deep-link` no `<body>`; o front filtra o projeto ou abre o modal.
+
+**Allowlist do piloto** (`PILOTO_ATIVO`): é a aba `Usuários`. Não existe mais lista no código.
+A aba **Acessos** do front (só super-admin) é a interface para essa aba: incluir = dar acesso, remover = revogar.
+**Super-admin** não é perfil da planilha — é a constante `SUPER_ADMINS` no código, justamente para ninguém se
+promover pela tela; `bootstrap().usuario.superAdmin` liga o item de rail.
 
 ## Esquema da aba Tarefas (ordem fixa — `Code.gs` usa índices)
 
@@ -79,8 +101,15 @@ Funções **sem rota** (rodam por trigger/manual): `setup()` (cria abas e valida
 npx serve -p 3000 .     # preview local da UI (config em .claude/launch.json)
 ```
 
-⚠️ O preview local mostra **só a interface**: `tarefas.html` chama um `WEBAPP_URL` real (linha
-~524, atualmente **vazio**), então os dados não carregam sem backend publicado ou mock.
+⚠️ **Preview local e tokens:** desde a modernização visual (09/09), os tokens de cor/escala do Iris vêm de
+`Tokens.html` via `<?!= include('Tokens') ?>` (diretiva do Apps Script). O `npx serve` **não resolve** esse
+include, então a UI fica **sem estilo** no localhost. Para ver estilizado, gere um HTML com os includes
+(`Estilos_Fontes` + `Tokens`) embutidos e sirva esse arquivo. Em produção o include resolve normalmente.
+
+ℹ️ No preview local o frontend cai num **mock embutido** (bloco no fim de `tarefas-shadcn.html`,
+que sobrescreve `chamarAPI`): tarefas, usuários, projetos e checklists de exemplo, sem backend.
+Serve para reproduzir bugs de UI simulando outro perfil — basta ajustar `currentUser` /
+`currentUserPodeExcluir` no console antes de abrir o modal.
 
 **Deploy do backend (clasp):**
 ```bash
@@ -94,19 +123,24 @@ clasp push
 no Apps Script. Sempre editar a existente (lápis ✏️ → Nova versão). Após publicar, fazer
 **hard reload** (Ctrl+Shift+R) ou aba anônima pra furar o cache do browser.
 
-## Config que precisa ser preenchida
+## Config (já preenchida — conferir antes de mexer)
 
 | Onde | Variável | Estado | Para quê |
 |---|---|---|---|
-| `Code.gs:5` | `SHEET_ID` | vazio | Necessário se o script for standalone (vazio = container-bound) |
-| `Code.gs:11` | `EMAIL_REPORTE` | vazio | Destinatário(s) do relatório diário |
-| `tarefas.html:524` | `WEBAPP_URL` | vazio | URL do Web App que o frontend consome |
+| `Code.gs:5` | `SHEET_ID` | preenchida | ID da planilha (script é standalone, não container-bound) |
+| `Code.gs:14` | `EMAIL_REPORTE` | preenchida | Destinatário(s) do relatório diário |
+| `Code.gs:19` | `EMAIL_REMETENTE` | `taskcenter@unimedcnu.coop.br` | Send-As confirmado em 03/08/2026; `enviarEmail()` só usa se o alias existir em `GmailApp.getAliases()` |
+| `tarefas-shadcn.html:913` | `WEBAPP_URL` | preenchida | URL do Web App que o frontend consome |
 
 ## Mapa de arquivos
 
 | Arquivo | Papel |
 |---|---|
 | `Code.gs` | Backend Apps Script: roteador, CRUD, checklists, interações, e-mails, triggers |
+| `ImportacaoUsuarios.gs` | Equipe de Atenção à Saúde como constante + importação/remapeamento de e-mail (manual) |
+| `ImportacaoPlanos.gs` | Ações fixas dos painéis + macroações do GT; importação idempotente para tarefas (manual) |
+| `integracoes/PlanoAcaoCora.html` | Fonte de referência do bloco de leitura copiado nos três painéis (não sobe para o script) |
+| `tests/` | Testes Node dos `.gs` (`npm test`); `harness.js` carrega os `.gs` num `vm` com stubs |
 | `tarefas.html` | Frontend completo (markup + CSS + JS vanilla): Kanban/Lista, modal, checklist, PDF |
 | `appsscript.json` | Manifesto do Apps Script |
 | `docs/resumo_projeto.md` | Contexto do projeto (⚠️ tabela de fases está desatualizada — código já entregue) |
