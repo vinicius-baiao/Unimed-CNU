@@ -4,8 +4,44 @@
     {
       "name": "tarefas",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "."],
+      "runtimeArgs": [
+        "serve",
+        "."
+      ],
       "autoPort": true
+    },
+    {
+      "name": "spravato-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "C:/Users/AURLIO~1/AppData/Local/Temp/claude/C--Users-Aur-lio-UNIMED---Gest-o-de-Projetos/136a7fff-a3e9-4f73-80c2-ea37fe6502a2/scratchpad/spravato",
+        "-l",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "cora-tokens",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "C:/Users/AURLIO~1/AppData/Local/Temp/claude/C--Users-Aur-lio-UNIMED---Gest-o-de-Projetos/136a7fff-a3e9-4f73-80c2-ea37fe6502a2/scratchpad/cora-preview",
+        "-l",
+        "3200"
+      ],
+      "port": 3200
+    },
+    {
+      "name": "iris-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "C:/Users/AURLIO~1/AppData/Local/Temp/claude/C--Users-Aur-lio-UNIMED---Gest-o-de-Projetos/136a7fff-a3e9-4f73-80c2-ea37fe6502a2/scratchpad/iris-preview",
+        "-l",
+        "3300"
+      ],
+      "port": 3300
     }
   ]
 }

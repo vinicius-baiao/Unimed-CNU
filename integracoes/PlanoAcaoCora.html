@@ -1,5 +1,5 @@
 <!--
-  PlanoAcaoCora — bloco de leitura do plano de ação a partir do Cora.
+  PlanoAcaoCora — bloco de leitura do plano de ação a partir do Iris.
   FONTE DE REFERÊNCIA. Copiado (não incluído) nos Painel.html de:
     Raio X Spravato · Raio X da Carteira PF · GT Terapias Oncológicas
   Padrão do Design System: includes por cópia, sem dependência entre repositórios.
@@ -8,8 +8,8 @@
     1. Copiar o <style> para o CSS do painel e o <script> para o JS.
     2. Antes do script, definir:
          var PAC_CONFIG = {
-           url: '<URL /exec do Cora>',
-           projetoId: 0,               // id do projeto no Cora (preferido); 0 = usar o nome
+           url: '<URL /exec do Iris>',
+           projetoId: 0,               // id do projeto no Iris (preferido); 0 = usar o nome
            projetoNome: 'GT Onco',     // fallback enquanto o id não for conhecido
            hostId: 'pac-host',         // <div id="pac-host"></div> dentro da seção do plano
            especial: {                 // opcional: link extra por marca de origem
@@ -18,11 +18,11 @@
          };
     3. Chamar pacIniciar() quando a seção abrir (INIT.acoes no Spravato/PF; DOMContentLoaded no GT).
 
-  Backend: rota planoAcaoProjeto do Cora (Code.gs), JSONP, cache de 60 s.
+  Backend: rota planoAcaoProjeto do Iris (Code.gs), JSONP, cache de 60 s.
   Spec: docs/superpowers/specs/2026-09-08-planos-de-acao-dos-paineis-no-cora-design.md
 -->
 <style>
-/* ══ PlanoAcaoCora — plano de ação lido do Cora (copiado de integracoes/PlanoAcaoCora.html) ══ */
+/* ══ PlanoAcaoCora — plano de ação lido do Iris (copiado de integracoes/PlanoAcaoCora.html) ══ */
 .pac-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}
 .pac-bar .pac-fonte{font-size:12px;color:var(--muted-foreground,#6E807D)}
 .pac-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:8px 16px;font:inherit;font-weight:700;font-size:12.5px;
@@ -74,15 +74,15 @@
 </style>
 
 <script>
-/* ══ PlanoAcaoCora — leitura do plano de ação a partir do Cora (JSONP). ══
-   Copiado de integracoes/PlanoAcaoCora.html no repositório do Cora. Não editar
+/* ══ PlanoAcaoCora — leitura do plano de ação a partir do Iris (JSONP). ══
+   Copiado de integracoes/PlanoAcaoCora.html no repositório do Iris. Não editar
    só aqui: alterar lá e recopiar nos três painéis. Requer PAC_CONFIG definido antes. */
 var PAC_ORDEM = { 'Em andamento': 0, 'Bloqueado': 1, 'A fazer': 2, 'Backlog': 3, 'Concluído': 4 };
 var PAC_BADGE = { 'Em andamento': 'doing', 'Bloqueado': 'block', 'A fazer': 'wait', 'Backlog': 'wait', 'Concluído': 'ok' };
 var PAC_TIMEOUT_MS = 15000;
 var PAC_AMOSTRA = [
   { id: 1, tarefa: 'Ação de exemplo em andamento', status: 'Em andamento', prazo: '2026-12-31', responsavel: 'colega@unimedcnu.coop.br',
-    observacoes: 'Card ilustrativo do preview local. Em produção, os dados vêm do Cora.\nOrigem: amostra#1', ultimaAtualizacao: '2026-09-08T10:00:00',
+    observacoes: 'Card ilustrativo do preview local. Em produção, os dados vêm do Iris.\nOrigem: amostra#1', ultimaAtualizacao: '2026-09-08T10:00:00',
     checklist: { total: 3, feitos: 1, itens: [{ item: '1.1 Primeiro desdobramento', feito: true, responsavel: '' }, { item: '1.2 Segundo', feito: false, responsavel: '' }, { item: '1.3 Terceiro', feito: false, responsavel: '' }] } },
   { id: 2, tarefa: 'Ação de exemplo a iniciar', status: 'A fazer', prazo: '', responsavel: '', observacoes: 'Origem: amostra#2', ultimaAtualizacao: '', checklist: { total: 0, feitos: 0, itens: [] } },
   { id: 3, tarefa: 'Ação de exemplo concluída', status: 'Concluído', prazo: '2026-08-06', responsavel: 'outra@unimedcnu.coop.br', observacoes: 'Origem: amostra#3', ultimaAtualizacao: '2026-08-06T16:20:00', checklist: { total: 2, feitos: 2, itens: [{ item: 'a', feito: true, responsavel: '' }, { item: 'b', feito: true, responsavel: '' }] } }
@@ -100,7 +100,7 @@ function pacNome(email) {
 function pacMarca(obs) { var m = /Origem:\s*(\S+)/.exec(obs || ''); return m ? m[1] : ''; }
 function pacSemMarca(obs) { return String(obs || '').replace(/\n?Origem:\s*\S+\s*$/, '').trim(); }
 
-/* JSONP autossuficiente (mesmo padrão do chamarAPI do Cora), com timeout. */
+/* JSONP autossuficiente (mesmo padrão do chamarAPI do Iris), com timeout. */
 function pacJsonp(url, params, cb) {
   var nome = '_pac_' + Date.now() + '_' + Math.floor(Math.random() * 1e6), feito = false;
   var s = document.createElement('script');
@@ -108,9 +108,9 @@ function pacJsonp(url, params, cb) {
   window[nome] = function (data) { fim(data); };
   params.callback = nome;
   s.src = url + '?' + Object.keys(params).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]); }).join('&');
-  s.onerror = function () { fim({ erro: 'Falha de rede ao contatar o Cora.' }); };
+  s.onerror = function () { fim({ erro: 'Falha de rede ao contatar o Iris.' }); };
   document.body.appendChild(s);
-  setTimeout(function () { fim({ erro: 'O Cora não respondeu em ' + Math.round(PAC_TIMEOUT_MS / 1000) + ' s.' }); }, PAC_TIMEOUT_MS);
+  setTimeout(function () { fim({ erro: 'O Iris não respondeu em ' + Math.round(PAC_TIMEOUT_MS / 1000) + ' s.' }); }, PAC_TIMEOUT_MS);
 }
 
 function pacOrdenar(tarefas) {
@@ -130,7 +130,7 @@ function pacKpisHTML(t) {
   var ini = t.filter(function (x) { return x.status === 'A fazer' || x.status === 'Backlog'; }).length;
   var pct = total ? Math.round(conc / total * 100) : 0;
   return '<div class="pac-kpis">' +
-    '<div class="pac-kpi"><div class="l">Ações no plano</div><div class="v">' + total + '</div><div class="h">geridas no Cora</div></div>' +
+    '<div class="pac-kpi"><div class="l">Ações no plano</div><div class="v">' + total + '</div><div class="h">geridas no Iris</div></div>' +
     '<div class="pac-kpi ok"><div class="l">De execução</div><div class="v">' + pct + '%</div><div class="h">' + conc + ' concluída' + (conc === 1 ? '' : 's') + '</div></div>' +
     '<div class="pac-kpi doing"><div class="l">Em andamento</div><div class="v">' + and + '</div><div class="h">inclui bloqueadas</div></div>' +
     '<div class="pac-kpi wait"><div class="l">A iniciar</div><div class="v">' + ini + '</div><div class="h">a fazer + backlog</div></div>' +
@@ -155,7 +155,7 @@ function pacCardHTML(t, urlCora) {
   }
   var esp = (PAC_CONFIG.especial || {})[pacMarca(t.observacoes)], extra = '';
   if (esp) extra = '<a class="pac-link" href="javascript:void 0" onclick="' + pacEsc(esp.onclick || '') + '">' + pacEsc(esp.texto) + '</a>';
-  var editar = urlCora ? '<a class="pac-link" href="' + pacEsc(urlCora) + '?tarefa=' + t.id + '" target="_blank" rel="noopener">Editar no Cora →</a>' : '';
+  var editar = urlCora ? '<a class="pac-link" href="' + pacEsc(urlCora) + '?tarefa=' + t.id + '" target="_blank" rel="noopener">Editar no Iris →</a>' : '';
   return '<div class="pac-item" data-id="' + t.id + '">' +
     '<div class="pac-top"><b>' + pacEsc(t.tarefa) + '</b><span class="pac-badge ' + badge + '">' + pacEsc(t.status) + '</span></div>' +
     '<div class="pac-meta">' + meta + '</div>' +
@@ -165,19 +165,19 @@ function pacCardHTML(t, urlCora) {
 
 function pacRender(host, dados, aviso) {
   var tarefas = pacOrdenar(dados.tarefas || []), urlCora = dados.urlCora || PAC_CONFIG.url;
-  var abrir = urlCora && dados.projeto ? '<a class="pac-btn" href="' + pacEsc(urlCora) + '?projeto=' + dados.projeto.id + '" target="_blank" rel="noopener">Abrir no Cora</a>' : '';
+  var abrir = urlCora && dados.projeto ? '<a class="pac-btn" href="' + pacEsc(urlCora) + '?projeto=' + dados.projeto.id + '" target="_blank" rel="noopener">Abrir no Iris</a>' : '';
   host.innerHTML =
     (aviso ? '<div class="pac-aviso">' + aviso + '</div>' : '') +
-    '<div class="pac-bar"><span class="pac-fonte">Fonte: Cora · Gestão de Tarefas' + (dados.projeto ? ' · projeto <b>' + pacEsc(dados.projeto.nome) + '</b>' : '') + '</span>' + abrir + '</div>' +
+    '<div class="pac-bar"><span class="pac-fonte">Fonte: Iris · Gestão de Tarefas' + (dados.projeto ? ' · projeto <b>' + pacEsc(dados.projeto.nome) + '</b>' : '') + '</span>' + abrir + '</div>' +
     pacKpisHTML(tarefas) +
     (tarefas.length ? '<div class="pac-lista">' + tarefas.map(function (t) { return pacCardHTML(t, urlCora); }).join('') + '</div>'
                     : '<div class="pac-lista"><div class="pac-carregando">Nenhuma ação cadastrada neste projeto ainda.</div></div>') +
-    '<div class="pac-nota">Plano gerido no Cora. Alterações feitas lá aparecem aqui em até um minuto. Para editar status, prazo, responsável ou desdobramentos, use os links.</div>';
+    '<div class="pac-nota">Plano gerido no Iris. Alterações feitas lá aparecem aqui em até um minuto. Para editar status, prazo, responsável ou desdobramentos, use os links.</div>';
 }
 
 function pacErro(host, msg) {
   host.innerHTML = '<div class="pac-aviso"><b>O plano de ação não pôde ser carregado.</b> ' + pacEsc(msg || '') +
-    ' <a href="' + pacEsc(PAC_CONFIG.url) + '" target="_blank" rel="noopener">Abrir no Cora</a></div>';
+    ' <a href="' + pacEsc(PAC_CONFIG.url) + '" target="_blank" rel="noopener">Abrir no Iris</a></div>';
 }
 
 var pacIniciado = false;
@@ -186,12 +186,12 @@ function pacIniciar() {
   var host = document.getElementById(PAC_CONFIG.hostId || 'pac-host');
   if (!host) return;
   if (pacPreview()) {
-    console.warn('Preview local: plano de ação de AMOSTRA — nada vem do Cora.');
+    console.warn('Preview local: plano de ação de AMOSTRA — nada vem do Iris.');
     pacRender(host, { projeto: { id: 0, nome: PAC_CONFIG.projetoNome || 'amostra' }, urlCora: PAC_CONFIG.url, tarefas: PAC_AMOSTRA },
-      '<b>Preview local:</b> cards de amostra. Em produção esta seção lê o projeto <b>' + pacEsc(PAC_CONFIG.projetoNome || '') + '</b> do Cora.');
+      '<b>Preview local:</b> cards de amostra. Em produção esta seção lê o projeto <b>' + pacEsc(PAC_CONFIG.projetoNome || '') + '</b> do Iris.');
     return;
   }
-  host.innerHTML = '<div class="pac-lista"><div class="pac-carregando">Carregando plano de ação do Cora…</div></div>';
+  host.innerHTML = '<div class="pac-lista"><div class="pac-carregando">Carregando plano de ação do Iris…</div></div>';
   var dados = PAC_CONFIG.projetoId ? { projetoId: PAC_CONFIG.projetoId } : { projetoNome: PAC_CONFIG.projetoNome };
   pacJsonp(PAC_CONFIG.url, { acao: 'planoAcaoProjeto', dados: dados }, function (res) {
     if (!res || res.erro) { pacErro(host, res && res.erro); return; }

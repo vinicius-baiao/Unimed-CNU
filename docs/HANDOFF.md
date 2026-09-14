@@ -1,4 +1,4 @@
-# HANDOFF — Cora. Gestão de Tarefas
+# HANDOFF — Iris. Gestão de Tarefas
 
 > Estado do projeto ao final da sessão de **08/09/2026 (tarde)** — roteiro de conclusão dos planos de
 > ação executado (Etapas 1, 2 e 4 concluídas; painéis republicados com os IDs; Etapa 3 gravada às 14:51).
@@ -9,8 +9,8 @@
 
 - Branch de trabalho: **`mvp-shadcn-piloto`** (PR #3 aberto contra `main`, ainda não mergeado).
 - (Manhã) Publicado em 08/09/2026 via `clasp deploy -i` (nova versão na implantação existente):
-  Cora **@65** (hoje **@70**); Spravato **v4.74** (@251 e @252, as duas implantações existentes); Carteira PF
-  **v8.47** (@77); GT Onco **v1.39** (@64). Os três painéis já leem do Cora; até a importação
+  Iris **@65** (hoje **@70**); Spravato **v4.74** (@251 e @252, as duas implantações existentes); Carteira PF
+  **v8.47** (@77); GT Onco **v1.39** (@64). Os três painéis já leem do Iris; até a importação
   rodar, a seção deles mostra "Nenhuma ação cadastrada" (projeto ainda não existe) ou o erro
   "Projeto não disponível" — esperado. **Superado à tarde: importação feita, painéis republicados — ver bullet abaixo e o bloco de 08/09 (tarde).**
 - Endpoints da carga inicial: `bootstrap` + `bootstrapApoio`, chamados em paralelo pelo front.
@@ -23,26 +23,26 @@
 - `.claude/settings.local.json` fica **sempre modificado e não commitado** de propósito
   (config local de ferramentas).
 
-### Último bloco — 09/09 (tarde): modernização visual — Tokens.html do DS + piloto no Cora — publicado @71
+### Último bloco — 09/09 (tarde): modernização visual — Tokens.html do DS + piloto no Iris — publicado @71
 
 Pedido do Aurélio: analisar o painel Spravato, rever o design system e "modernizar o visual" das ferramentas
-(seguem sendo ferramentas — sem hero/efeitos nesta rodada). Abordagem: consolidar em escalas; piloto vivo: Cora.
+(seguem sendo ferramentas — sem hero/efeitos nesta rodada). Abordagem: consolidar em escalas; piloto vivo: Iris.
 Spec: `docs/superpowers/specs/2026-09-09-modernizacao-visual-design-system-design.md`; plano:
 `docs/superpowers/plans/2026-09-09-modernizacao-visual-design-system.md`. Execução por subagentes
 (implementador + revisor por tarefa; 1 fix round na Task 4 e na Task 5; revisão final opus "pronto para publicar").
-Commits Cora `e7941d9..0c5b12b`; DS (repo `UNIMED - Design System`) `a006eb1..d058ba2`.
+Commits Iris `e7941d9..0c5b12b`; DS (repo `UNIMED - Design System`) `a006eb1..d058ba2`.
 
 - **`Tokens.html` canônico** nasce no DS (`starter-kit/Tokens.html`, 123 tokens): paleta atual **mais escalas**
   nomeadas — tipografia `--fs-eyebrow:12`…`--fs-display:28` (piso 12px), raio `--radius-sm/lg/pill`, três
   elevações `--elev-rest/hover/modal`, espaço `--sp-1..8`, motion `--motion-fast/med` + `--ease` (hover nunca
   com `scale`), `--focus-ring`, `--accent-ink` único dourado-sobre-claro, e `@media (prefers-reduced-motion)`.
   Distribuído por **cópia byte-idêntica** por portal, como `Estilos_Fontes`.
-- **Cora adotou** (`tarefas-shadcn.html`): passou a incluir `<?!= include('Tokens') ?>` e perdeu o `:root` local;
+- **Iris adotou** (`tarefas-shadcn.html`): passou a incluir `<?!= include('Tokens') ?>` e perdeu o `:root` local;
   todo `font-size` < 12px subiu para `var(--fs-eyebrow)`; sombras colapsadas nas três elevações; `scale` de hover
   removido; foco visível tokenizado. Trouxe do Spravato: stat card com barra por **significado** (via `:has(#id)`),
   `#indFiltros` sticky translúcida, cabeçalhos de seção com tokens, `.tarefas-table` alinhada à `.ind-tabela`.
   **Sem mudança de layout, fluxo, texto ou dado.** Teste novo `tests/test_tokens.js` (4 invariantes); `npm test`
-  = 10 verdes. O push do Cora agora lista **8 arquivos** (os 7 + `Tokens.html`).
+  = 10 verdes. O push do Iris agora lista **8 arquivos** (os 7 + `Tokens.html`).
 - **DS**: doutrina (`CLAUDE.md` §1 "Escalas", §2 "mínimo 12px", §7 include), `README`/`starter-kit/LEIA-ME`
   (tabela + passo de criação), e `guia-referencia-visual.html` (nova seção "Escalas").
 - **Verificado em produção (09/09, @71):** `bootstrap` `superAdmin:true`, 81 tarefas; a Home renderiza com as
@@ -149,10 +149,10 @@ tarefa, revisão final da branch com onda única de correções), commits `ffa2a
 - **Incidente de processo:** um implementador (haiku) escreveu a Task 3 num arquivo com nome errado
   (`tarafas-shadcn.html`) e commitou; removido em `2918d6d` e a task refeita. Regra adotada nos despachos: `git status`
   antes de editar e antes de commitar, e `git add` só do arquivo alvo.
-- **Publicado:** Cora **@69** (09/09: monitoramento de ações — Para agir hoje, lista de risco, estagnação, matriz; @68 = aba Indicadores; @67 = chip de colega com busca, nomes humanizados, alerta de carga);
+- **Publicado:** Iris **@69** (09/09: monitoramento de ações — Para agir hoje, lista de risco, estagnação, matriz; @68 = aba Indicadores; @67 = chip de colega com busca, nomes humanizados, alerta de carga);
   painéis com `projetoId` fixo — Spravato **@253** (v4.75), Carteira PF **@78** (v8.48), GT Onco **@65** (v1.40).
-  IDs no Cora: Spravato 5 · PF 6 · GT 7. **Etapa 3 gravada 14:51:** aba Usuários com **79** pessoas; Guilherme,
-  Taiara, Carina e Fabiane = Gestor. O Cora está aberto para a equipe — falta comunicar (pendência 10).
+  IDs no Iris: Spravato 5 · PF 6 · GT 7. **Etapa 3 gravada 14:51:** aba Usuários com **79** pessoas; Guilherme,
+  Taiara, Carina e Fabiane = Gestor. O Iris está aberto para a equipe — falta comunicar (pendência 10).
 
 ### Último bloco — 08/09 (noite): marcar colega com busca + nomes humanizados + alerta de carga — publicado @67
 
@@ -184,7 +184,7 @@ Executado via Chrome (sessão do Aurélio) + `clasp`, seguindo
 |---|---|
 | 1 `migrarProjetosPublico` | OK 13:28 — coluna `Publico` criada, 4 projetos legados em FALSE |
 | 2 remap Guilherme Borges | OK — sim 13:39 (3 células: Usuários L40; Tarefas L19/L20 col 4) → gravado 13:58. Ele é `guilherme.silva@` (ainda *Usuário Padrão*) |
-| 3 `importarUsuariosEquipe` | OK — simulação 14:02 ("38 a adicionar, 2 a atualizar") → **gravada 14:51** após autorização do Aurélio. Aba Usuários com **79** pessoas; Guilherme, Taiara, Carina e Fabiane = Gestor; Glaucia com unidade/cargo. **O Cora está aberto para a equipe** (comunicar: pendência 10) |
+| 3 `importarUsuariosEquipe` | OK — simulação 14:02 ("38 a adicionar, 2 a atualizar") → **gravada 14:51** após autorização do Aurélio. Aba Usuários com **79** pessoas; Guilherme, Taiara, Carina e Fabiane = Gestor; Glaucia com unidade/cargo. **O Iris está aberto para a equipe** (comunicar: pendência 10) |
 | 4 `importarPlanosDeAcao` | OK — sim 14:24 (`Spravato 10 · PF 17 · GT 18 · novas 45 · itens 34`, N=2, M=5) → gravado ~14:26. **IDs: Spravato 5 · Carteira PF 6 · GT Onco 7** (verificado pela rota `planoAcaoProjeto`: 10/17/18 tarefas) |
 | 6 painéis | OK — `projetoId` 5/6/7 em `Painel.html` (Spravato, PF, GT) e `build/body_gt.html`; bumps v4.75 / v8.48 (+CHANGELOG) / v1.40; `clasp push -f` + `clasp deploy -i` → @253 / @78 / @65 |
 
@@ -197,20 +197,20 @@ usuários normalmente e não filtra por usuário → o "vê o site mas não vê 
 chamada da carga inicial (o front abre mesmo assim, por desenho). Hard reload resolve; se repetir, investigar rede.
 
 **Verificação da spec (17 passos):** feitos os checks server-side (rota pública por nome para os 3 projetos,
-contagens, projetos ativos e públicos). Pendentes os que exigem navegador/pessoas — Etapa 5 itens 1–3 (Cora: chip
+contagens, projetos ativos e públicos). Pendentes os que exigem navegador/pessoas — Etapa 5 itens 1–3 (Iris: chip
 `público`, `?projeto=7`, `?tarefa=<id>`), 4–5 (seção Plano de Ação nos 3 painéis), 6 (conta fora da aba Usuários) e
 7 (Taiara/Carina — depende da Etapa 3).
 
 **Limpeza:** `_Roteiro.gs` e os `case '_roteiro_*'` temporários do `doGet` foram removidos e o HEAD re-pushado;
-a `@65` do Cora nunca mudou. O Cora **não** foi republicado (a única mudança de código é a constante da importação).
+a `@65` do Iris nunca mudou. O Iris **não** foi republicado (a única mudança de código é a constante da importação).
 
-### Último bloco — planos de ação dos painéis dentro do Cora (08/09/2026)
+### Último bloco — planos de ação dos painéis dentro do Iris (08/09/2026)
 
 Spec: [`docs/superpowers/specs/2026-09-08-planos-de-acao-dos-paineis-no-cora-design.md`](superpowers/specs/2026-09-08-planos-de-acao-dos-paineis-no-cora-design.md).
 Plano: [`docs/superpowers/plans/2026-09-08-planos-de-acao-dos-paineis-no-cora.md`](superpowers/plans/2026-09-08-planos-de-acao-dos-paineis-no-cora.md).
 
-Os painéis Spravato, Carteira PF e GT Onco passam a ler o plano de ação do Cora (rota
-`planoAcaoProjeto`, JSONP, somente leitura, botões "Abrir/Editar no Cora"). No Cora:
+Os painéis Spravato, Carteira PF e GT Onco passam a ler o plano de ação do Iris (rota
+`planoAcaoProjeto`, JSONP, somente leitura, botões "Abrir/Editar no Iris"). No Iris:
 
 - Coluna **`Publico`** (F) na aba Projetos; checkbox no modal; chip na lista.
 - `idsTarefasVisiveis()` inclui tarefas de projeto público. Pré-filtro "minhas tarefas" ao
@@ -237,7 +237,7 @@ conferindo o Logger, depois com `false`):**
 1. `migrarProjetosPublico()` — cria a coluna F na aba Projetos existente.
 2. `remapearEmailUsuario('guilherme.silva.ext@unimedcnu.coop.br', 'guilherme.silva@unimedcnu.coop.br', true)`
 3. `importarUsuariosEquipe(true)` — esperado: 38 a adicionar, 2 a atualizar (Glaucia e Guilherme).
-   A partir do `false`, **os 40 entram no Cora**.
+   A partir do `false`, **os 40 entram no Iris**.
 4. `importarPlanosDeAcao(true)` — esperado: Spravato 8+custom, PF 12+custom, GT 18; 34 itens.
    Pede autorização do escopo de Drive na primeira execução. Anotar os **IDs dos projetos**
    que o Logger imprime: eles vão em `CORA_PROJETO_ID` de cada painel.
@@ -375,9 +375,9 @@ inalterados, console sem erros.
 | 7 | ~~**Gui retestar checklist**~~ **validado em 03/08** | Guilherme testou na versão publicada e aprovou: marcar itens do checklist em modo visualização funciona. Encerra o feedback que abriu a sessão. |
 | 8 | **URL do Google Sites** | Escolher endereço curto (sugestão: `/cora`) e tornar a página do app a home do site. Depois disso posso adicionar uma constante `URL_PORTAL` no `Code.gs` para os links dos e-mails. |
 | 9 | **Executar o roteiro do bloco de 08/09** | `migrarProjetosPublico` → `remapearEmailUsuario` → `importarUsuariosEquipe` → `importarPlanosDeAcao`, cada uma em simulação antes. Depois, passar os IDs dos projetos para os painéis e publicar os três. **→ Feito em 08/09 à tarde (Etapas 1, 2 e 4 + painéis republicados); resta só a Etapa 3 — ver pendência 11.** |
-| 10 | **Comunicar a equipe** | **Já vale (Etapa 3 gravada 14:51):** Os 40 passam a entrar no Cora após a importação. E-mail de boas-vindas fica com o Aurélio. |
-| 11 | ~~**Etapa 3 — liberar os 38 da equipe**~~ **feita em 08/09 às 14:51** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Cora para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
-| 13 | **Testar a aba Acessos (@70)** | Abrir o Cora com Ctrl+Shift+R, entrar em Acessos, trocar o perfil de alguém e voltar, editar uma unidade, incluir e remover um usuário de teste. Ajustes de UX decididos sem consulta podem ser revistos. Para um segundo super-admin, acrescentar o e-mail em `SUPER_ADMINS` (`Code.gs`) e publicar. |
+| 10 | **Comunicar a equipe** | **Já vale (Etapa 3 gravada 14:51):** Os 40 passam a entrar no Iris após a importação. E-mail de boas-vindas fica com o Aurélio. |
+| 11 | ~~**Etapa 3 — liberar os 38 da equipe**~~ **feita em 08/09 às 14:51** | `importarUsuariosEquipe(false)` está simulada e aprovada (38 a adicionar, 2 a atualizar). Gravar **abre o Iris para as 40 pessoas** — decisão sua. Se preferir liberar por etapas, pedir um filtro por equipe. Enquanto não gravar, o Guilherme Borges segue *Usuário Padrão* e Taiara/Carina/Fabiane não entram. |
+| 13 | **Testar a aba Acessos (@70)** | Abrir o Iris com Ctrl+Shift+R, entrar em Acessos, trocar o perfil de alguém e voltar, editar uma unidade, incluir e remover um usuário de teste. Ajustes de UX decididos sem consulta podem ser revistos. Para um segundo super-admin, acrescentar o e-mail em `SUPER_ADMINS` (`Code.gs`) e publicar. |
 | 12 | **`.claude/settings.local.json` passou a ser rastreado** | O commit `b54c72c` ("wip … migração de notebook", 08/09 22:25) adicionou o arquivo ao `.gitignore` **e** o commitou; o ignore não desrastreia. Decidir se faço `git rm --cached .claude/settings.local.json` (mantém o arquivo local, sai do índice) — a regra do projeto é nunca versioná-lo. |
 
 ## Backlog técnico (fase 2)

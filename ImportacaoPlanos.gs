@@ -1,5 +1,5 @@
 // ============================================================
-//  Importação dos planos de ação dos painéis → tarefas do Cora (08/09/2026)
+//  Importação dos planos de ação dos painéis → tarefas do Iris (08/09/2026)
 //  Execução MANUAL no editor do Apps Script. Nada aqui é roteado pelo doGet.
 //
 //    importarPlanosDeAcao(true)   → só lista no Logger o que criaria
@@ -89,7 +89,7 @@ var PLANO_PF_FIXOS = [
 ];
 
 // ── GT Onco: transcrição do Painel.html v1.38, seção #plano ──────────────
-// status já no vocabulário do Cora; resp é a chave em IMPORT_EMAILS_GT;
+// status já no vocabulário do Iris; resp é a chave em IMPORT_EMAILS_GT;
 // itens = desdobramentos numerados (feito conforme ✓/"concluído" no painel);
 // notas = bullets não numerados, vão para Observações.
 function I(texto, feito) { return { texto: texto, feito: !!feito }; }
@@ -178,7 +178,7 @@ function limparTituloAcao(t) {
 }
 
 // {titulo, desc, status (vocabulário do painel), prazo, notas[]} + marca →
-// campos da tarefa do Cora. Prazo só no formato yyyy-MM-dd; senão vazio.
+// campos da tarefa do Iris. Prazo só no formato yyyy-MM-dd; senão vazio.
 function converterAcaoPainel(item, marca) {
   var status = STATUS_PAINEL_PARA_CORA[String(item.status || '').toLowerCase()] || 'Backlog';
   var prazo  = /^\d{4}-\d{2}-\d{2}$/.test(String(item.prazo || '')) ? String(item.prazo) : '';
@@ -231,7 +231,7 @@ function mesclarPlanoPainel(fixos, salvos, prefixo) {
 function tarefasGT() {
   return PLANO_GT.map(function(m) {
     var c = converterAcaoPainel({ titulo: m.titulo, desc: '', status: '', prazo: m.prazo, notas: m.notas }, 'gt#' + m.n);
-    c.status = m.status;                       // já no vocabulário do Cora
+    c.status = m.status;                       // já no vocabulário do Iris
     c.responsavel = m.resp ? IMPORT_EMAILS_GT[m.resp] : '';
     c.itens = m.itens;
     return c;

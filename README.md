@@ -1,8 +1,8 @@
-# Cora. — Gestão de Tarefas
+# Iris. — Gestão de Tarefas
 
 > Portal de gestão de tarefas (Kanban + Lista) da **Rede Ambulatorial · Unimed CNU**,
 > construído sobre Google Apps Script + Google Sheets, no padrão institucional
-> **Design System Unimed CNU** (assinatura `Cora.`, casca Shell com rail escura).
+> **Design System Unimed CNU** (assinatura `Iris.`, casca Shell com rail escura).
 
 ## O que é
 
@@ -59,7 +59,7 @@ Google Sheets "Tarefas CNU"  ←→  Apps Script Web App (Code.gs)  ←→  tare
 | Arquivo | Papel |
 |---|---|
 | `Code.gs` | Backend: roteador, CRUD, permissões, visibilidade, checklists, interações, e-mails, triggers |
-| `tarefas-shadcn.html` | Frontend completo (Shell/rail `Cora.`, Home, Kanban, Lista, modais) |
+| `tarefas-shadcn.html` | Frontend completo (Shell/rail `Iris.`, Home, Kanban, Lista, modais) |
 | `tarefas.html` | Layout clássico anterior (rollback; trocar `HTML_FILE` no `Code.gs`) |
 | `Estilos_Fontes.html` | Inter + Unimed Slab embutidas (base64) — do starter kit do DS; não editar à mão |
 | `appsscript.json` | Manifesto (`executeAs: USER_DEPLOYING`, `access: DOMAIN`) |
@@ -82,7 +82,7 @@ O board abre pré-filtrado nas próprias tarefas, para todos os perfis ("Limpar 
 ## Planos de ação dos painéis (desde 08/09/2026)
 
 Os painéis **Raio X Spravato**, **Raio X da Carteira PF** e **GT Terapias Oncológicas** não
-têm mais storage próprio de plano de ação: cada ação é uma tarefa do Cora nos projetos
+têm mais storage próprio de plano de ação: cada ação é uma tarefa do Iris nos projetos
 **Spravato**, **Carteira PF** e **GT Onco**, marcados como **públicos** (coluna `Publico` da
 aba `Projetos`, checkbox "Visível a todo o domínio" no modal). Desdobramentos são itens de
 checklist. Cada tarefa importada traz `Origem: <painel>#<id>` na última linha de Observações.
@@ -92,7 +92,7 @@ checklist. Cada tarefa importada traz `Origem: <painel>#<id>` na última linha d
   allowlist. Recusa projeto inexistente, arquivado ou não público com a mesma mensagem.
   Cache de 60 s por projeto, invalidado pelas escritas.
 - **Link profundo**: `…/exec?projeto=<id>` abre Tarefas filtradas no projeto;
-  `…/exec?tarefa=<id>` abre o modal da tarefa. É o destino dos botões "Abrir/Editar no Cora"
+  `…/exec?tarefa=<id>` abre o modal da tarefa. É o destino dos botões "Abrir/Editar no Iris"
   dos painéis.
 - **Importações manuais** (editor do Apps Script, nesta ordem, cada uma primeiro com `true`):
   `migrarProjetosPublico()`, `remapearEmailUsuario(de, para, simular)`,
@@ -148,7 +148,7 @@ Segue o **Design System Unimed CNU** (starter-kit de 17/07/2026):
 - Tokens canônicos (creme `#F8F7F4`, ink `#16302E`, primário `#004E4C`,
   dourado `#C9A84C`, semânticos ok/warn/late) — consumidos via `var(--…)`;
 - Casca **Shell**: rail escura 64→236px com símbolo oficial (pinheiro),
-  assinatura **`Cora.`** (Unimed Slab itálico + ponto dourado) e subtítulo
+  assinatura **`Iris.`** (Unimed Slab itálico + ponto dourado) e subtítulo
   "Gestão de Tarefas"; rodapé com avatar de iniciais;
 - Tipografia **Inter** (UI) e **Unimed Slab** (exclusiva da assinatura),
   embutidas em `Estilos_Fontes.html`;

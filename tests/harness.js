@@ -1,4 +1,4 @@
-// Harness de testes para os .gs do Cora (Node, sem dependências).
+// Harness de testes para os .gs do Iris (Node, sem dependências).
 // Carrega Code.gs + ImportacaoPlanos.gs + ImportacaoUsuarios.gs num contexto
 // `vm` com stubs mínimos dos serviços do Apps Script.
 //

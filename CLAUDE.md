@@ -101,7 +101,7 @@ promover pela tela; `bootstrap().usuario.superAdmin` liga o item de rail.
 npx serve -p 3000 .     # preview local da UI (config em .claude/launch.json)
 ```
 
-⚠️ **Preview local e tokens:** desde a modernização visual (09/09), os tokens de cor/escala do Cora vêm de
+⚠️ **Preview local e tokens:** desde a modernização visual (09/09), os tokens de cor/escala do Iris vêm de
 `Tokens.html` via `<?!= include('Tokens') ?>` (diretiva do Apps Script). O `npx serve` **não resolve** esse
 include, então a UI fica **sem estilo** no localhost. Para ver estilizado, gere um HTML com os includes
 (`Estilos_Fontes` + `Tokens`) embutidos e sirva esse arquivo. Em produção o include resolve normalmente.

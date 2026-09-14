@@ -1,4 +1,4 @@
-// Invariantes visuais do Cora: Tokens.html idêntico ao do DS, sem :root local,
+// Invariantes visuais do Iris: Tokens.html idêntico ao do DS, sem :root local,
 // tipografia >= 12px fora de @media print, sem scale() em :hover.
 'use strict';
 const assert = require('assert');
@@ -8,11 +8,11 @@ const path = require('path');
 const HTML = fs.readFileSync('tarefas-shadcn.html', 'utf8');
 const norm = s => s.replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').trimEnd();
 
-// 1. Tokens.html do Cora idêntico ao do DS (conteúdo normalizado)
+// 1. Tokens.html do Iris idêntico ao do DS (conteúdo normalizado)
 const DS = 'C:/Users/Aurélio/UNIMED - Design System/starter-kit/Tokens.html';
 if (fs.existsSync(DS)) {
   assert.strictEqual(norm(fs.readFileSync('Tokens.html','utf8')), norm(fs.readFileSync(DS,'utf8')),
-    'Tokens.html do Cora difere do DS');
+    'Tokens.html do Iris difere do DS');
 } else {
   console.log('  (aviso: DS não encontrado neste ambiente; pulei a comparação 1)');
 }
